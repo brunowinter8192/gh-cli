@@ -100,6 +100,14 @@ When the task is "find libraries/repos for X" or any broad landscape survey:
 - Doing it yourself leads to: too-specific queries, 0 results, 7+ iterations, wasted context
 - Pattern: dispatch sub → sub returns candidates → you verify top 3-5 with get_repo/get_file_content
 
+**Ecosystem/Landscape Searches — Breadth First (NON-NEGOTIABLE):**
+When researching an entire ecosystem (e.g., "web crawling tools", "vector databases"):
+- Dispatch 2+ parallel subagents with DIFFERENT search angles (e.g., one by technology, one by use case)
+- Each agent runs 5-10 SHORT queries (2-3 words max), sorted by stars
+- A single agent with narrow queries returns niche repos and misses the big players
+- Minimum: 10 distinct queries across all agents to cover the landscape
+- Example failure: "crawl4ai mcp" (narrow) → 2 repos. Fix: "web crawler python" + "website scraper" + "firecrawl" + "scrapy" → full ecosystem
+
 **1. Dispatch (subagent)**
 - Dispatch immediately with all available session context (directory structure, file patterns, what to look for)
 - Include known paths from earlier calls (Rule 7) — saves the sub redundant overview work
