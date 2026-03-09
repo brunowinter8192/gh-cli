@@ -151,7 +151,10 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 ```
 1. search_code "def workflow language:python" -> Find patterns
    → Note the file path from search results!
-2. get_file_content owner, repo, path -> Read full implementation
+2. get_file_content owner, repo, path -> Read implementation
+   → Large file rule: Files > 20 KB are rarely needed in full.
+     Use limit=150 + offset to read only the relevant section.
+     The search result fragment tells you where the relevant code is.
 3. get_repo_tree owner, repo, "src/" -> Understand context
 ```
 
@@ -230,8 +233,15 @@ Include the file path from search output, e.g.:
 
 **CRITICAL: Your FINAL response MUST be the structured report. Never end with narration.**
 
-Wrong: "Excellent! I found the issue. Let me get the details:" — This is an in-progress comment, NOT a final response.
-Right: FILE: / VALUE: / EVIDENCE: blocks with synthesized findings.
+**START your final response IMMEDIATELY with the first heading or finding. Zero preamble.**
+
+Wrong (ALL of these):
+- "Excellent! I found the issue. Let me get the details:"
+- "Perfect! I now have comprehensive information. Let me compile the findings."
+- "I've successfully researched the topic. Here's what I found:"
+- ANY sentence before the first `##` heading or `FILE:` block
+
+Right: First token of your response = `##` or `FILE:` or `---` (no leading text)
 
 When you have completed your research (or are approaching turn limits), output the structured report IMMEDIATELY as your final message. No commentary before it, no "let me now..." transitions.
 
@@ -284,6 +294,12 @@ Stop searching when ANY of:
 - Local filesystem paths (`/Users/...`, `/home/...`, `C:\...`)
 - References to "current context" or "workspace"
 - Any path that is not a GitHub repository path
+
+**If the task prompt contains local paths (e.g., project context):**
+- IGNORE them for source attribution — do NOT reproduce in output
+- If the local file contains relevant info, omit the path and include only the content
+- Wrong: `**From:** /Users/.../DOCS.md — Entity Resolution: ...`
+- Right: `Entity Resolution: ...` (no local path attribution)
 
 **ONLY GitHub references:**
 - `owner/repo` for repositories
