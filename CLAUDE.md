@@ -7,55 +7,17 @@
 
 ---
 
-## CONFIGURATION
-
-Editable files for Process Improvements in RECAP/IMPROVE phase:
-
-| Config | Path | Purpose |
-|--------|------|---------|
-| Project Standards | `CLAUDE.md` | Code conventions, MCP patterns, naming |
-| Iterative Dev | `.claude/skills/iterative-dev/SKILL.md` | PLAN-IMPLEMENT-RECAP-IMPROVE-CLOSING cycle |
-| GitHub Tools | `.claude/skills/github/SKILL.md` | MCP tool docs, parameters, usage strategy |
-| GitHub Agent | `.claude/skills/agent-github-search/SKILL.md` | GitHub search agent dispatch rules |
-| GitHub Search Instructions | `.claude/agents/github-search.md` | GitHub research subagent instructions |
-| Explore Instructions | `.claude/agents/explore-specialist.md` | Codebase search subagent instructions |
-| RAG MCP | `.claude/skills/RAG_MCP/SKILL.md` | Vector search over GitHub API docs (APIEndpoints collection) |
-
----
-
 ## General
 
 - NO emojis in production code, READMEs, DOCS.md, logs
 - ALWAYS keep script console output concise
 - `endpoints.md` lists all 47 GitHub REST API categories with `[RAG]` markers for those available via vector search
 
-### Plugin Sync
+### Plugin Distribution
 
-**pre-commit hook** (`.git/hooks/pre-commit`) syncs local configs to plugin distribution automatically:
+`.claude-plugin/` is the plugin distribution folder (tracked in git). Edit files directly here.
 
-| Source (edit here) | Target (auto-generated) |
-|--------------------|------------------------|
-| `.claude/agents/github-search.md` | `.claude-plugin/agents/github-search.md` |
-| `.claude/skills/github/*` | `.claude-plugin/skills/github/*` |
-| `.claude/skills/agent-github-search/*` | `.claude-plugin/skills/agent-github-search/*` |
-
-**Rules:**
-- ALWAYS edit `.claude/` files, NEVER `.claude-plugin/` directly
-- `.claude-plugin/` is the distribution folder for `plugin install` — auto-generated
-- Hook runs on every `git commit` — no manual sync needed
-- New tools MUST be registered in 5 places: `server.py`, `.claude/skills/github/SKILL.md`, `.claude/agents/github-search.md`, `src/github/DOCS.md`, `README.md`
-
-**Commit Workflow (ONE call):**
-`.claude/` is gitignored — you CANNOT `git add .claude/`. The pre-commit hook syncs to `.claude-plugin/` but only DURING commit. For manual commits:
-```bash
-cp .claude/<changed-file> .claude-plugin/<same-path> && \
-git add .claude-plugin/<changed-files> && \
-git commit -m "..." && \
-git push --set-upstream origin main
-```
-- You KNOW which files you changed — no `git status`/`git diff` needed
-- Copy → add → commit → push in ONE chained command
-- Always use `--set-upstream origin main` on first push
+New tools MUST be registered in 5 places: `server.py`, `.claude-plugin/skills/github/SKILL.md`, `.claude-plugin/agents/github-search.md`, `src/github/DOCS.md`, `README.md`
 
 ### Testing
 
