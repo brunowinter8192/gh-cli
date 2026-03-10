@@ -254,6 +254,21 @@ Performs HTTP GET request to GitHub Releases API for repository. Applies per_pag
 ### format_releases()
 Transforms raw API response into human-readable text output. Extracts tag_name, name, published date, prerelease flag, draft flag, assets count, and URL for each release. Includes changelog body preview truncated to 300 characters, collapsed to single line. Skips changelog line when body is empty.
 
+## get_release.py
+
+**Purpose:** Retrieve a single release with full release notes body. Supports latest release or specific tag.
+**Input:** owner, repo name, optional tag
+**Output:** Human-readable formatted text with release metadata and full Markdown body
+
+### get_release_workflow()
+Main orchestrator that coordinates single release retrieval. Calls fetch_release to get raw API data, then format_release to structure the output. Returns formatted text string with complete release details.
+
+### fetch_release()
+Performs HTTP GET request to GitHub Releases API. When tag is None, uses `/releases/latest` endpoint (most recent non-prerelease, non-draft release). When tag is provided, uses `/releases/tags/{tag}` endpoint. Returns raw JSON response containing full release data including body.
+
+### format_release()
+Transforms raw API response into human-readable text output. Displays tag, name, published date, prerelease status, and URL. Includes full release notes body as Markdown (no truncation). Lists assets with file size and download count when present.
+
 ## graphql_client.py
 
 **Purpose:** Shared GraphQL client infrastructure for GitHub GraphQL API.
