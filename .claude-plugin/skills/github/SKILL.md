@@ -21,6 +21,7 @@ tools:
   - mcp__plugin_github-research_github__list_commits
   - mcp__plugin_github-research_github__compare_commits
   - mcp__plugin_github-research_github__list_releases
+  - mcp__plugin_github-research_github__get_release
 ---
 
 # GitHub MCP Tools — Search Strategy
@@ -287,7 +288,8 @@ Topics are part of the Repositories API. No dedicated tool needed:
 | Find projects by topic | search_repos (topic: qualifier) | get_repo |
 | Browse commit history | list_commits | compare_commits |
 | Compare versions/branches | compare_commits | list_commits |
-| Find releases/changelogs | list_releases | compare_commits |
+| Find releases/changelogs | list_releases | get_release |
+| Read full release notes | get_release | list_releases |
 | Find code patterns | search_code | get_file_content |
 | Understand structure | get_repo_tree | get_file_content |
 | Compare projects | search_repos | get_file_content (README) |

@@ -24,6 +24,7 @@ tools:
   - mcp__plugin_github-research_github__list_commits
   - mcp__plugin_github-research_github__compare_commits
   - mcp__plugin_github-research_github__list_releases
+  - mcp__plugin_github-research_github__get_release
 color: green
 ---
 
@@ -171,6 +172,7 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 2. list_commits owner, repo, path="src/main.py" -> Find when file was changed
 3. compare_commits owner, repo, base="v1.0", head="v2.0" -> See what changed between versions
 4. list_releases owner, repo -> Find versions and changelogs
+5. get_release owner, repo -> Read full release notes (latest or by tag)
 ```
 
 ## Path Integrity (CRITICAL)
