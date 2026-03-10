@@ -22,6 +22,7 @@ from src.github.get_discussion import get_discussion_workflow
 from src.github.list_commits import list_commits_workflow
 from src.github.compare_commits import compare_commits_workflow
 from src.github.list_releases import list_releases_workflow
+from src.github.get_release import get_release_workflow
 
 mcp = FastMCP("GitHub")
 
@@ -180,6 +181,16 @@ def list_releases(
 ) -> list[TextContent]:
     """List releases. Use to find versions, changelogs, or breaking changes."""
     return list_releases_workflow(owner, repo, per_page)
+
+
+@mcp.tool
+def get_release(
+    owner: str,
+    repo: str,
+    tag: str | None = None
+) -> list[TextContent]:
+    """Get release with full notes. Use to read changelogs or check what changed in a version."""
+    return get_release_workflow(owner, repo, tag)
 
 
 if __name__ == "__main__":
