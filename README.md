@@ -47,7 +47,7 @@ Without a token, tools work but hit GitHub's unauthenticated rate limit (~60 req
 | Component | Name | Description |
 |-----------|------|-------------|
 | **Skill** | `/github-research:gh-search` | Tool usage context and workflows |
-| **MCP Server** | `github` | 20 GitHub API tools |
+| **MCP Server** | `github` | 21 GitHub API tools |
 | **Subagent** | `github-search` | Deep research specialist |
 
 ## MCP Tools
@@ -203,6 +203,16 @@ List releases with version tags and changelogs.
 | `owner` | string | required | Repository owner |
 | `repo` | string | required | Repository name |
 | `per_page` | int | `10` | Number of results |
+
+### get_release
+
+Get a single release with full release notes. Without tag returns latest release.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `owner` | string | required | Repository owner |
+| `repo` | string | required | Repository name |
+| `tag` | string | `null` | Version tag (e.g., `"v2.1.72"`). Omit for latest |
 
 ### search_discussions
 
