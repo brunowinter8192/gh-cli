@@ -19,7 +19,6 @@ bug_fixes/
 # Claude Code local (not for distribution)
 .claude/
 .beads/
-CLAUDE.md
 
 # Plugin hooks (local only)
 /hooks/
