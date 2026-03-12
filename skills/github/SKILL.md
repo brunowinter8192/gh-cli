@@ -18,6 +18,10 @@ tools:
   - mcp__plugin_github-research_github__search_discussions
   - mcp__plugin_github-research_github__list_discussions
   - mcp__plugin_github-research_github__get_discussion
+  - mcp__plugin_github-research_github__list_commits
+  - mcp__plugin_github-research_github__compare_commits
+  - mcp__plugin_github-research_github__list_releases
+  - mcp__plugin_github-research_github__get_release
 ---
 
 # GitHub MCP Tools — Search Strategy
@@ -107,6 +111,11 @@ When researching an entire ecosystem (e.g., "web crawling tools", "vector databa
 - A single agent with narrow queries returns niche repos and misses the big players
 - Minimum: 10 distinct queries across all agents to cover the landscape
 - Example failure: "crawl4ai mcp" (narrow) → 2 repos. Fix: "web crawler python" + "website scraper" + "firecrawl" + "scrapy" → full ecosystem
+
+**Subtask Limit (CRITICAL):**
+- Maximum 3-4 subtasks per github-search dispatch
+- If task requires 5+ subtasks: split into sequential dispatches (first known issues → then searches/exploration)
+- Reason: Haiku context exhausts after ~15 large tool outputs — excess tasks get silently dropped
 
 **1. Dispatch (subagent)**
 - Dispatch immediately with all available session context (directory structure, file patterns, what to look for)

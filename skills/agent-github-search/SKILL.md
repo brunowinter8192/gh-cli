@@ -48,6 +48,15 @@ description: GitHub MCP tool reference for search agents
 | list_discussions | Browse discussions in a specific repo |
 | get_discussion | Read full discussion with comments |
 
+### Commits & Releases
+
+| Tool | Purpose |
+|------|---------|
+| list_commits | Browse commit history, find when a file changed |
+| compare_commits | See diff between two branches, tags, or SHAs |
+| list_releases | List all releases with changelogs |
+| get_release | Read full release notes for a specific tag |
+
 ## Parameter Reference
 
 ### search_repos
@@ -172,6 +181,42 @@ description: GitHub MCP tool reference for search agents
 | number | int | required | Discussion number |
 | comment_limit | int | 50 | Max comments to return |
 | comment_sort | upvotes/chronological | upvotes | Comment sort order |
+
+### list_commits
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| owner | str | required | Repository owner |
+| repo | str | required | Repository name |
+| sha | str | "" | Branch or commit SHA to start from |
+| path | str | "" | Only commits touching this file path |
+| author | str | "" | Filter by author login |
+| per_page | int | 20 | Number of commits to return |
+
+### compare_commits
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| owner | str | required | Repository owner |
+| repo | str | required | Repository name |
+| base | str | required | Base branch, tag, or SHA |
+| head | str | required | Head branch, tag, or SHA |
+
+### list_releases
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| owner | str | required | Repository owner |
+| repo | str | required | Repository name |
+| per_page | int | 10 | Number of releases to return |
+
+### get_release
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| owner | str | required | Repository owner |
+| repo | str | required | Repository name |
+| tag | str/null | null | Release tag (e.g., "v2.0.0") — omit for latest release |
 
 ## Search Qualifiers
 
