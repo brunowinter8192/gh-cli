@@ -64,7 +64,7 @@ Two fundamentally different search modes exist:
 When looking for a specific example or report, search by the broadest known identifier in the filename FIRST (e.g., template name, query ID), not by specific content details (e.g., node IDs, exact values).
 - `get_repo_tree(pattern="*Q8*", path="Predictions/")` → finds all Q8 reports in one call
 - `grep_repo(pattern="13408", file_pattern="*.md")` → may miss due to `max_files` limit
-Also: when using `grep_repo` on directories with many files, increase `max_files` beyond the default 10.
+Server enforces min 20 files for `grep_repo` regardless of `max_files` value.
 
 **6. Truncation → spawn subagent.**
 When `grep_repo` or `get_repo_tree` returns a truncation warning, do NOT repeat with same scope.
@@ -255,7 +255,7 @@ Re-prompt with: "Your output lacked file paths. Re-run and use EXACTLY this form
 **Verification tool selection (CRITICAL):**
 When verifying whether a parameter/function/class exists:
 - Agent cited a specific FILE → use `grep_file` on THAT file. Direct hit, no false negatives.
-- Agent cited no specific file → use `grep_repo` with `max_files=50+` and `file_pattern="*.py"`. Default max_files (10) causes false negatives on repos with 50+ files.
+- Agent cited no specific file → use `grep_repo` with `file_pattern="*.py"`. Server enforces min 20 files; set higher for repos with 50+ files.
 - NEVER conclude "doesn't exist" from a `grep_repo` with low max_files — that's a sampling error, not a verification.
 
 **Verification scope transparency (CRITICAL):**
@@ -321,20 +321,13 @@ Never say "MATCH" for claims you didn't actually verify. If thesis shows derived
 
 **`search_code` — does not index CSV/data files (Issue #2):**
 - GitHub Code Search skips `type: data` files (CSV, TSV, etc. per GitHub Linguist)
-- Tool now shows a NOTE when 0 results, suggesting `grep_file` or `grep_repo`
-- **Fallback:** `grep_repo` searches file content across repo by file pattern
-
-**Data files in large repos:**
-- Use `grep_repo(pattern="search_term", file_pattern="*.csv", path="subdir")` for content search in data files
-- `grep_repo` combines `get_repo_tree(pattern=...)` + `grep_file` automatically
+- Tool output hints to use `grep_repo` when 0 results
+- **Fallback:** `grep_repo(pattern="search_term", file_pattern="*.csv", path="subdir")`
 
 **`search_repos` — query length limit (Issue #3):**
-- GitHub Search API returns 0 results for long queries (5+ words)
-- Queries MUST be short: 2-3 words maximum
-- **Wrong:** `"python browser automation CDP chrome devtools protocol async"` → 0 results
-- **Right:** `"pydoll browser automation"` or `"python CDP chrome"` → results found
-- Use `sort_by` parameter (stars, updated) to filter, not more query words
+- Server auto-truncates queries to 3 words with warning in output
 - When exploring a broad topic: run MULTIPLE short queries, not ONE long query
+- Use `sort_by` parameter (stars, updated) to filter, not more query words
 
 ## Searching for Values
 

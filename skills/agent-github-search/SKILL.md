@@ -111,9 +111,9 @@ description: GitHub MCP tool reference for search agents
 | owner | str | required | Repository owner |
 | repo | str | required | Repository name |
 | pattern | str | required | Regex pattern to search in file content |
-| file_pattern | str | "\*.csv" | Glob pattern for file selection |
+| file_pattern | str | "\*" | Glob pattern for file selection |
 | path | str | "" | Subdirectory scope (narrows search, avoids truncation) |
-| max_files | int | 10 | Max files to search (increase for large dirs) |
+| max_files | int | 10 | Max files to search (server enforces min 20) |
 
 ### search_items
 
@@ -243,8 +243,8 @@ GitHub search supports qualifiers in query strings:
 - **Fallback:** Use `grep_repo` for data file content search
 
 **grep_repo — max_files limit:**
-- Default 10 files. Large directories need higher `max_files`
-- Also affected by tree truncation on large repos
+- Server enforces min 20 files regardless of `max_files` value
+- For repos with 50+ matching files, set `max_files` higher explicitly
 
 ## Searching for Values in Data Files
 

@@ -11,7 +11,9 @@ MAX_MATCHES_PER_FILE = 3
 
 
 # ORCHESTRATOR
-def grep_repo_workflow(owner: str, repo: str, pattern: str, file_pattern: str = "*.csv", path: str = "", max_files: int = MAX_FILES) -> list[TextContent]:
+def grep_repo_workflow(owner: str, repo: str, pattern: str, file_pattern: str = "*", path: str = "", max_files: int = MAX_FILES) -> list[TextContent]:
+    """Regex search across repo files."""
+    max_files = max(max_files, 20)  # Floor: agent can go higher, never lower
     default_branch = fetch_default_branch(owner, repo)
     tree_sha = get_tree_sha(owner, repo, default_branch, path)
     raw_tree = fetch_tree(owner, repo, tree_sha, recursive=True)

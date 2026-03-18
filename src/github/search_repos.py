@@ -6,13 +6,29 @@ from src.github.client import GITHUB_API_BASE, RESULTS_PER_PAGE, build_headers
 
 
 # ORCHESTRATOR
+MAX_QUERY_WORDS = 3
+
+
 def search_repos_workflow(
     query: str,
     sort_by: Literal["stars", "forks", "updated", "best_match"] = "best_match"
 ) -> list[TextContent]:
+    query, truncation_warning = enforce_query_length(query)
     raw_response = fetch_repositories(query, sort_by)
     formatted_string = format_repo_results(raw_response)
+    if truncation_warning:
+        formatted_string = truncation_warning + "\n\n" + formatted_string
     return [TextContent(type="text", text=formatted_string)]
+
+
+def enforce_query_length(query: str) -> tuple[str, str]:
+    words = query.split()
+    if len(words) <= MAX_QUERY_WORDS:
+        return query, ""
+    original = query
+    truncated = " ".join(words[:MAX_QUERY_WORDS])
+    warning = f"NOTE: Query truncated to {MAX_QUERY_WORDS} words ('{original}' → '{truncated}'). GitHub Search returns 0 results for long queries. Run multiple short queries instead."
+    return truncated, warning
 
 
 # FUNCTIONS
