@@ -34,37 +34,37 @@ def search_repos(
     query: str,
     sort_by: Literal["stars", "forks", "updated", "best_match"] = "best_match"
 ) -> list[TextContent]:
-    """Search repos. Use when user wants to find projects, libraries, or frameworks."""
+    """Search GitHub repositories."""
     return search_repos_workflow(query, sort_by)
 
 
 @mcp.tool
 def search_code(query: str) -> list[TextContent]:
-    """Search code. Use to find implementation patterns or usage examples across GitHub."""
+    """Search code across GitHub."""
     return search_code_workflow(query)
 
 
 @mcp.tool
 def get_repo_tree(owner: str, repo: str, path: str = "", depth: int = -1, pattern: str = "") -> list[TextContent]:
-    """Get repo tree. Use to browse repository structure before reading specific files."""
+    """Browse repository file tree."""
     return get_repo_tree_workflow(owner, repo, path, depth, pattern)
 
 
 @mcp.tool
 def get_file_content(owner: str, repo: str, path: str, metadata_only: bool = False, offset: int = 0, limit: int = 0) -> list[TextContent]:
-    """Get file content. Use after browsing repo tree to read specific files."""
+    """Read file from GitHub repo."""
     return get_file_content_workflow(owner, repo, path, metadata_only, offset, limit)
 
 
 @mcp.tool
 def grep_file(owner: str, repo: str, path: str, pattern: str, context_lines: int = 0, max_matches: int = 50) -> list[TextContent]:
-    """Search file content by regex pattern. Use to find specific lines without downloading entire file."""
+    """Regex search within a file."""
     return grep_file_workflow(owner, repo, path, pattern, context_lines, max_matches)
 
 
 @mcp.tool
-def grep_repo(owner: str, repo: str, pattern: str, file_pattern: str = "*.csv", path: str = "", max_files: int = 10) -> list[TextContent]:
-    """Search file content across repo by file pattern. Use when search_code fails on data files."""
+def grep_repo(owner: str, repo: str, pattern: str, file_pattern: str = "*", path: str = "", max_files: int = 10) -> list[TextContent]:
+    """Regex search across repo files."""
     return grep_repo_workflow(owner, repo, pattern, file_pattern, path, max_files)
 
 
@@ -74,19 +74,19 @@ def search_items(
     type: Literal["issue", "pr"],
     sort_by: Literal["comments", "reactions", "created", "updated", "best_match"] = "best_match"
 ) -> list[TextContent]:
-    """Search issues or PRs. Use to find bug reports, feature requests, or code changes."""
+    """Search GitHub issues or PRs."""
     return search_items_workflow(query, type, sort_by)
 
 
 @mcp.tool
 def get_issue(owner: str, repo: str, issue_number: int) -> list[TextContent]:
-    """Get issue. Use to read full issue details including description."""
+    """Read GitHub issue."""
     return get_issue_workflow(owner, repo, issue_number)
 
 
 @mcp.tool
 def get_issue_comments(owner: str, repo: str, issue_number: int) -> list[TextContent]:
-    """Get issue comments. Use to read the discussion thread on an issue."""
+    """Read issue comments."""
     return get_issue_comments_workflow(owner, repo, issue_number)
 
 
@@ -97,31 +97,31 @@ def list_repo_prs(
     state: Literal["open", "closed", "all"] = "open",
     sort_by: Literal["created", "updated", "popularity", "long-running"] = "created"
 ) -> list[TextContent]:
-    """List repo PRs. Use to see recent activity or pending changes in a repository."""
+    """List repository PRs."""
     return list_repo_prs_workflow(owner, repo, state, sort_by)
 
 
 @mcp.tool
 def get_pr(owner: str, repo: str, pull_number: int) -> list[TextContent]:
-    """Get PR. Use to read PR details including description and merge status."""
+    """Read pull request details."""
     return get_pr_workflow(owner, repo, pull_number)
 
 
 @mcp.tool
 def get_pr_files(owner: str, repo: str, pull_number: int) -> list[TextContent]:
-    """Get PR files. Use to see which files were changed in a pull request."""
+    """List files changed in a PR."""
     return get_pr_files_workflow(owner, repo, pull_number)
 
 
 @mcp.tool
 def get_repo(owner: str, repo: str) -> list[TextContent]:
-    """Get repo metadata. Use to read repository details including topics and license."""
+    """Read repository metadata."""
     return get_repo_workflow(owner, repo)
 
 
 @mcp.tool
 def search_discussions(query: str, first: int = 10) -> list[TextContent]:
-    """Search discussions. Use to find Q&A, ideas, or community conversations across GitHub."""
+    """Search GitHub discussions."""
     return search_discussions_workflow(query, first)
 
 
@@ -133,7 +133,7 @@ def list_discussions(
     category: str | None = None,
     answered: bool | None = None
 ) -> list[TextContent]:
-    """List repo discussions. Use to browse discussions in a specific repository."""
+    """List repository discussions."""
     return list_discussions_workflow(owner, repo, first, category, answered)
 
 
@@ -145,7 +145,7 @@ def get_discussion(
     comment_limit: int = 50,
     comment_sort: Literal["upvotes", "chronological"] = "upvotes"
 ) -> list[TextContent]:
-    """Get discussion. Use to read full discussion with comments sorted by upvotes."""
+    """Read discussion with comments."""
     return get_discussion_workflow(owner, repo, number, comment_limit, comment_sort)
 
 
@@ -158,7 +158,7 @@ def list_commits(
     author: str = "",
     per_page: int = 20
 ) -> list[TextContent]:
-    """List commits. Use to browse commit history or find when changes were introduced."""
+    """List commit history."""
     return list_commits_workflow(owner, repo, sha, path, author, per_page)
 
 
@@ -169,7 +169,7 @@ def compare_commits(
     base: str,
     head: str
 ) -> list[TextContent]:
-    """Compare two branches, tags, or SHAs. Use to see changes between versions."""
+    """Compare branches/tags/SHAs."""
     return compare_commits_workflow(owner, repo, base, head)
 
 
@@ -179,7 +179,7 @@ def list_releases(
     repo: str,
     per_page: int = 10
 ) -> list[TextContent]:
-    """List releases. Use to find versions, changelogs, or breaking changes."""
+    """List repository releases."""
     return list_releases_workflow(owner, repo, per_page)
 
 
@@ -189,7 +189,7 @@ def get_release(
     repo: str,
     tag: str | None = None
 ) -> list[TextContent]:
-    """Get release with full notes. Use to read changelogs or check what changed in a version."""
+    """Read release notes."""
     return get_release_workflow(owner, repo, tag)
 
 
