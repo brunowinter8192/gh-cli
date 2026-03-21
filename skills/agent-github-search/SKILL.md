@@ -123,6 +123,11 @@ description: GitHub MCP tool reference for search agents
 | type | "issue"/"pr" | required | Item type to search |
 | sort_by | comments/reactions/created/updated/best_match | best_match | Sort order |
 
+**Empty result handling:** Response < 100 chars = 0 results found.
+- The topic does NOT exist in that repo as an issue/PR — do NOT retry with synonyms on the same repo
+- NEVER repeat the exact same query in the same session
+- Pivot immediately: use `search_code`, `grep_repo`, or read the relevant docs file directly
+
 ### get_issue / get_issue_comments
 
 | Parameter | Type | Default | Description |
