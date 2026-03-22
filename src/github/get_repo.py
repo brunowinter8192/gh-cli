@@ -1,11 +1,15 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
 
+logger = logging.getLogger(__name__)
+
 
 # ORCHESTRATOR
 def get_repo_workflow(owner: str, repo: str) -> list[TextContent]:
+    logger.info("get_repo owner=%s repo=%s", owner, repo)
     raw_data = fetch_repo(owner, repo)
     formatted = format_repo(raw_data)
     return [TextContent(type="text", text=formatted)]
@@ -16,6 +20,7 @@ def get_repo_workflow(owner: str, repo: str) -> list[TextContent]:
 # Fetch repository metadata from GitHub API
 def fetch_repo(owner: str, repo: str) -> dict:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}"
+    logger.debug("Fetching from %s", url)
     response = requests.get(url, headers=build_headers())
     response.raise_for_status()
     return response.json()

@@ -1,6 +1,9 @@
 # INFRASTRUCTURE
+import logging
 from mcp.types import TextContent
 from src.github.graphql_client import graphql_query
+
+logger = logging.getLogger(__name__)
 
 CATEGORIES_QUERY = """
 query($owner: String!, $repo: String!) {
@@ -52,6 +55,7 @@ def list_discussions_workflow(
     category: str | None = None,
     answered: bool | None = None
 ) -> list[TextContent]:
+    logger.info("list_discussions owner=%s repo=%s", owner, repo)
     category_id = None
     if category:
         category_id = lookup_category_id(owner, repo, category)
@@ -65,6 +69,7 @@ def list_discussions_workflow(
 
 # Lookup category ID by slug
 def lookup_category_id(owner: str, repo: str, slug: str) -> str | None:
+    logger.debug("Fetching categories owner=%s repo=%s", owner, repo)
     variables = {"owner": owner, "repo": repo}
     data = graphql_query(CATEGORIES_QUERY, variables)
     categories = data["repository"]["discussionCategories"]["nodes"]
@@ -83,6 +88,7 @@ def fetch_discussions(
     category_id: str | None,
     answered: bool | None
 ) -> dict:
+    logger.debug("Fetching discussions owner=%s repo=%s", owner, repo)
     variables = {
         "owner": owner,
         "repo": repo,

@@ -1,7 +1,10 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, RESULTS_PER_PAGE, build_headers
+
+logger = logging.getLogger(__name__)
 
 
 # ORCHESTRATOR
@@ -13,6 +16,7 @@ def list_commits_workflow(
     author: str = "",
     per_page: int = RESULTS_PER_PAGE
 ) -> list[TextContent]:
+    logger.info("list_commits owner=%s repo=%s", owner, repo)
     raw_data = fetch_commits(owner, repo, sha, path, author, per_page)
     formatted = format_commits(raw_data, owner, repo)
     return [TextContent(type="text", text=formatted)]
@@ -23,6 +27,7 @@ def list_commits_workflow(
 # Fetch commits from repository
 def fetch_commits(owner: str, repo: str, sha: str, path: str, author: str, per_page: int) -> list:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/commits"
+    logger.debug("Fetching from %s", url)
     params = {"per_page": per_page}
     if sha:
         params["sha"] = sha

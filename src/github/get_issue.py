@@ -1,11 +1,15 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
 
+logger = logging.getLogger(__name__)
+
 
 # ORCHESTRATOR
 def get_issue_workflow(owner: str, repo: str, issue_number: int) -> list[TextContent]:
+    logger.info("get_issue owner=%s repo=%s issue_number=%s", owner, repo, issue_number)
     raw_response = fetch_issue(owner, repo, issue_number)
     formatted_string = format_issue(raw_response, owner, repo)
     return [TextContent(type="text", text=formatted_string)]
@@ -16,6 +20,7 @@ def get_issue_workflow(owner: str, repo: str, issue_number: int) -> list[TextCon
 # Fetch single issue from GitHub API
 def fetch_issue(owner: str, repo: str, issue_number: int) -> dict:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues/{issue_number}"
+    logger.debug("Fetching from %s", url)
     response = requests.get(url, headers=build_headers())
     response.raise_for_status()
     return response.json()

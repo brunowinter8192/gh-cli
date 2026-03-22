@@ -1,13 +1,17 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
+
+logger = logging.getLogger(__name__)
 
 COMMENTS_PER_PAGE = 30
 
 
 # ORCHESTRATOR
 def get_issue_comments_workflow(owner: str, repo: str, issue_number: int) -> list[TextContent]:
+    logger.info("get_issue_comments owner=%s repo=%s issue_number=%s", owner, repo, issue_number)
     raw_response = fetch_comments(owner, repo, issue_number)
     formatted_string = format_comments(raw_response, owner, repo, issue_number)
     return [TextContent(type="text", text=formatted_string)]
@@ -18,6 +22,7 @@ def get_issue_comments_workflow(owner: str, repo: str, issue_number: int) -> lis
 # Fetch comments from GitHub API
 def fetch_comments(owner: str, repo: str, issue_number: int) -> list:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues/{issue_number}/comments"
+    logger.debug("Fetching from %s", url)
     params = {"per_page": COMMENTS_PER_PAGE}
     response = requests.get(url, params=params, headers=build_headers())
     response.raise_for_status()

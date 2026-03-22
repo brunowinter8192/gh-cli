@@ -1,12 +1,16 @@
 # INFRASTRUCTURE
+import logging
 import requests
 import base64
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
 
+logger = logging.getLogger(__name__)
+
 
 # ORCHESTRATOR
 def get_file_content_workflow(owner: str, repo: str, path: str, metadata_only: bool = False, offset: int = 0, limit: int = 0) -> list[TextContent]:
+    logger.info("get_file_content owner=%s repo=%s path=%s", owner, repo, path)
     raw_response = fetch_file_content(owner, repo, path)
 
     if isinstance(raw_response, list):
@@ -24,6 +28,7 @@ def get_file_content_workflow(owner: str, repo: str, path: str, metadata_only: b
 # Fetch file content from GitHub Contents API
 def fetch_file_content(owner: str, repo: str, path: str) -> dict:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    logger.debug("Fetching from %s", url)
     response = requests.get(url, headers=build_headers())
     response.raise_for_status()
     return response.json()

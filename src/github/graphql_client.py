@@ -1,8 +1,11 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from src.github.client import GITHUB_TOKEN
 
 GITHUB_GRAPHQL = "https://api.github.com/graphql"
+
+logger = logging.getLogger(__name__)
 
 
 # FUNCTIONS
@@ -13,6 +16,7 @@ def graphql_query(query: str, variables: dict) -> dict:
         "Authorization": f"Bearer {GITHUB_TOKEN}",
         "Content-Type": "application/json"
     }
+    logger.debug("Fetching from %s", GITHUB_GRAPHQL)
     response = requests.post(
         GITHUB_GRAPHQL,
         headers=headers,

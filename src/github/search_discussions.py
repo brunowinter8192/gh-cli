@@ -1,6 +1,9 @@
 # INFRASTRUCTURE
+import logging
 from mcp.types import TextContent
 from src.github.graphql_client import graphql_query
+
+logger = logging.getLogger(__name__)
 
 SEARCH_QUERY = """
 query($query: String!, $first: Int!) {
@@ -28,6 +31,7 @@ query($query: String!, $first: Int!) {
 
 # ORCHESTRATOR
 def search_discussions_workflow(query: str, first: int = 10) -> list[TextContent]:
+    logger.info("search_discussions query=%s", query)
     raw_data = fetch_discussions(query, first)
     formatted = format_results(raw_data)
     return [TextContent(type="text", text=formatted)]
@@ -37,6 +41,7 @@ def search_discussions_workflow(query: str, first: int = 10) -> list[TextContent
 
 # Fetch discussions via GitHub GraphQL Search API
 def fetch_discussions(query: str, first: int) -> dict:
+    logger.debug("Fetching discussions query=%s", query)
     variables = {"query": query, "first": min(first, 100)}
     return graphql_query(SEARCH_QUERY, variables)
 

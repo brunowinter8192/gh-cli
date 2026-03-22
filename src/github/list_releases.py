@@ -1,13 +1,17 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
+
+logger = logging.getLogger(__name__)
 
 MAX_BODY_LENGTH = 300
 
 
 # ORCHESTRATOR
 def list_releases_workflow(owner: str, repo: str, per_page: int = 10) -> list[TextContent]:
+    logger.info("list_releases owner=%s repo=%s", owner, repo)
     raw_data = fetch_releases(owner, repo, per_page)
     formatted = format_releases(raw_data, owner, repo)
     return [TextContent(type="text", text=formatted)]
@@ -18,6 +22,7 @@ def list_releases_workflow(owner: str, repo: str, per_page: int = 10) -> list[Te
 # Fetch releases from repository
 def fetch_releases(owner: str, repo: str, per_page: int) -> list:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/releases"
+    logger.debug("Fetching from %s", url)
     params = {"per_page": per_page}
     response = requests.get(url, params=params, headers=build_headers())
     response.raise_for_status()

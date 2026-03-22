@@ -1,11 +1,15 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, RESULTS_PER_PAGE, build_headers
 
+logger = logging.getLogger(__name__)
+
 
 # ORCHESTRATOR
 def search_code_workflow(query: str) -> list[TextContent]:
+    logger.info("search_code query=%s", query)
     raw_response = fetch_code_search(query)
     formatted_string = format_code_results(raw_response)
     return [TextContent(type="text", text=formatted_string)]
@@ -16,6 +20,7 @@ def search_code_workflow(query: str) -> list[TextContent]:
 # Fetch code search results with text match metadata
 def fetch_code_search(query: str) -> dict:
     url = f"{GITHUB_API_BASE}/search/code"
+    logger.debug("Fetching from %s", url)
     params = {
         "q": query,
         "per_page": RESULTS_PER_PAGE

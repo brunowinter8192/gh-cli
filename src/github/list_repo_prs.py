@@ -1,8 +1,11 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from typing import Literal
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, RESULTS_PER_PAGE, build_headers
+
+logger = logging.getLogger(__name__)
 
 
 # ORCHESTRATOR
@@ -12,6 +15,7 @@ def list_repo_prs_workflow(
     state: Literal["open", "closed", "all"] = "open",
     sort_by: Literal["created", "updated", "popularity", "long-running"] = "created"
 ) -> list[TextContent]:
+    logger.info("list_repo_prs owner=%s repo=%s", owner, repo)
     raw_response = fetch_repo_prs(owner, repo, state, sort_by)
     formatted_string = format_pr_list(raw_response, owner, repo)
     return [TextContent(type="text", text=formatted_string)]
@@ -22,6 +26,7 @@ def list_repo_prs_workflow(
 # Fetch PRs from repository
 def fetch_repo_prs(owner: str, repo: str, state: str, sort_by: str) -> list:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls"
+    logger.debug("Fetching from %s", url)
     params = {
         "state": state,
         "sort": sort_by,

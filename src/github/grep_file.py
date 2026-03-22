@@ -1,13 +1,17 @@
 # INFRASTRUCTURE
+import logging
 import re
 from mcp.types import TextContent
 from src.github.get_file_content import fetch_file_content, decode_content
+
+logger = logging.getLogger(__name__)
 
 MAX_MATCHES = 50
 
 
 # ORCHESTRATOR
 def grep_file_workflow(owner: str, repo: str, path: str, pattern: str, context_lines: int = 0, max_matches: int = MAX_MATCHES) -> list[TextContent]:
+    logger.info("grep_file owner=%s repo=%s path=%s pattern=%s", owner, repo, path, pattern)
     raw_response = fetch_file_content(owner, repo, path)
 
     if isinstance(raw_response, list):

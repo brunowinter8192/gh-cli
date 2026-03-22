@@ -1,7 +1,10 @@
 # INFRASTRUCTURE
+import logging
 from typing import Literal
 from mcp.types import TextContent
 from src.github.graphql_client import graphql_query
+
+logger = logging.getLogger(__name__)
 
 DISCUSSION_QUERY = """
 query($owner: String!, $repo: String!, $number: Int!, $commentLimit: Int!) {
@@ -55,6 +58,7 @@ def get_discussion_workflow(
     comment_limit: int = 50,
     comment_sort: Literal["upvotes", "chronological"] = "upvotes"
 ) -> list[TextContent]:
+    logger.info("get_discussion owner=%s repo=%s number=%s", owner, repo, number)
     raw_data = fetch_discussion(owner, repo, number, comment_limit)
     formatted = format_discussion(raw_data, comment_limit, comment_sort)
     return [TextContent(type="text", text=formatted)]
@@ -64,6 +68,7 @@ def get_discussion_workflow(
 
 # Fetch single discussion with comments
 def fetch_discussion(owner: str, repo: str, number: int, comment_limit: int) -> dict:
+    logger.debug("Fetching discussion owner=%s repo=%s number=%s", owner, repo, number)
     variables = {
         "owner": owner,
         "repo": repo,
@@ -102,7 +107,6 @@ def format_discussion(data: dict, comment_limit: int, comment_sort: str) -> str:
         "\n---\n"
     ]
 
-    # Accepted Answer section
     answer = d.get("answer")
     if answer:
         ans_author = (answer.get("author") or {}).get("login", "unknown")
@@ -111,7 +115,6 @@ def format_discussion(data: dict, comment_limit: int, comment_sort: str) -> str:
         lines.append(answer.get("body", ""))
         lines.append("\n---\n")
 
-    # Comments section
     comments_data = d.get("comments") or {}
     total_comments = comments_data.get("totalCount", 0)
     comments = comments_data.get("nodes") or []
@@ -126,7 +129,6 @@ def format_discussion(data: dict, comment_limit: int, comment_sort: str) -> str:
         lines.append(f"**@{c_author}** ({c.get('createdAt', '')[:10]}) - {c.get('upvoteCount', 0)} upvotes{is_answer}")
         lines.append(c.get("body", ""))
 
-        # Replies
         replies = (c.get("replies") or {}).get("nodes") or []
         for r in replies:
             r_author = (r.get("author") or {}).get("login", "unknown")

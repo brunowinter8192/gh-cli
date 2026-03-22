@@ -1,11 +1,15 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
 
+logger = logging.getLogger(__name__)
+
 
 # ORCHESTRATOR
 def get_release_workflow(owner: str, repo: str, tag: str | None = None) -> list[TextContent]:
+    logger.info("get_release owner=%s repo=%s tag=%s", owner, repo, tag)
     raw = fetch_release(owner, repo, tag)
     formatted = format_release(raw, owner, repo)
     return [TextContent(type="text", text=formatted)]
@@ -19,6 +23,7 @@ def fetch_release(owner: str, repo: str, tag: str | None) -> dict:
         url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/releases/tags/{tag}"
     else:
         url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/releases/latest"
+    logger.debug("Fetching from %s", url)
     response = requests.get(url, headers=build_headers())
     response.raise_for_status()
     return response.json()

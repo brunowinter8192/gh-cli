@@ -1,11 +1,15 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
 
+logger = logging.getLogger(__name__)
+
 
 # ORCHESTRATOR
 def get_pr_workflow(owner: str, repo: str, pull_number: int) -> list[TextContent]:
+    logger.info("get_pr owner=%s repo=%s pull_number=%s", owner, repo, pull_number)
     raw_response = fetch_pr(owner, repo, pull_number)
     formatted_string = format_pr(raw_response, owner, repo)
     return [TextContent(type="text", text=formatted_string)]
@@ -16,6 +20,7 @@ def get_pr_workflow(owner: str, repo: str, pull_number: int) -> list[TextContent
 # Fetch single PR from GitHub API
 def fetch_pr(owner: str, repo: str, pull_number: int) -> dict:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pull_number}"
+    logger.debug("Fetching from %s", url)
     response = requests.get(url, headers=build_headers())
     response.raise_for_status()
     return response.json()

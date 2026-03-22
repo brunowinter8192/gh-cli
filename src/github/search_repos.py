@@ -1,8 +1,11 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from typing import Literal
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, RESULTS_PER_PAGE, build_headers
+
+logger = logging.getLogger(__name__)
 
 
 # ORCHESTRATOR
@@ -13,6 +16,7 @@ def search_repos_workflow(
     query: str,
     sort_by: Literal["stars", "forks", "updated", "best_match"] = "best_match"
 ) -> list[TextContent]:
+    logger.info("search_repos query=%s sort_by=%s", query, sort_by)
     query, truncation_warning = enforce_query_length(query)
     raw_response = fetch_repositories(query, sort_by)
     formatted_string = format_repo_results(raw_response)
@@ -36,6 +40,7 @@ def enforce_query_length(query: str) -> tuple[str, str]:
 # Fetch repositories from GitHub Search API
 def fetch_repositories(query: str, sort_by: str) -> dict:
     url = f"{GITHUB_API_BASE}/search/repositories"
+    logger.debug("Fetching from %s", url)
 
     params = {
         "q": query,

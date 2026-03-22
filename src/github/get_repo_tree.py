@@ -1,9 +1,12 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from fnmatch import fnmatch
 from os.path import basename
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
+
+logger = logging.getLogger(__name__)
 
 MAX_TREE_CHARS = 1000
 PATTERN_RESULTS_LIMIT = 50
@@ -11,6 +14,7 @@ PATTERN_RESULTS_LIMIT = 50
 
 # ORCHESTRATOR
 def get_repo_tree_workflow(owner: str, repo: str, path: str = "", depth: int = -1, pattern: str = "") -> list[TextContent]:
+    logger.info("get_repo_tree owner=%s repo=%s path=%s", owner, repo, path)
     default_branch = fetch_default_branch(owner, repo)
     tree_sha = get_tree_sha(owner, repo, default_branch, path)
 
@@ -31,6 +35,7 @@ def get_repo_tree_workflow(owner: str, repo: str, path: str = "", depth: int = -
 # Get default branch name for repository
 def fetch_default_branch(owner: str, repo: str) -> str:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}"
+    logger.debug("Fetching from %s", url)
     headers = build_headers()
 
     response = requests.get(url, headers=headers)
@@ -42,12 +47,14 @@ def fetch_default_branch(owner: str, repo: str) -> str:
 def get_tree_sha(owner: str, repo: str, branch: str, path: str) -> str:
     if not path:
         url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/branches/{branch}"
+        logger.debug("Fetching from %s", url)
         headers = build_headers()
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         return response.json()["commit"]["commit"]["tree"]["sha"]
 
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    logger.debug("Fetching from %s", url)
     params = {"ref": branch}
     headers = build_headers("application/vnd.github.object+json")
     response = requests.get(url, params=params, headers=headers)
@@ -63,6 +70,7 @@ def get_tree_sha(owner: str, repo: str, branch: str, path: str) -> str:
 # Fetch tree structure from GitHub Git Trees API
 def fetch_tree(owner: str, repo: str, tree_sha: str, recursive: bool = True) -> dict:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/trees/{tree_sha}"
+    logger.debug("Fetching from %s", url)
     params = {"recursive": "true"} if recursive else {}
     headers = build_headers()
 

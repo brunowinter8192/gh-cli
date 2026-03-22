@@ -1,7 +1,10 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
+
+logger = logging.getLogger(__name__)
 
 FILES_PER_PAGE = 100
 MAX_PATCH_PREVIEW = 500
@@ -9,6 +12,7 @@ MAX_PATCH_PREVIEW = 500
 
 # ORCHESTRATOR
 def get_pr_files_workflow(owner: str, repo: str, pull_number: int) -> list[TextContent]:
+    logger.info("get_pr_files owner=%s repo=%s pull_number=%s", owner, repo, pull_number)
     raw_response = fetch_pr_files(owner, repo, pull_number)
     formatted_string = format_pr_files(raw_response, owner, repo, pull_number)
     return [TextContent(type="text", text=formatted_string)]
@@ -19,6 +23,7 @@ def get_pr_files_workflow(owner: str, repo: str, pull_number: int) -> list[TextC
 # Fetch PR files from GitHub API
 def fetch_pr_files(owner: str, repo: str, pull_number: int) -> list:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pull_number}/files"
+    logger.debug("Fetching from %s", url)
     params = {"per_page": FILES_PER_PAGE}
     response = requests.get(url, params=params, headers=build_headers())
     response.raise_for_status()

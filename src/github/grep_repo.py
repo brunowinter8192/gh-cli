@@ -1,10 +1,13 @@
 # INFRASTRUCTURE
+import logging
 import re
 from mcp.types import TextContent
 from src.github.get_repo_tree import fetch_default_branch, get_tree_sha, fetch_tree
 from src.github.get_repo_tree import filter_by_pattern
 from src.github.get_file_content import fetch_file_content, decode_content
 from src.github.grep_file import search_lines
+
+logger = logging.getLogger(__name__)
 
 MAX_FILES = 10
 MAX_MATCHES_PER_FILE = 3
@@ -13,6 +16,7 @@ MAX_MATCHES_PER_FILE = 3
 # ORCHESTRATOR
 def grep_repo_workflow(owner: str, repo: str, pattern: str, file_pattern: str = "*", path: str = "", max_files: int = MAX_FILES) -> list[TextContent]:
     """Regex search across repo files."""
+    logger.info("grep_repo owner=%s repo=%s pattern=%s", owner, repo, pattern)
     max_files = max(max_files, 20)  # Floor: agent can go higher, never lower
     default_branch = fetch_default_branch(owner, repo)
     tree_sha = get_tree_sha(owner, repo, default_branch, path)

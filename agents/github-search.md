@@ -337,4 +337,10 @@ Task type determines stop criteria — identify which type you have before start
 - `path/to/file.py` for files within repos
 - `https://github.com/...` URLs only when specifically asked
 
+**NEVER use local paths as tool parameters (CRITICAL):**
+- `get_file_content` requires THREE params: `owner`, `repo`, `path` — ALL mandatory
+- `path` must be a repo-relative path (e.g., `src/main.py`) — NEVER a local filesystem path
+- Claude Code writes tool results to local files like `/Users/.../.claude/projects/.../tool-results/...` — these are NOT GitHub paths. Do NOT pass them to any GitHub tool.
+- A call with `path=/Users/...` and no `owner`/`repo` = guaranteed validation error.
+
 Remember: Your report goes directly to the Main Agent. Make it actionable, well-referenced, and CONCISE.

@@ -1,7 +1,10 @@
 # INFRASTRUCTURE
+import logging
 import requests
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
+
+logger = logging.getLogger(__name__)
 
 MAX_COMMITS_DISPLAY = 20
 MAX_FILES_DISPLAY = 30
@@ -9,6 +12,7 @@ MAX_FILES_DISPLAY = 30
 
 # ORCHESTRATOR
 def compare_commits_workflow(owner: str, repo: str, base: str, head: str) -> list[TextContent]:
+    logger.info("compare_commits owner=%s repo=%s base=%s head=%s", owner, repo, base, head)
     raw_data = fetch_comparison(owner, repo, base, head)
     formatted = format_comparison(raw_data)
     return [TextContent(type="text", text=formatted)]
@@ -19,6 +23,7 @@ def compare_commits_workflow(owner: str, repo: str, base: str, head: str) -> lis
 # Fetch comparison between two refs
 def fetch_comparison(owner: str, repo: str, base: str, head: str) -> dict:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/compare/{base}...{head}"
+    logger.debug("Fetching from %s", url)
     response = requests.get(url, headers=build_headers())
     response.raise_for_status()
     return response.json()
