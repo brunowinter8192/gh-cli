@@ -38,7 +38,10 @@ github/
 ├── server.py
 ├── requirements.txt
 ├── README.md                       → [Setup & External Docs](README.md)
+├── mcp-start.sh
 ├── decisions/
+│   ├── api_strategy.md
+│   └── tool_design.md
 ├── src/
 │   └── github/                     → [DOCS.md](src/github/DOCS.md)
 ├── .claude-plugin/                 → Plugin distribution
