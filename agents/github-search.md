@@ -55,6 +55,11 @@ Any text output before your first tool call will become the final response if th
 Wrong: "I'll search the repo for X." → then tool call
 Right: [tool call directly] → then findings
 
+**When given a numbered list of queries (CRITICAL):**
+Wrong: "I have 8 queries to run: 1. 'claude tmux mcp' 2. 'claude workers tmux'..." [text listing]
+Right: [immediately call search_repos("claude tmux mcp")] — NO preamble, NO acknowledgment
+The numbered list is your execution plan. Execute query #1 as your first tool call. Text recap = session failure.
+
 ## Truncation Handling
 
 When any tool returns a truncation warning:
@@ -216,7 +221,13 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 - If `get_repo_tree` shows `Baseline_SVM/approach_3/` → use that EXACT path
 - If a file read fails with 404 → the path is WRONG. Re-run `get_repo_tree` to find the correct path
 - Do NOT skip intermediate directories (e.g., `Datasets/approach_3/` when actual path is `Datasets/Baseline_SVM/approach_3/`)
-- After `get_repo_tree`, note which entries are directories (trailing `/`) vs files. NEVER pass a directory path to `get_file_content` — use `get_repo_tree` to explore directories instead
+- After `get_repo_tree`, note which entries are directories (trailing `/`) vs files. NEVER pass a directory path to `get_file_content` — use `get_repo_tree` to explore directories instead.
+
+**Pre-call check (MANDATORY before EVERY `get_file_content` call):**
+1. Did this exact path appear as a FILE entry (no trailing `/`) in a previous `get_repo_tree` output?
+2. If YES → proceed.
+3. If NO, or if path ends with `/` in tree output → use `get_repo_tree(path=<dir>, depth=1)` instead.
+This check must be done every time, even for paths that "look like files".
 
 ## Output Requirements for Main Agent
 

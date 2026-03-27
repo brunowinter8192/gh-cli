@@ -57,6 +57,58 @@ description: GitHub MCP tool reference for search agents
 | list_releases | List all releases with changelogs |
 | get_release | Read full release notes for a specific tag |
 
+## Navigation Rules
+
+**1. DOCS first — always.**
+Before opening data files or CSVs in any directory, check for README.md or DOCS.md in that directory (or parent). Well-documented repos explain which files are authoritative and what each subdirectory contains. Skipping DOCS leads to reading the wrong file.
+
+**2. Ambiguous matches — check ALL before reporting.**
+When multiple candidates exist (same filename in different paths, multiple subdirectories like `approach_1/` through `approach_4/`, different versions of the same data): check ALL of them BEFORE reporting any result. Never report a mismatch after checking only one candidate when others remain unchecked. The correct workflow is:
+1. Identify all candidates (parallel `get_file_content` or `grep_file` calls)
+2. Compare each against the expected data
+3. Report the full picture: which matches, which don't, and why
+
+**3. When no candidate matches — show all.**
+If after checking ALL candidates none matches, present all findings with their full paths. One wrong assumption wastes more time than a few extra tool calls.
+
+**4. Search Mode — targeted vs exploratory.**
+
+- **Targeted search** (asked for specific data, verification, comparison):
+  Exhaust cheap self-serve options first:
+  1. `get_repo_tree(pattern="*keyword*")` or `grep_repo` to locate files directly
+  2. If file found but content doesn't match → **check same directory first** (`depth=1`) for variants (filtered, selected, final, summary...)
+  3. If same directory has nothing → broaden scope one level up
+  4. Only after 2-3 failed attempts → report as NOT FOUND
+
+- **Exploratory search** (discover trends, compare repos, survey landscape):
+  Navigate freely with tools. Drill down via get_repo_tree, read READMEs, follow interesting leads.
+
+**5. Filename search before content search.**
+When looking for a specific example or report, search by the broadest known identifier in the filename FIRST (e.g., template name, query ID), not by specific content details (e.g., node IDs, exact values).
+- `get_repo_tree(pattern="*Q8*", path="Predictions/")` → finds all Q8 reports in one call
+- `grep_repo(pattern="13408", file_pattern="*.md")` → may miss due to `max_files` limit
+
+**6. Session context before new searches.**
+Before making new tool calls, check if the referenced data was already read in this session. New claims often reference the same source files as previous ones. Re-reading known files wastes tool calls.
+
+## Reading Priority (per repository)
+
+1. **README.md** - Overview, features, usage
+2. **package.json / pyproject.toml** - Dependencies, metadata
+3. **docs/ or examples/** - Usage patterns
+4. **src/** - Only if critical to answer question
+
+## Result Limits
+
+**search_repos / search_code:**
+- Fetch: Top 10-15 results
+- Read in depth: Top 3-5
+- Skim rest: Only for outliers
+
+**Files per repo:**
+- Max 3-4 files (README + key sources)
+- Use get_repo_tree first to identify critical files
+
 ## Parameter Reference
 
 ### search_repos
@@ -246,6 +298,11 @@ GitHub search supports qualifiers in query strings:
 - GitHub Code Search skips `type: data` files (CSV, TSV, etc. per GitHub Linguist)
 - Tool shows NOTE when 0 results
 - **Fallback:** Use `grep_repo` for data file content search
+
+**search_repos — query length limit:**
+- Server auto-truncates queries to 3 words with warning in output
+- When exploring a broad topic: run MULTIPLE short queries, not ONE long query
+- Use `sort_by` parameter (stars, updated) to filter, not more query words
 
 **grep_repo — max_files limit:**
 - Server enforces min 20 files regardless of `max_files` value

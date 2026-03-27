@@ -274,9 +274,9 @@ github/
 ├── .claude-plugin/           # Plugin distribution
 │   ├── plugin.json           # Plugin metadata
 │   ├── marketplace.json      # Marketplace entry
-│   ├── .mcp.json             # MCP server config
-│   ├── skills/github/SKILL.md
-│   └── agents/github-search.md
+│   └── .mcp.json             # MCP server config
+├── agents/github-search.md   # Subagent system prompt
+├── skills/agent-github-search/SKILL.md  # Subagent tool reference
 ├── server.py                 # MCP entry point
 └── src/github/               # Tool implementations
     └── DOCS.md
@@ -287,8 +287,8 @@ github/
 | Doc | Content |
 |-----|---------|
 | `src/github/DOCS.md` | Tool implementation details |
-| `.claude-plugin/skills/github/SKILL.md` | Tool usage guide |
-| `.claude-plugin/agents/github-search.md` | Subagent instructions |
+| `skills/agent-github-search/SKILL.md` | Subagent tool reference + usage strategies |
+| `agents/github-search.md` | Subagent system prompt |
 
 ## Development
 
