@@ -1,23 +1,42 @@
-# GitHub Research Plugin
+# GitHub Research
 
-GitHub API tools for Claude Code - search repos, code, issues, PRs, discussions.
+GitHub API tools for Claude Code — search repos, code, issues, PRs, discussions, and explore any repository.
 
-## Installation
+## Features
 
-### As Plugin (recommended)
+- **Full GitHub Search** — repos, code snippets, issues, PRs, and discussions in one plugin
+- **Repository Exploration** — browse file trees, read files, grep content without cloning
+- **PR & Commit Analysis** — inspect diffs, changed files, commit history, branch comparisons
+- **Release Tracking** — list releases and read changelogs
+- **Autonomous Research Agent** — dispatches multi-tool GitHub investigations automatically
 
-In a Claude Code session:
+## Quick Start
 
 ```
 /plugin marketplace add brunowinter8192/claude-plugins
 /plugin install github-research
+# Restart session
 ```
 
-Restart the session after installation.
+## Prerequisites
 
-### Manual (.mcp.json)
+- Python 3.10+
+- `GH_TOKEN` environment variable (optional, recommended — see Setup)
 
-Add to your project's `.mcp.json` (all paths must be absolute):
+## Setup
+
+**Plugin install** (Quick Start above) handles everything automatically.
+
+**GitHub Token (recommended):**
+
+```bash
+# Add to ~/.zshrc or ~/.bashrc
+export GH_TOKEN="ghp_your_token_here"
+```
+
+Without a token the plugin works on public repos at 60 requests/hour. With a token: 5000 requests/hour.
+
+**Manual install** (without plugin system):
 
 ```json
 {
@@ -31,269 +50,77 @@ Add to your project's `.mcp.json` (all paths must be absolute):
 }
 ```
 
-### GitHub Token (optional)
+## Usage
 
-Set `GH_TOKEN` in your shell for authenticated access (higher rate limits):
+### MCP Tools
+
+| Tool | What it does | When to use |
+|------|-------------|-------------|
+| `search_repos` | Find repositories by topic, language, keyword | Discover projects or alternatives |
+| `search_code` | Find code patterns across GitHub | Find implementation examples |
+| `search_items` | Search issues or PRs across GitHub | Track bugs, feature requests, merged changes |
+| `search_discussions` | Find discussions across GitHub | Community Q&A, design decisions |
+| `get_repo` | Repository metadata, topics, stats | Quick overview before diving in |
+| `get_repo_tree` | Browse file structure with optional filtering | Understand project layout |
+| `get_file_content` | Read file content with pagination | Read source files |
+| `grep_file` | Regex search within a single file | Find specific code in a known file |
+| `grep_repo` | Regex search across all repo files | Find patterns when `search_code` returns nothing |
+| `get_issue` / `get_issue_comments` | Issue details and full discussion thread | Understand a reported bug or request |
+| `list_repo_prs` | List PRs with state and sort filters | See what's merged, open, or in review |
+| `get_pr` / `get_pr_files` | PR details and list of changed files | Review a specific pull request |
+| `list_commits` / `compare_commits` | Commit history or diff between branches/tags | Track changes over time |
+| `list_releases` / `get_release` | Releases with changelogs | Check latest version or release notes |
+| `list_discussions` / `get_discussion` | Discussions in a specific repo | Read community conversations |
+
+### Skills & Commands
+
+- **`/github-research:agent-github-search`** — Tool reference and usage workflows for the GitHub search agent. Activate when doing multi-step research.
+
+### Agents
+
+- **`github-search`** — Autonomous deep-research specialist. Chains multiple tools to investigate repos, compare libraries, or trace issues. Dispatch for complex multi-tool tasks; use direct tool calls for single lookups.
+
+## Workflows
+
+**Researching a library:**
+`search_repos` → `get_repo` for stats → `get_repo_tree` to understand structure → `get_file_content` or `grep_repo` to read implementation details.
+
+**Investigating an issue:**
+`search_items` (or known issue number) → `get_issue` → `get_issue_comments` for full discussion → `list_repo_prs` to find the fix → `get_pr_files` to see what changed.
+
+**Comparing implementations:**
+Dispatch the `github-search` agent with a research question — it searches, reads, and compares across repos automatically.
+
+## Troubleshooting
+
+<details>
+<summary>Rate limit exceeded</summary>
+
+Without a token GitHub allows ~60 requests/hour. Set `GH_TOKEN` in your shell and restart:
 
 ```bash
-# Add to ~/.zshrc or ~/.bashrc
 export GH_TOKEN="ghp_your_token_here"
 ```
 
-Without a token, tools work but hit GitHub's unauthenticated rate limit (~60 req/hour).
+Authenticated requests get 5000/hour.
+</details>
 
-## Plugin Components
+<details>
+<summary>search_code returns empty results</summary>
 
-| Component | Name | Description |
-|-----------|------|-------------|
-| **Skill** | `/github-research:gh-search` | Tool usage context and workflows |
-| **MCP Server** | `github` | 21 GitHub API tools |
-| **Subagent** | `github-search` | Deep research specialist |
+GitHub code search has indexing limitations — not all repos or files are indexed. Fallbacks:
 
-## MCP Tools
+1. Use `grep_repo` on a known repo to search file content directly
+2. Use `get_repo_tree` + `get_file_content` to read files manually
+3. Try shorter, more specific queries (GitHub truncates long queries internally)
+</details>
 
-### search_repos
+<details>
+<summary>Tools not available after install</summary>
 
-Find repositories by topic, language, or keyword.
+Restart your Claude Code session after installing the plugin. MCP servers are loaded at session start.
+</details>
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `query` | string | required | Search query with GitHub qualifiers (e.g., `"fastapi stars:>1000"`) |
-| `sort_by` | `"stars"` / `"forks"` / `"updated"` / `"best_match"` | `"best_match"` | Sort order |
+## License
 
-### search_code
-
-Find code snippets and implementation patterns across GitHub.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `query` | string | required | Code search query |
-
-### get_repo
-
-Get repository metadata including topics, license, and stats.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-
-### get_repo_tree
-
-Browse repository file structure with optional filtering.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `path` | string | `""` | Subdirectory path |
-| `depth` | int | `-1` | Tree depth (`-1` = full) |
-| `pattern` | string | `""` | Glob filter (e.g., `"*.py"`) |
-
-### get_file_content
-
-Read file content with optional pagination for large files.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `path` | string | required | File path |
-| `metadata_only` | bool | `false` | Return only metadata |
-| `offset` | int | `0` | Start line (pagination) |
-| `limit` | int | `0` | Max lines (`0` = all) |
-
-### grep_file
-
-Search file content by regex pattern without downloading entire file.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `path` | string | required | File path |
-| `pattern` | string | required | Regex pattern |
-| `context_lines` | int | `0` | Lines before/after match |
-| `max_matches` | int | `50` | Max results |
-
-### grep_repo
-
-Search file content across repo by file pattern. Fallback when `search_code` fails on data files.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `pattern` | string | required | Regex pattern |
-| `file_pattern` | string | `"*.csv"` | File glob filter |
-| `path` | string | `""` | Subdirectory scope |
-| `max_files` | int | `10` | Max files to search |
-
-### search_items
-
-Find issues or PRs across GitHub.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `query` | string | required | Search query |
-| `type` | `"issue"` / `"pr"` | required | Item type |
-| `sort_by` | `"comments"` / `"reactions"` / `"created"` / `"updated"` / `"best_match"` | `"best_match"` | Sort order |
-
-### get_issue / get_issue_comments
-
-Get issue details or discussion thread.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `issue_number` | int | required | Issue number |
-
-### list_repo_prs
-
-List pull requests in a repository.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `state` | `"open"` / `"closed"` / `"all"` | `"open"` | PR state filter |
-| `sort_by` | `"created"` / `"updated"` / `"popularity"` / `"long-running"` | `"created"` | Sort order |
-
-### get_pr / get_pr_files
-
-Get PR details or list changed files.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `pull_number` | int | required | PR number |
-
-### list_commits
-
-Browse commit history with optional filters.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `sha` | string | `""` | Branch or SHA to start from |
-| `path` | string | `""` | Only commits touching this file |
-| `author` | string | `""` | Filter by author (username or email) |
-| `per_page` | int | `20` | Number of results |
-
-### compare_commits
-
-Compare two branches, tags, or SHAs.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `base` | string | required | Base branch, tag, or SHA |
-| `head` | string | required | Head branch, tag, or SHA |
-
-### list_releases
-
-List releases with version tags and changelogs.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `per_page` | int | `10` | Number of results |
-
-### get_release
-
-Get a single release with full release notes. Without tag returns latest release.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `tag` | string | `null` | Version tag (e.g., `"v2.1.72"`). Omit for latest |
-
-### search_discussions
-
-Find discussions across GitHub.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `query` | string | required | Search query |
-| `first` | int | `10` | Number of results |
-
-### list_discussions
-
-Browse discussions in a specific repository.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `first` | int | `10` | Number of results |
-| `category` | string | `null` | Filter by category |
-| `answered` | bool | `null` | Filter by answered status |
-
-### get_discussion
-
-Read full discussion with comments.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `owner` | string | required | Repository owner |
-| `repo` | string | required | Repository name |
-| `number` | int | required | Discussion number |
-| `comment_limit` | int | `50` | Max comments |
-| `comment_sort` | `"upvotes"` / `"chronological"` | `"upvotes"` | Comment sort order |
-
-## Component Details
-
-### Skill
-
-- **Trigger:** `ghs` in prompt
-- **Manual:** `/github-research:gh-search`
-- **Content:** Tool context, workflows, when-to-use guidance
-
-### MCP Server
-
-- 20 read-only GitHub API tools
-- **Required for private repos:** Set `GITHUB_TOKEN` or `GH_TOKEN` as system env var
-- Without token: public repos only, lower rate limits
-
-### Subagent
-
-- **Type:** `github-search`
-- **Use for:** Complex multi-tool research, comparing repos
-- **Skip for:** Single tool calls, known owner/repo
-
-## Directory Structure
-
-```
-github/
-├── .claude-plugin/           # Plugin distribution
-│   ├── plugin.json           # Plugin metadata
-│   ├── marketplace.json      # Marketplace entry
-│   └── .mcp.json             # MCP server config
-├── agents/github-search.md   # Subagent system prompt
-├── skills/agent-github-search/SKILL.md  # Subagent tool reference
-├── server.py                 # MCP entry point
-└── src/github/               # Tool implementations
-    └── DOCS.md
-```
-
-## Documentation
-
-| Doc | Content |
-|-----|---------|
-| `src/github/DOCS.md` | Tool implementation details |
-| `skills/agent-github-search/SKILL.md` | Subagent tool reference + usage strategies |
-| `agents/github-search.md` | Subagent system prompt |
-
-## Development
-
-Local testing without installation:
-
-```bash
-claude --plugin-dir ./github
-```
+MIT
