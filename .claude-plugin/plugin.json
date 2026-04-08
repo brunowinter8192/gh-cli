@@ -7,8 +7,7 @@
   },
   "repository": "https://github.com/brunowinter8192/github-MCP",
   "keywords": ["github", "research", "mcp", "search"],
-  "skills": ["./skills/agent-github-search/"],
-  "agents": ["./agents/github-search.md"],
+  "skills": ["./skills/github-search/"],
   "mcpServers": {
     "github": {
       "command": "${CLAUDE_PLUGIN_ROOT}/mcp-start.sh",
