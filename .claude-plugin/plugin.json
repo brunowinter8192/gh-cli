@@ -1,17 +1,11 @@
 {
   "name": "github-research",
-  "version": "1.0.0",
-  "description": "GitHub research capability - search repos, code, issues, PRs",
+  "version": "1.1.0",
+  "description": "GitHub research capability - search repos, code, issues, PRs, discussions, releases via CLI",
   "author": {
     "name": "Bruno Winter"
   },
   "repository": "https://github.com/brunowinter8192/github-MCP",
-  "keywords": ["github", "research", "mcp", "search"],
-  "skills": ["./skills/github-search/"],
-  "mcpServers": {
-    "github": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-start.sh",
-      "args": []
-    }
-  }
+  "keywords": ["github", "research", "cli", "search"],
+  "skills": ["./skills/github-search/"]
 }
