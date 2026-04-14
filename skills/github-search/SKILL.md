@@ -1,6 +1,6 @@
 ---
 name: github-search
-description: Search GitHub repositories, code, issues, PRs, discussions, releases via CLI. Use when user asks to find repos, grep code in repos, fetch issues/PRs, explore GitHub content, read release notes, compare commits, or browse discussions.
+description: See ~/.claude/shared-rules/global/cli-skills.md
 ---
 
 # GitHub Search — Skill
