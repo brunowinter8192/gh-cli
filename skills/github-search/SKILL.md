@@ -1,20 +1,69 @@
 ---
 name: github-search
-description: GitHub MCP tool reference, search strategies, and report formats
+description: Search GitHub repositories, code, issues, PRs, discussions, releases via CLI. Use when user asks to find repos, grep code in repos, fetch issues/PRs, explore GitHub content, read release notes, compare commits, or browse discussions.
 ---
 
 # GitHub Search — Skill
 
-## Tool Name Format
+## CLI Invocation
 
-All tools use the prefix: `mcp__plugin_github-research_github__`
+All tools are invoked via the Bash tool using absolute paths:
 
-The plugin is named `github-research` — with HYPHEN, NOT underscore.
+```
+/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/MCP/github/.venv/bin/python \
+  /Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/MCP/github/cli.py <cmd> [args]
+```
 
-- CORRECT: `mcp__plugin_github-research_github__get_repo`
-- WRONG: `mcp__plugin_github_research_github__get_repo`
+### Quick Reference — All 20 Tools
 
-On `Error: No such tool available`: you are using the wrong prefix. Stop immediately, correct to the format above, and retry. If errors persist after correction: report "Tool error: [message]. Research not possible." and stop.
+```bash
+# Discovery
+python cli.py search_repos "fastapi" --sort-by stars
+python cli.py search_code "def workflow language:python repo:owner/repo"
+python cli.py get_repo anthropics claude-code
+
+# Repository Exploration
+python cli.py get_repo_tree anthropics claude-code --path src --depth 2 --pattern "*.py"
+python cli.py get_file_content anthropics claude-code README.md
+python cli.py get_file_content anthropics claude-code src/main.py --offset 100 --limit 50
+python cli.py get_file_content anthropics claude-code src/ --metadata-only
+
+# Content Search
+python cli.py grep_file anthropics claude-code src/main.py "def run" --context-lines 3
+python cli.py grep_repo anthropics claude-code "class.*Tool" --file-pattern "*.py" --path src --max-files 20
+
+# Issues & PRs
+python cli.py search_items "memory leak repo:anthropics/claude-code" --type issue --sort-by comments
+python cli.py get_issue anthropics claude-code 1234
+python cli.py get_issue_comments anthropics claude-code 1234
+python cli.py list_repo_prs anthropics claude-code --state open --sort-by updated
+python cli.py get_pr anthropics claude-code 567
+python cli.py get_pr_files anthropics claude-code 567
+
+# Discussions
+python cli.py search_discussions "context window topic:claude"
+python cli.py list_discussions anthropics claude-code --first 20 --category q-a --answered
+python cli.py list_discussions anthropics claude-code --not-answered
+python cli.py get_discussion anthropics claude-code 89 --comment-sort upvotes --comment-limit 30
+
+# Commits & Releases
+python cli.py list_commits anthropics claude-code --path src/main.py --per-page 10
+python cli.py list_commits anthropics claude-code --sha main --author octocat
+python cli.py compare_commits anthropics claude-code v1.0 v2.0
+python cli.py list_releases anthropics claude-code --per-page 5
+python cli.py get_release anthropics claude-code --tag v2.0.0
+python cli.py get_release anthropics claude-code  # latest release
+```
+
+**Always use the full absolute paths** when invoking from the Bash tool — the skill runs from arbitrary working directories:
+
+```bash
+/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/MCP/github/.venv/bin/python \
+  /Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/MCP/github/cli.py \
+  search_repos "mitmproxy" --sort-by stars
+```
+
+On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr and exits non-zero. Check `GH_TOKEN` env var is set.
 
 ## Tools by Category
 
