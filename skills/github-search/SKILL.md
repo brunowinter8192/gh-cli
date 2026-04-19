@@ -7,63 +7,63 @@ description: See ~/.claude/shared-rules/global/cli-skills.md
 
 ## CLI Invocation
 
-All tools are invoked via the Bash tool using absolute paths:
+All tools are invoked via the `gh-cli` wrapper (installed at `~/.local/bin/gh-cli`, in PATH):
 
 ```
-/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/MCP/github/.venv/bin/python \
-  /Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/MCP/github/cli.py <cmd> [args]
+gh-cli <cmd> [args]
 ```
 
 ### Quick Reference — All 20 Tools
 
 ```bash
 # Discovery
-python cli.py search_repos "fastapi" --sort-by stars
-python cli.py search_code "def workflow language:python repo:owner/repo"
-python cli.py get_repo anthropics claude-code
+gh-cli search_repos "fastapi" --sort-by stars
+gh-cli search_code "def workflow language:python repo:owner/repo"
+gh-cli get_repo anthropics claude-code
 
 # Repository Exploration
-python cli.py get_repo_tree anthropics claude-code --path src --depth 2 --pattern "*.py"
-python cli.py get_file_content anthropics claude-code README.md
-python cli.py get_file_content anthropics claude-code src/main.py --offset 100 --limit 50
-python cli.py get_file_content anthropics claude-code src/ --metadata-only
+gh-cli get_repo_tree anthropics claude-code --path src --depth 2 --pattern "*.py"
+gh-cli get_file_content anthropics claude-code README.md
+gh-cli get_file_content anthropics claude-code src/main.py --offset 100 --limit 50
+gh-cli get_file_content anthropics claude-code src/ --metadata-only
 
 # Content Search
-python cli.py grep_file anthropics claude-code src/main.py "def run" --context-lines 3
-python cli.py grep_repo anthropics claude-code "class.*Tool" --file-pattern "*.py" --path src --max-files 20
+gh-cli grep_file anthropics claude-code src/main.py "def run" --context-lines 3
+gh-cli grep_repo anthropics claude-code "class.*Tool" --file-pattern "*.py" --path src --max-files 20
 
 # Issues & PRs
-python cli.py search_items "memory leak repo:anthropics/claude-code" --type issue --sort-by comments
-python cli.py get_issue anthropics claude-code 1234
-python cli.py get_issue_comments anthropics claude-code 1234
-python cli.py list_repo_prs anthropics claude-code --state open --sort-by updated
-python cli.py get_pr anthropics claude-code 567
-python cli.py get_pr_files anthropics claude-code 567
+gh-cli search_items "memory leak repo:anthropics/claude-code" --type issue --sort-by comments
+gh-cli get_issue anthropics claude-code 1234
+gh-cli get_issue_comments anthropics claude-code 1234
+gh-cli list_repo_prs anthropics claude-code --state open --sort-by updated
+gh-cli get_pr anthropics claude-code 567
+gh-cli get_pr_files anthropics claude-code 567
 
 # Discussions
-python cli.py search_discussions "context window topic:claude"
-python cli.py list_discussions anthropics claude-code --first 20 --category q-a --answered
-python cli.py list_discussions anthropics claude-code --not-answered
-python cli.py get_discussion anthropics claude-code 89 --comment-sort upvotes --comment-limit 30
+gh-cli search_discussions "context window topic:claude"
+gh-cli list_discussions anthropics claude-code --first 20 --category q-a --answered
+gh-cli list_discussions anthropics claude-code --not-answered
+gh-cli get_discussion anthropics claude-code 89 --comment-sort upvotes --comment-limit 30
 
 # Commits & Releases
-python cli.py list_commits anthropics claude-code --path src/main.py --per-page 10
-python cli.py list_commits anthropics claude-code --sha main --author octocat
-python cli.py compare_commits anthropics claude-code v1.0 v2.0
-python cli.py list_releases anthropics claude-code --per-page 5
-python cli.py get_release anthropics claude-code --tag v2.0.0
-python cli.py get_release anthropics claude-code  # latest release
-```
-
-**Always use the full absolute paths** when invoking from the Bash tool — the skill runs from arbitrary working directories:
-
-```bash
-/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/MCP/github/.venv/bin/python \
-  /Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/MCP/github/cli.py \
-  search_repos "mitmproxy" --sort-by stars
+gh-cli list_commits anthropics claude-code --path src/main.py --per-page 10
+gh-cli list_commits anthropics claude-code --sha main --author octocat
+gh-cli compare_commits anthropics claude-code v1.0 v2.0
+gh-cli list_releases anthropics claude-code --per-page 5
+gh-cli get_release anthropics claude-code --tag v2.0.0
+gh-cli get_release anthropics claude-code  # latest release
 ```
 
 On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr and exits non-zero. Check `GH_TOKEN` env var is set.
+
+## Regex Patterns (grep_file / grep_repo)
+
+Patterns are compiled with Python `re` — **NOT** POSIX ERE.
+
+- Alternation: use bare `|`, never `\|`. POSIX-ERE `\|` matches a literal backslash-pipe in Python and returns zero matches silently.
+- The CLI auto-normalizes `\|` → `|` and emits a warning, but writing the correct pattern first is faster.
+- Good: `"MOUSE_WHEEL_UP|MOUSE_WHEEL_DOWN"`, `"def (run|start)"`
+- Bad: `"MOUSE\|mouse\|button"` (escaped pipes; auto-corrected but wastes a call)
 
 ## Tools by Category
 

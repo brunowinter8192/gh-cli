@@ -1,11 +1,10 @@
 # INFRASTRUCTURE
 import logging
-import re
 from mcp.types import TextContent
 from src.github.get_repo_tree import fetch_default_branch, get_tree_sha, fetch_tree
 from src.github.get_repo_tree import filter_by_pattern
 from src.github.get_file_content import fetch_file_content, decode_content
-from src.github.grep_file import search_lines
+from src.github.grep_file import search_lines, normalize_pattern
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +16,7 @@ MAX_MATCHES_PER_FILE = 3
 def grep_repo_workflow(owner: str, repo: str, pattern: str, file_pattern: str = "*", path: str = "", max_files: int = MAX_FILES) -> list[TextContent]:
     """Regex search across repo files."""
     logger.info("grep_repo owner=%s repo=%s pattern=%s", owner, repo, pattern)
+    pattern, warning = normalize_pattern(pattern)
     max_files = max(max_files, 20)  # Floor: agent can go higher, never lower
     default_branch = fetch_default_branch(owner, repo)
     tree_sha = get_tree_sha(owner, repo, default_branch, path)
@@ -24,7 +24,7 @@ def grep_repo_workflow(owner: str, repo: str, pattern: str, file_pattern: str = 
     truncated = raw_tree.get("truncated", False)
     matching_files = filter_by_pattern(raw_tree, file_pattern)
     results = grep_matching_files(owner, repo, matching_files[:max_files], pattern, path)
-    return [TextContent(type="text", text=format_grep_repo_results(results, pattern, file_pattern, path, len(matching_files), max_files, truncated))]
+    return [TextContent(type="text", text=format_grep_repo_results(results, pattern, file_pattern, path, len(matching_files), max_files, truncated, warning))]
 
 
 # FUNCTIONS
@@ -45,10 +45,12 @@ def grep_matching_files(owner: str, repo: str, files: list[dict], pattern: str, 
 
 
 # Format grep results across multiple files
-def format_grep_repo_results(results: list[dict], pattern: str, file_pattern: str, base_path: str, total_matching: int, max_files: int, truncated: bool) -> str:
+def format_grep_repo_results(results: list[dict], pattern: str, file_pattern: str, base_path: str, total_matching: int, max_files: int, truncated: bool, warning: str | None = None) -> str:
     scope = base_path if base_path else "/"
     searched = len(results)
     output = []
+    if warning:
+        output.append(f"Note: {warning}\n")
     output.append(f"Search: \"{pattern}\" in {file_pattern} (scope: {scope})")
     output.append(f"Files searched: {searched}/{total_matching} matching files (max_files={max_files})\n")
 

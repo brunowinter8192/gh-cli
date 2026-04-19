@@ -12,6 +12,7 @@ MAX_MATCHES = 50
 # ORCHESTRATOR
 def grep_file_workflow(owner: str, repo: str, path: str, pattern: str, context_lines: int = 0, max_matches: int = MAX_MATCHES) -> list[TextContent]:
     logger.info("grep_file owner=%s repo=%s path=%s pattern=%s", owner, repo, path, pattern)
+    pattern, warning = normalize_pattern(pattern)
     raw_response = fetch_file_content(owner, repo, path)
 
     if isinstance(raw_response, list):
@@ -20,10 +21,21 @@ def grep_file_workflow(owner: str, repo: str, path: str, pattern: str, context_l
     content = decode_content(raw_response)
     lines = content.split("\n")
     matches = search_lines(lines, pattern, context_lines, max_matches)
-    return [TextContent(type="text", text=format_grep_response(matches, path, pattern, len(lines)))]
+    return [TextContent(type="text", text=format_grep_response(matches, path, pattern, len(lines), warning))]
 
 
 # FUNCTIONS
+
+# Normalize POSIX-ERE escapes to Python re syntax. Returns (pattern, warning_or_None).
+def normalize_pattern(pattern: str) -> tuple[str, str | None]:
+    if r'\|' in pattern:
+        fixed = pattern.replace(r'\|', '|')
+        return fixed, (
+            f"Pattern contained POSIX-ERE '\\|' — auto-normalized to Python '|' for alternation. "
+            f"Original: {pattern!r}  →  Used: {fixed!r}. Use bare '|' in future queries."
+        )
+    return pattern, None
+
 
 # Find lines matching regex pattern with optional context
 def search_lines(lines: list[str], pattern: str, context_lines: int, max_matches: int) -> list[dict]:
@@ -48,8 +60,10 @@ def search_lines(lines: list[str], pattern: str, context_lines: int, max_matches
 
 
 # Format grep results as text output
-def format_grep_response(matches: list[dict], path: str, pattern: str, total_lines: int) -> str:
+def format_grep_response(matches: list[dict], path: str, pattern: str, total_lines: int, warning: str | None = None) -> str:
     output = []
+    if warning:
+        output.append(f"Note: {warning}\n")
     output.append(f"File: {path} ({total_lines:,} lines)")
     output.append(f"Pattern: \"{pattern}\"")
 
