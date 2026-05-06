@@ -1,6 +1,5 @@
 ---
 name: github-search
-description: See ~/.claude/shared-rules/global/cli-skills.md
 ---
 
 # GitHub Search — Skill
