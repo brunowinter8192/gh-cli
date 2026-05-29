@@ -16,7 +16,7 @@ Three drivers for the migration:
 
 ## Result
 
-- `server.py` replaced by `cli.py` (argparse, 20 subcommands — one tool removed during count audit)
+- `server.py` replaced by `cli.py` (argparse, 20 subcommands). The old docs cited 21 — that count was stale; tool consolidation happened in earlier commits (e.g. fb2d265 "Consolidate MCP tools: 19 → 17 via merge-first", 37807a3 "migrate github-research from MCP to pure CLI"), not during this documentation session.
 - Plugin changed from MCP-server to skills-only: `.claude-plugin/plugin.json` sets `"skills": ["./skills/github-search/"]` with no `"server"` key
 - Tool docstrings replaced by argparse `help=` strings
 - `mcp` package retained in `requirements.txt`: all `<tool>_workflow()` functions still return `list[TextContent]` for the newline-rendering fix (see `decisions/OldThemes/output_textcontent.md`)
