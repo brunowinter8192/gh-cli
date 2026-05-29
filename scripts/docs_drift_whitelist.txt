@@ -1,0 +1,43 @@
+# docs_drift_whitelist.txt — github (GitHub Research CLI)
+# Identifiers to skip in the Symbol-Existence check (Check 3 of docs-drift-check).
+# Format: one identifier per line, # for comments.
+#
+# What belongs here:
+#   - Universal acronyms (API, CLI, REST, ...)
+#   - External tool / framework / spec / filename-derived prose words
+#   - Documented naming-convention suffixes (pattern tokens, not literal symbols)
+#
+# What does NOT belong here:
+#   - Project-specific constants/functions that should exist in src/ — those are
+#     real drift, fix the code or the doc instead.
+
+# --- Universal acronyms ---
+API
+CLI
+HTTP
+HTTPS
+JSON
+LOC
+MCP
+RAG
+REST
+URL
+SOLL
+IST
+SDK
+
+# --- Doc status / section markers ---
+NOTE
+DEAD
+CODE
+
+# --- Filename-derived prose words ---
+# SKILL: from "SKILL.md" (skills/github-search/SKILL.md), not a code symbol.
+SKILL
+README
+
+# --- Naming-convention suffixes (pattern tokens, not literal symbols) ---
+# _workflow: the tool-orchestrator naming convention. Real functions are
+# search_repos_workflow(), get_repo_workflow(), ... (20 of them). Docs reference
+# the generic <tool>_workflow() pattern; no literal `_workflow` symbol exists.
+_workflow
