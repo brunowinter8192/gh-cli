@@ -23,3 +23,11 @@
 {"actor":"Bruno Winter","comment":null,"created_at":"2026-04-26T18:00:12Z","event_type":"closed","id":23,"issue_id":"github-rmp","new_value":"Obsolet nach 2.5 Monaten — nicht weiterverfolgt.","old_value":""}
 {"actor":"Bruno Winter","comment":null,"created_at":"2026-04-26T18:00:12Z","event_type":"closed","id":24,"issue_id":"github-66p","new_value":"Obsolet nach 2.5 Monaten — nicht weiterverfolgt.","old_value":""}
 {"actor":"Bruno Winter","comment":null,"created_at":"2026-04-26T18:01:37Z","event_type":"created","id":25,"issue_id":"github-96y","new_value":"","old_value":""}
+{"actor":"Bruno Winter","comment":null,"created_at":"2026-04-26T18:22:02Z","event_type":"created","id":26,"issue_id":"github-3cl","new_value":"","old_value":""}
+{"actor":"Bruno Winter","comment":null,"created_at":"2026-04-26T18:22:15Z","event_type":"created","id":27,"issue_id":"github-chm","new_value":"","old_value":""}
+{"actor":"Bruno Winter","comment":null,"created_at":"2026-04-26T18:22:30Z","event_type":"created","id":28,"issue_id":"github-i1v","new_value":"","old_value":""}
+{"actor":"Bruno Winter","comment":null,"created_at":"2026-04-26T18:22:51Z","event_type":"created","id":29,"issue_id":"github-6vg","new_value":"","old_value":""}
+{"actor":"Bruno Winter","comment":null,"created_at":"2026-04-26T18:23:07Z","event_type":"created","id":30,"issue_id":"github-4xx","new_value":"","old_value":""}
+{"actor":"Bruno Winter","comment":null,"created_at":"2026-04-26T18:23:24Z","event_type":"created","id":31,"issue_id":"github-qs4","new_value":"","old_value":""}
+{"actor":"Bruno Winter","comment":null,"created_at":"2026-04-26T18:23:29Z","event_type":"closed","id":32,"issue_id":"github-96y","new_value":"Recherche-Phase abgeschlossen. Findings als Comment dokumentiert. Sechs konkrete Improvement-Beads angelegt (github-3cl, github-chm, github-i1v, github-6vg, github-4xx, github-qs4) mit URLs zu Community-Repos für späteres Nachlesen.","old_value":""}
+{"actor":"Bruno Winter","comment":null,"created_at":"2026-05-29T17:34:38Z","event_type":"created","id":33,"issue_id":"github-4wi","new_value":"","old_value":""}
