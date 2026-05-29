@@ -16,6 +16,7 @@ from src.github.grep_repo import grep_repo_workflow
 from src.github.search_items import search_items_workflow
 from src.github.get_issue import get_issue_workflow
 from src.github.get_issue_comments import get_issue_comments_workflow
+from src.github.index_issues import index_issues_workflow
 from src.github.get_repo import get_repo_workflow
 from src.github.search_discussions import search_discussions_workflow
 from src.github.list_discussions import list_discussions_workflow
@@ -29,7 +30,7 @@ from src.github.get_release import get_release_workflow
 def main():
     parser = argparse.ArgumentParser(
         prog="cli.py",
-        description="GitHub Research CLI — 17 tools for searching repos, code, issues, discussions, releases."
+        description="GitHub Research CLI — 18 tools for searching repos, code, issues, discussions, releases."
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -101,6 +102,13 @@ def main():
     p.add_argument("owner")
     p.add_argument("repo")
     p.add_argument("issue_number", type=int)
+
+    # ── index_issues ──────────────────────────────────────────────────────────
+    p = sub.add_parser("index_issues", help="Fetch issues matching a query and index into RAG.")
+    p.add_argument("query", help="Search keywords (max 3; most distinctive first)")
+    p.add_argument("repo", help="Repository as owner/repo")
+    p.add_argument("--limit", type=int, default=30,
+                   help="Max issues to fetch and index (default 30)")
 
     # ── get_repo ──────────────────────────────────────────────────────────────
     p = sub.add_parser("get_repo", help="Read repository metadata.")
@@ -200,6 +208,9 @@ def main():
 
     elif args.cmd == "get_issue_comments":
         result = get_issue_comments_workflow(args.owner, args.repo, args.issue_number)
+
+    elif args.cmd == "index_issues":
+        result = index_issues_workflow(args.query, args.repo, args.limit)
 
     elif args.cmd == "get_repo":
         result = get_repo_workflow(args.owner, args.repo)

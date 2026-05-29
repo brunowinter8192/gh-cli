@@ -12,7 +12,7 @@ All tools are invoked via the `gh-cli` wrapper (installed at `~/.local/bin/gh-cl
 gh-cli <cmd> [args]
 ```
 
-### Quick Reference — All 17 Tools
+### Quick Reference — All 18 Tools
 
 ```bash
 # Discovery
@@ -34,6 +34,7 @@ gh-cli grep_repo anthropics claude-code "class.*Tool" --file-pattern "*.py" --pa
 gh-cli search_items "memory leak repo:anthropics/claude-code" --type issue --sort-by comments
 gh-cli get_issue anthropics claude-code 1234
 gh-cli get_issue_comments anthropics claude-code 1234
+gh-cli index_issues "streaming" anthropics/claude-code --limit 30
 
 # Discussions
 gh-cli search_discussions "context window topic:claude"
@@ -92,6 +93,7 @@ Patterns are compiled with Python `re` — **NOT** POSIX ERE.
 | search_items | Find issues or PRs across GitHub |
 | get_issue | Read full issue with body |
 | get_issue_comments | Read issue discussion thread |
+| index_issues | Fetch issues by keyword query and index into RAG (`github_issues` collection) |
 
 ### Discussions
 
@@ -109,6 +111,17 @@ Patterns are compiled with Python `re` — **NOT** POSIX ERE.
 | compare_commits | See diff between two branches, tags, or SHAs |
 | list_releases | List all releases with changelogs |
 | get_release | Read full release notes for a specific tag |
+
+## Query Engineering (index_issues)
+
+- **MAX 3 keywords** (mandatory) — the wrapper hard-caps at 3; extra words are silently dropped before the search call.
+- **Most distinctive keyword first** — the fallback loop drops from the back (3→2→1 keywords). If the 3-keyword query returns 0 results, it retries with 2, then 1. A nonsense or overly-narrow last keyword won't block the run; an overly-narrow *first* keyword will error.
+- **After indexing, search via RAG** — run `rag-cli search_hybrid "<terms>" github_issues` for broad thematic retrieval instead of many `get_issue` calls:
+  ```
+  gh-cli index_issues "streaming" anthropics/claude-code --limit 30
+  rag-cli search_hybrid "streaming context window tool_use" github_issues
+  ```
+- **Re-run = re-index** — `index_issues` always overwrites MDs and re-indexes. Issues with new comments get re-chunked automatically (RAG `index-dir` skips unchanged content-hash).
 
 ## Search Strategy
 
@@ -186,6 +199,14 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 1. search_items "error message repo:owner/repo" type="issue" -> Find related issues
 2. get_issue owner, repo, issue_number -> Read full issue
 3. get_issue_comments owner, repo, issue_number -> Read discussion
+```
+
+### Index + Search Workflow
+```
+1. index_issues "streaming" anthropics/claude-code --limit 30
+   → fetches top-30 issues, strips noise, writes MDs, indexes into github_issues
+2. rag-cli search_hybrid "streaming context window" github_issues
+   → broad vector search replaces many fine-grained get_issue calls
 ```
 
 ### Code Pattern Discovery
@@ -349,6 +370,14 @@ When any tool returns a truncation warning:
 | owner | str | required | Repository owner |
 | repo | str | required | Repository name |
 | issue_number | int | required | Issue number |
+
+### index_issues
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| query | str | required | Search keywords (max 3; most distinctive first) |
+| repo | str | required | Repository as owner/repo |
+| --limit | int | 30 | Max issues to fetch and index |
 
 ### get_repo
 

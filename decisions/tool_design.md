@@ -2,7 +2,7 @@
 
 ## Status Quo (IST)
 
-- 17 tools registered in `cli.py` (argparse subcommands)
+- 18 tools registered in `cli.py` (argparse subcommands); 17 are query/research tools, 1 (`index_issues`) is a RAG-indexing command (fetch + strip + write MDs + `workflow.py index-dir`)
 - Query truncation: `search_repos` enforces `MAX_QUERY_WORDS=3` (GitHub Search returns 0 for long queries)
 - Pagination: fixed `RESULTS_PER_PAGE=20` from `client.py`, no cursor-based pagination
 - `grep_repo` default `max_files=10`, caller can override
