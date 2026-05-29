@@ -1,0 +1,11 @@
+{
+  "collection": "github-docs",
+  "include": [
+    "DOCS.md",
+    "src/*/DOCS.md",
+    "decisions/*.md",
+    "decisions/OldThemes/*.md",
+    "decisions/OldThemes/**/*.md",
+    "sources/sources.md"
+  ]
+}

@@ -2,14 +2,13 @@
 
 ## Status Quo (IST)
 
-- 21 MCP tools registered in `server.py`
-- Query truncation: `search_repos` enforces MAX_QUERY_WORDS=3 (GitHub Search returns 0 for long queries)
-- Pagination: Fixed `RESULTS_PER_PAGE=20` from `client.py`, no cursor-based pagination
-- `grep_repo` default `max_files=10`, agent can override
+- 20 tools registered in `cli.py` (argparse subcommands)
+- Query truncation: `search_repos` enforces `MAX_QUERY_WORDS=3` (GitHub Search returns 0 for long queries)
+- Pagination: fixed `RESULTS_PER_PAGE=20` from `client.py`, no cursor-based pagination
+- `grep_repo` default `max_files=10`, caller can override
 - `get_file_content` supports `offset`/`limit` for line-range reads and `metadata_only` mode
 - `get_repo_tree` supports `depth` filtering and `pattern` glob matching
 - `get_discussion` supports `comment_sort` (upvotes vs chronological) and `comment_limit`
-- Minimal tool docstrings (3-5 words) per server-pattern convention
 
 ## Evidenz
 
