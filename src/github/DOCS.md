@@ -2,7 +2,7 @@
 
 ## Role
 
-20 tool modules (17 REST, 3 GraphQL) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py`. Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+17 tool modules (14 REST, 3 GraphQL) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py`. Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -22,7 +22,7 @@
 **Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers.
 **Reads:** `~/.zshrc` (last `export GH_TOKEN=` line via `_read_zshrc_token()`); `os.environ["GH_TOKEN"]`; `os.environ["GITHUB_TOKEN"]`. Resolves at module-import time.
 **Writes:** exports `GITHUB_TOKEN` (str), `GITHUB_API_BASE` (str), `RESULTS_PER_PAGE` (int); `build_headers()` returns headers dict.
-**Called by:** all 17 REST tool modules (import `build_headers`, `GITHUB_API_BASE`, `RESULTS_PER_PAGE`); `graphql_client.py` (imports `GITHUB_TOKEN`).
+**Called by:** all 14 REST tool modules (import `build_headers`, `GITHUB_API_BASE`, `RESULTS_PER_PAGE`); `graphql_client.py` (imports `GITHUB_TOKEN`).
 **Calls out:** stdlib only (`os`, `re`, `pathlib`).
 
 ---
@@ -107,7 +107,7 @@
 
 ---
 
-### search_items.py (94 LOC)
+### search_items.py (92 LOC)
 
 **Purpose:** Search GitHub issues or PRs using the Search Issues API with type qualifier.
 **Reads:** GitHub Search Issues API (`/search/issues`) with `is:issue` or `is:pr` qualifier injected.
@@ -132,36 +132,6 @@
 **Purpose:** Retrieve all comments on a GitHub issue.
 **Reads:** GitHub Issue Comments API (`/issues/{number}/comments`).
 **Writes:** returns `list[TextContent]` — comment count, each comment with author, date, body.
-**Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
-
----
-
-### list_repo_prs.py (69 LOC)
-
-**Purpose:** List pull requests in a repository with state and sort filters.
-**Reads:** GitHub Pulls API (`/pulls`) with state + sort params.
-**Writes:** returns `list[TextContent]` — PR number, title, state, author, branches, date, labels, URL.
-**Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
-
----
-
-### get_pr.py (62 LOC)
-
-**Purpose:** Retrieve full PR details including body, commit stats, and file change counts.
-**Reads:** GitHub Pulls API (`/pulls/{number}`).
-**Writes:** returns `list[TextContent]` — title, state (MERGED detection), branches, merge info, commit/addition/deletion counts, body.
-**Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
-
----
-
-### get_pr_files.py (64 LOC)
-
-**Purpose:** List files changed in a pull request with diff statistics.
-**Reads:** GitHub Pulls Files API (`/pulls/{number}/files`).
-**Writes:** returns `list[TextContent]` — file list with status icons, addition/deletion counts, truncated patch preview.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`.
 

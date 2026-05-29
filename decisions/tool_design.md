@@ -2,7 +2,7 @@
 
 ## Status Quo (IST)
 
-- 20 tools registered in `cli.py` (argparse subcommands)
+- 17 tools registered in `cli.py` (argparse subcommands)
 - Query truncation: `search_repos` enforces `MAX_QUERY_WORDS=3` (GitHub Search returns 0 for long queries)
 - Pagination: fixed `RESULTS_PER_PAGE=20` from `client.py`, no cursor-based pagination
 - `grep_repo` default `max_files=10`, caller can override
