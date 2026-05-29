@@ -29,6 +29,8 @@ def index_issues_workflow(query: str, repo: str, limit: int = DEFAULT_LIMIT) -> 
     repo_basename = repo_name
 
     keywords = query.split()[:3]
+    if not keywords:
+        return [TextContent(type="text", text="Empty query — provide 1-3 keywords.")]
     total = 0
     numbers: list[int] = []
     kw_level = 0
