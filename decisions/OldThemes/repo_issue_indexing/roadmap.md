@@ -33,6 +33,16 @@ Conceptual frame: a GitHub **issue** ≈ a Reddit **post** (discussion layer →
 - Chunking + indexing use RAG's config **1:1** — no custom chunking. Command (verified): `cd RAG && venv/bin/python workflow.py index-dir --input data/documents/github_issues`. Indexing is triggered **jointly**, not auto-run by the staging step.
 - **Status (end of this session):** 100 cleaned per-issue MDs staged in `RAG/data/documents/github_issues/` (1.0 MB; total 830.6 KB, down from 888.6 pre-cleanup −6.5%; comments 531.8 → 476.3 KB after `strip_comments_noise`; bodies unchanged 344.4 KB). At the indexing threshold. **Indexing NOT yet run** — the `index-dir` trigger + the indexing-time baseline (which decides N) is pending the feature-build session.
 
+## Security finding & redaction precondition (this session)
+
+The `streaming` extraction surfaced a token leak. Past sessions used inline `export GH_TOKEN="…" ; gh-cli …` (a workaround for the CC shell-snapshot staleness — see `token_resolution.md`). The Monitor_CC proxy logged those command lines; the extractor copied them verbatim into `ghcli_calls.jsonl`, which then carried the **live** `ghp_…` token (== current zshrc token) plus an old `github_pat_…`. GitHub push-protection blocked the push — the token never reached the remote.
+
+Resolution this session: `dev/` is now gitignored (never public); local `main` was reset to the clean origin state and only the public roadmap pushed; the token-bearing commit (`ghcli_calls.jsonl`) stays on the local `dev` branch only.
+
+PRECONDITIONS for the feature-build before ANY push:
+- The extractor (`extract_ghcli_calls.py`) and the fetch/index wrapper MUST redact token patterns (`ghp_…`, `github_pat_…`) before writing any MD/JSONL artifact.
+- The exposed live `ghp_…` token should be rotated (it sat in shell-history + proxy-logs + a local commit).
+
 ## Prod wrapper (target)
 
 New gh-cli command: user gives a query (+ repo) → top-N relevant issues pulled → saved as per-issue MDs → dedup against already-indexed (Reddit-style: post-id/number + title-hash) → RAG index. The agent's job is pure **query engineering**.
