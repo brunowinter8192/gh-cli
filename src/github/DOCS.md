@@ -2,7 +2,7 @@
 
 ## Role
 
-17 tool modules (14 REST, 3 GraphQL) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py`. Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+18 tool modules (15 REST, 3 GraphQL) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py`. Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -22,7 +22,7 @@
 **Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers.
 **Reads:** `~/.zshrc` (last `export GH_TOKEN=` line via `_read_zshrc_token()`); `os.environ["GH_TOKEN"]`; `os.environ["GITHUB_TOKEN"]`. Resolves at module-import time.
 **Writes:** exports `GITHUB_TOKEN` (str), `GITHUB_API_BASE` (str), `RESULTS_PER_PAGE` (int); `build_headers()` returns headers dict.
-**Called by:** all 14 REST tool modules (import `build_headers`, `GITHUB_API_BASE`, `RESULTS_PER_PAGE`); `graphql_client.py` (imports `GITHUB_TOKEN`).
+**Called by:** all 15 REST tool modules (import `build_headers`, `GITHUB_API_BASE`, `RESULTS_PER_PAGE`); `graphql_client.py` (imports `GITHUB_TOKEN`).
 **Calls out:** stdlib only (`os`, `re`, `pathlib`).
 
 ---
@@ -122,7 +122,7 @@
 **Purpose:** Retrieve full issue details including body.
 **Reads:** GitHub Issues API (`/issues/{number}`).
 **Writes:** returns `list[TextContent]` — title, state, author, dates, labels, comment count, body.
-**Called by:** `cli.py`.
+**Called by:** `cli.py`; `index_issues.py` (imports `get_issue_workflow`).
 **Calls out:** `requests`, `mcp.types`.
 
 ---
@@ -132,8 +132,18 @@
 **Purpose:** Retrieve all comments on a GitHub issue.
 **Reads:** GitHub Issue Comments API (`/issues/{number}/comments`).
 **Writes:** returns `list[TextContent]` — comment count, each comment with author, date, body.
-**Called by:** `cli.py`.
+**Called by:** `cli.py`; `index_issues.py` (imports `get_issue_comments_workflow`).
 **Calls out:** `requests`, `mcp.types`.
+
+---
+
+### index_issues.py (188 LOC)
+
+**Purpose:** Fetch GitHub issues matching a query, strip noise, write per-issue MDs, and index into the `github_issues` RAG collection. Keyword-fallback loop (3→2→1) ensures a non-empty result set.
+**Reads:** GitHub Search Issues API + `get_issue_workflow` + `get_issue_comments_workflow` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
+**Writes:** per-issue MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `workflow.py index-dir` via subprocess (RAG venv); returns `list[TextContent]` summary.
+**Called by:** `cli.py`.
+**Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`.
 
 ---
 

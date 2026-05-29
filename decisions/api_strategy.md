@@ -2,7 +2,7 @@
 
 ## Status Quo (IST)
 
-- 14 tools use GitHub REST API v3 via `build_headers()` (`client.py`)
+- 15 tools use GitHub REST API v3 via `build_headers()` (`client.py`)
 - 3 tools use GitHub GraphQL API v4 via `graphql_query()` (`graphql_client.py`):
   - `search_discussions` — GraphQL Search for discussions
   - `list_discussions` — Repository discussions listing with optional category filter
