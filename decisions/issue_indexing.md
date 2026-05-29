@@ -1,0 +1,29 @@
+# Issue Indexing (index_issues)
+
+## Status Quo (IST)
+- Tool `index_issues` (`index_issues_workflow()` in `src/github/index_issues.py`), gh-cli subcommand: `index_issues <query> <repo> [--limit 30]`.
+- Query: hard-capped to 3 keywords (`query.split()[:3]`); 0-result fallback drops last keyword 3→2→1, then errors; empty/whitespace query → guard error.
+- Search: `search_raw()` → `GET /search/issues?q="<kw> repo:<repo> is:issue"`, `per_page=min(limit,100)`, relevance order; returns top-`limit` issue numbers.
+- Fetch: in-process `get_issue_workflow` + `get_issue_comments_workflow`; `strip_noise` + `strip_comments_noise`; per-issue MD `<repo_basename>__<num>.md` → `RAG/data/documents/github_issues/` (overwrite, no fetch-skip).
+- Index: subprocess `RAG/venv/bin/python workflow.py index-dir --input data/documents/github_issues` (cwd=RAG_ROOT, synchronous). Dedup by index-dir's `indexed_files` content-hash (skip unchanged, re-index changed).
+- `DEFAULT_LIMIT = 30`. No sleeps. Auth via `build_headers` header (no token in artifacts).
+- Retrieval of indexed issues: `rag-cli search_hybrid "<terms>" github_issues`.
+
+## Evidenz
+Indexing baseline (this session — `workflow.py index-dir` on 100 staged `anthropics/claude-code` "streaming" issues, embedding-8b; raw log `/tmp/gh_index.log`, one-off run not a persisted dev/ report):
+- 100 issues → 606 chunks (avg 6.06/issue); real 706s (~11.8 min), user 4.4s → embedding-server-bound (~7s/issue, ~1.16s/chunk). 0 skipped, 0 adopted.
+- Fetch: 2 core calls/issue; 200 for 100 = ~4% of 5000/hr core budget. Embedding dominates; search never the bottleneck.
+- Dedup idempotent: post-build smoke `--limit 1` on an unchanged issue → 0 new chunks.
+
+## Recommendation (SOLL)
+- **N=30 (Keep)** — default `--limit`, coverage-based (top-30 relevance carries the signal). PENDING eval: "rank 31-100 adds no marginal insight" is unmeasured — a recall eval (index top-100, representative queries, check if any answer comes from rank 31-100) would confirm.
+- **Query max-3 + fallback 3→2→1 (Keep)** — robust regardless of GitHub issue-search AND/OR semantics. Pending: empirical check of multi-word issue-search semantics.
+- **Dedup via index-dir content-hash (Keep)** — no wrapper-side dedup.
+
+## Offene Fragen
+- Wrapper's internal index-dir is synchronous (blocks ~N×7s for large N) — async/background variant for big N?
+- Freshness / re-index cadence / purge policy for github_issues (undefined).
+- Shared `github_issues` collection for all repos, or per-repo collections?
+
+## Quellen
+- `decisions/OldThemes/repo_issue_indexing/roadmap.md`, `decisions/OldThemes/repo_issue_indexing/wrapper_build.md`
