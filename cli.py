@@ -16,9 +16,6 @@ from src.github.grep_repo import grep_repo_workflow
 from src.github.search_items import search_items_workflow
 from src.github.get_issue import get_issue_workflow
 from src.github.get_issue_comments import get_issue_comments_workflow
-from src.github.list_repo_prs import list_repo_prs_workflow
-from src.github.get_pr import get_pr_workflow
-from src.github.get_pr_files import get_pr_files_workflow
 from src.github.get_repo import get_repo_workflow
 from src.github.search_discussions import search_discussions_workflow
 from src.github.list_discussions import list_discussions_workflow
@@ -32,7 +29,7 @@ from src.github.get_release import get_release_workflow
 def main():
     parser = argparse.ArgumentParser(
         prog="cli.py",
-        description="GitHub Research CLI — 20 tools for searching repos, code, issues, PRs, discussions, releases."
+        description="GitHub Research CLI — 17 tools for searching repos, code, issues, discussions, releases."
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -104,27 +101,6 @@ def main():
     p.add_argument("owner")
     p.add_argument("repo")
     p.add_argument("issue_number", type=int)
-
-    # ── list_repo_prs ─────────────────────────────────────────────────────────
-    p = sub.add_parser("list_repo_prs", help="List repository PRs.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("--state", choices=["open", "closed", "all"], default="open")
-    p.add_argument("--sort-by", dest="sort_by",
-                   choices=["created", "updated", "popularity", "long-running"],
-                   default="created")
-
-    # ── get_pr ────────────────────────────────────────────────────────────────
-    p = sub.add_parser("get_pr", help="Read pull request details.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("pull_number", type=int)
-
-    # ── get_pr_files ──────────────────────────────────────────────────────────
-    p = sub.add_parser("get_pr_files", help="List files changed in a PR.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("pull_number", type=int)
 
     # ── get_repo ──────────────────────────────────────────────────────────────
     p = sub.add_parser("get_repo", help="Read repository metadata.")
@@ -224,15 +200,6 @@ def main():
 
     elif args.cmd == "get_issue_comments":
         result = get_issue_comments_workflow(args.owner, args.repo, args.issue_number)
-
-    elif args.cmd == "list_repo_prs":
-        result = list_repo_prs_workflow(args.owner, args.repo, args.state, args.sort_by)
-
-    elif args.cmd == "get_pr":
-        result = get_pr_workflow(args.owner, args.repo, args.pull_number)
-
-    elif args.cmd == "get_pr_files":
-        result = get_pr_files_workflow(args.owner, args.repo, args.pull_number)
 
     elif args.cmd == "get_repo":
         result = get_repo_workflow(args.owner, args.repo)

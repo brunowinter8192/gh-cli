@@ -12,7 +12,7 @@ All tools are invoked via the `gh-cli` wrapper (installed at `~/.local/bin/gh-cl
 gh-cli <cmd> [args]
 ```
 
-### Quick Reference — All 20 Tools
+### Quick Reference — All 17 Tools
 
 ```bash
 # Discovery
@@ -34,9 +34,6 @@ gh-cli grep_repo anthropics claude-code "class.*Tool" --file-pattern "*.py" --pa
 gh-cli search_items "memory leak repo:anthropics/claude-code" --type issue --sort-by comments
 gh-cli get_issue anthropics claude-code 1234
 gh-cli get_issue_comments anthropics claude-code 1234
-gh-cli list_repo_prs anthropics claude-code --state open --sort-by updated
-gh-cli get_pr anthropics claude-code 567
-gh-cli get_pr_files anthropics claude-code 567
 
 # Discussions
 gh-cli search_discussions "context window topic:claude"
@@ -95,9 +92,6 @@ Patterns are compiled with Python `re` — **NOT** POSIX ERE.
 | search_items | Find issues or PRs across GitHub |
 | get_issue | Read full issue with body |
 | get_issue_comments | Read issue discussion thread |
-| list_repo_prs | List PRs in a repository |
-| get_pr | Read full PR with body and stats |
-| get_pr_files | List changed files in a PR |
 
 ### Discussions
 
@@ -192,14 +186,6 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 1. search_items "error message repo:owner/repo" type="issue" -> Find related issues
 2. get_issue owner, repo, issue_number -> Read full issue
 3. get_issue_comments owner, repo, issue_number -> Read discussion
-```
-
-### PR Analysis
-```
-1. search_items "feature repo:owner/repo is:merged" type="pr" -> Find relevant PRs
-2. get_pr owner, repo, pull_number -> Read PR details
-3. get_pr_files owner, repo, pull_number -> See what changed
-4. get_file_content owner, repo, "changed_file.py" -> Read current state
 ```
 
 ### Code Pattern Discovery
@@ -364,23 +350,6 @@ When any tool returns a truncation warning:
 | repo | str | required | Repository name |
 | issue_number | int | required | Issue number |
 
-### list_repo_prs
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| state | open/closed/all | open | PR state filter |
-| sort_by | created/updated/popularity/long-running | created | Sort order |
-
-### get_pr / get_pr_files
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| pull_number | int | required | PR number |
-
 ### get_repo
 
 | Parameter | Type | Default | Description |
@@ -532,7 +501,7 @@ VERDICT: MISMATCH (expected 72, found 73)
 - LINES must note if line 1 is a header (affects count!)
 - EVIDENCE must quote actual content from the file
 - VERDICT must state expected vs actual
-- **For PRs and Issues:** EVIDENCE must include at minimum: title, status (open/closed/merged), and one concrete detail (description excerpt, key change, or comment). Search result metadata alone (e.g., "labels: python") is not sufficient — read the PR/Issue with `get_pr` or `get_issue` first.
+- **For Issues:** EVIDENCE must include at minimum: title, status (open/closed), and one concrete detail (description excerpt, key comment). Search result metadata alone (e.g., "labels: python") is not sufficient — read with `get_issue` or `get_issue_comments` first. For PR results from `search_items --type pr`: search output is the available detail level (no dedicated PR-fetch tool).
 
 ### Repo Discovery Output (when finding repos/projects)
 

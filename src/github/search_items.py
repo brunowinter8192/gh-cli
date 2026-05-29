@@ -87,8 +87,6 @@ def format_item_results(raw_response: dict, type: str) -> str:
 
         if type == "issue":
             lines.append(f"   [get_issue: owner=\"{owner}\" repo=\"{repo}\" issue_number={item['number']}]")
-        else:
-            lines.append(f"   [get_pr: owner=\"{owner}\" repo=\"{repo}\" pull_number={item['number']}]")
         lines.append("")
 
     return "\n".join(lines)
