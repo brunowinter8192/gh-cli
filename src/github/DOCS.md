@@ -22,7 +22,7 @@
 **Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers.
 **Reads:** `~/.zshrc` (last `export GH_TOKEN=` line via `_read_zshrc_token()`); `os.environ["GH_TOKEN"]`; `os.environ["GITHUB_TOKEN"]`. Resolves at module-import time.
 **Writes:** exports `GITHUB_TOKEN` (str), `GITHUB_API_BASE` (str), `RESULTS_PER_PAGE` (int); `build_headers()` returns headers dict.
-**Called by:** all 15 REST tool modules (import `build_headers`, `GITHUB_API_BASE`, `RESULTS_PER_PAGE`); `graphql_client.py` (imports `GITHUB_TOKEN`).
+**Called by:** all 12 REST tool modules (import `build_headers`, `GITHUB_API_BASE`, `RESULTS_PER_PAGE`); `graphql_client.py` (imports `GITHUB_TOKEN`).
 **Calls out:** stdlib only (`os`, `re`, `pathlib`).
 
 ---

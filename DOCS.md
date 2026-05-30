@@ -34,7 +34,7 @@ CLI tool delivering 11 GitHub research commands (search, browse, issues, discuss
 
 | Owner | State | Who reads |
 |-------|-------|-----------|
-| `client.py` | `GITHUB_TOKEN` (str, module-level) — resolved once at import via `_resolve_token()` | all 13 REST tool modules via `build_headers()`; `graphql_client.py` at import |
+| `client.py` | `GITHUB_TOKEN` (str, module-level) — resolved once at import via `_resolve_token()` | all 12 REST tool modules via `build_headers()`; `graphql_client.py` at import |
 
 ## Root-Level Files
 
