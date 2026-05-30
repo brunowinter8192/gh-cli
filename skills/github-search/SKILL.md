@@ -58,66 +58,22 @@ Patterns are compiled with Python `re` — **NOT** POSIX ERE.
 - Good: `"MOUSE_WHEEL_UP|MOUSE_WHEEL_DOWN"`, `"def (run|start)"`
 - Bad: `"MOUSE\|mouse\|button"` (escaped pipes; auto-corrected but wastes a call)
 
-## Tools by Category
-
-### Discovery
-
-| Tool | Purpose |
-|------|---------|
-| search_repos | Find repositories by topic, technology, or keyword |
-| search_code | Find code patterns or usage examples across GitHub |
-| get_repo | Read repository metadata (stars, topics, license) |
-
-### Repository Exploration
-
-| Tool | Purpose |
-|------|---------|
-| get_repo_tree | Browse directory structure, search files by glob pattern |
-| get_file_content | Read file content, metadata, or directory listing |
-
-### Content Search
-
-| Tool | Purpose |
-|------|---------|
-| grep_file | Search within a single file by regex |
-| grep_repo | Search across multiple files in a repo by regex + file glob |
-
-### RAG-Semantic
-
-| Tool | Purpose |
-|------|---------|
-| index_issues | Fetch issues by keyword query, strip noise, index into `github_issues` RAG collection |
-| index_discussions | Fetch discussions by keyword query, strip noise, index into `github_discussions` RAG collection |
-
-### Releases
-
-| Tool | Purpose |
-|------|---------|
-| list_releases | List all releases with changelogs |
-| get_release | Read full release notes for a specific tag or latest |
-
-## Query Engineering (index_issues)
+## Query Engineering (index_issues / index_discussions)
 
 - **MAX 3 keywords** (mandatory) — the wrapper hard-caps at 3; extra words are silently dropped before the search call.
 - **Most distinctive keyword first** — the fallback loop drops from the back (3→2→1 keywords). If the 3-keyword query returns 0 results, it retries with 2, then 1. A nonsense or overly-narrow last keyword won't block the run; an overly-narrow *first* keyword will error.
-- **After indexing, search via RAG** — run `rag-cli search_hybrid "<terms>" github_issues` for broad thematic retrieval instead of many fine-grained issue tool-calls:
+- **After indexing, search via RAG:**
   ```
   gh-cli index_issues "streaming" anthropics/claude-code --limit 30
   rag-cli search_hybrid "streaming context window tool_use" github_issues
-  ```
-- **Re-run = re-index** — `index_issues` always overwrites MDs and re-indexes. Issues with new comments get re-chunked automatically (RAG `index-dir` skips unchanged content-hash).
 
-## Query Engineering (index_discussions)
-
-- **MAX 3 keywords** — same cap as `index_issues`; extra words dropped silently.
-- **Most distinctive keyword first** — fallback loop 3→2→1 drops from the back.
-- **repo: injection automatic** — `index_discussions` scopes search to the target repo; no cross-repo search.
-- **After indexing, search via RAG:**
-  ```
   gh-cli index_discussions "memory" gastownhall/beads --limit 30
   rag-cli search_hybrid "memory tracking workflow" github_discussions
   ```
-- **Re-run = re-index** — always overwrites MDs; index-dir skips unchanged content-hash.
+- **Re-run = re-index** — always overwrites MDs and re-indexes. Items with new comments get re-chunked automatically (RAG `index-dir` skips unchanged content-hash).
+
+**index_discussions only:**
+- **repo: injection automatic** — `index_discussions` scopes search to the target repo; no cross-repo search.
 - **Accepted-answer threading** — accepted answers appear in `### Accepted Answer` block; duplicate in-list `[ANSWER]` tag is stripped automatically during indexing.
 
 ## Search Strategy
@@ -126,7 +82,6 @@ Patterns are compiled with Python `re` — **NOT** POSIX ERE.
 
 **Use `search_repos`** when the task is: "find repos/tools/libraries for X"
 - Landscape discovery, tech comparison, "what exists for this use case"
-- Start with 2-3 core keywords MAXIMUM (GitHub API returns 0 for 4+ words)
 - GOOD: `search_repos("reddit bot")` → finds Reddit automation repos
 - BAD: `search_code("reddit post automation selenium python")` → finds README files that mention all 4 words
 
@@ -137,7 +92,7 @@ Patterns are compiled with Python `re` — **NOT** POSIX ERE.
 - BAD: `search_code("reddit post selenium")` → finds 2000+ unrelated files globally
 
 **`search_repos` query limit (NON-NEGOTIABLE):**
-- Maximum 2-3 words. GitHub API returns 0 results for 4+ word queries.
+- Maximum 2-3 words. 4+ word queries are auto-truncated to 3 (CLI warns) or return 0 results.
 - WRONG: `search_repos("reddit browser submit post without api")` → 0 results
 - RIGHT: `search_repos("reddit bot")` → then narrow with `sort_by=stars`
 - When no results: try synonyms as SEPARATE 2-word queries, don't add words to the failing query
@@ -227,7 +182,7 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 Before opening data files or CSVs in any directory, check for README.md or DOCS.md in that directory (or parent). Well-documented repos explain which files are authoritative and what each subdirectory contains. Skipping DOCS leads to reading the wrong file.
 
 **2. Ambiguous matches — check ALL before reporting.**
-When multiple candidates exist (same filename in different paths, multiple subdirectories like `approach_1/` through `approach_4/`, different versions of the same data): check ALL of them BEFORE reporting any result. Never report a mismatch after checking only one candidate when others remain unchecked. The correct workflow is:
+When multiple candidates exist (same filename in different paths, multiple subdirectories, different versions): check ALL of them BEFORE reporting any result. Never report a mismatch after checking only one candidate when others remain unchecked. The correct workflow is:
 1. Identify all candidates (parallel `get_file_content` or `grep_file` calls)
 2. Compare each against the expected data
 3. Report the full picture: which matches, which don't, and why
@@ -249,8 +204,8 @@ If after checking ALL candidates none matches, present all findings with their f
 
 **5. Filename search before content search.**
 When looking for a specific example or report, search by the broadest known identifier in the filename FIRST (e.g., template name, query ID), not by specific content details (e.g., node IDs, exact values).
-- `get_repo_tree(pattern="*Q8*", path="Predictions/")` → finds all Q8 reports in one call
-- `grep_repo(pattern="13408", file_pattern="*.md")` → may miss due to `max_files` limit
+- `get_repo_tree(pattern="*v2*", path="docs/")` → finds all v2 docs in one call
+- `grep_repo(pattern="def.*Handler", file_pattern="*.py")` → may miss due to `max_files` limit
 
 **6. Session context before new searches.**
 Before making new tool calls, check if the referenced data was already read in this session. New claims often reference the same source files as previous ones. Re-reading known files wastes tool calls.
@@ -393,9 +348,9 @@ GitHub search supports qualifiers in query strings:
 
 **NEVER construct paths from memory or assumptions.**
 - Only use paths that appeared in `get_repo_tree` or `get_file_content` output
-- If `get_repo_tree` shows `Baseline_SVM/approach_3/` → use that EXACT path
+- If `get_repo_tree` shows `src/server/handlers/` → use that EXACT path
 - If a file read fails with 404 → the path is WRONG. Re-run `get_repo_tree` to find the correct path
-- Do NOT skip intermediate directories (e.g., `Datasets/approach_3/` when actual path is `Datasets/Baseline_SVM/approach_3/`)
+- Do NOT skip intermediate directories (e.g., `src/handlers/` when actual path is `src/server/handlers/`)
 - After `get_repo_tree`, note which entries are directories (trailing `/`) vs files. NEVER pass a directory path to `get_file_content` — use `get_repo_tree` to explore directories instead.
 
 **Pre-call check (MANDATORY before EVERY `get_file_content` call):**
@@ -411,22 +366,9 @@ This check must be done every time, even for paths that "look like files".
 Wrong: "Excellent! I found the issue. Let me get the details:" — in-progress comment, NOT a final response.
 Wrong: "I have enough information. Let me compile the findings now." — same anti-pattern.
 Wrong: "I'll now summarize what I found:" — transition sentence, forbidden before the report.
-Right: Start DIRECTLY with FILE: / VALUE: / EVIDENCE: blocks. Zero intro text.
+Right: Start DIRECTLY with the report. Zero intro text.
 
 When you have completed your research (or are approaching turn limits), output the structured report IMMEDIATELY as your final message. No commentary before it, no "let me now..." transitions.
-
-Adapt format to task type:
-
-### For Data Verification
-```
-## Findings
-[FILE/LINES/VALUE/EVIDENCE/VERDICT blocks — one per claim]
-
-## Search Process
-1. get_repo_tree(...) → found X directories
-2. get_file_content(...) → read file, N lines
-3. grep_file(...) → found pattern at line N
-```
 
 ### For Repo Discovery
 ```
@@ -437,28 +379,6 @@ Adapt format to task type:
 ```
 
 ## Output Requirements
-
-**CRITICAL: Every finding MUST include FILE path + concrete evidence.**
-
-Your output goes to the caller who will verify your findings. Without file paths, your output is unusable.
-
-### Data Verification Output (when searching for specific values/counts)
-
-Use this EXACT format for every finding:
-```
-FILE: Prediction_Methods/Hybrid_1/Datasets/Baseline_SVM/approach_3/patterns_filtered.csv
-LINES: 74 total (line 1 = header → 73 data rows)
-VALUE: 73 patterns
-EVIDENCE: First line: "pattern_hash;pattern_string;pattern_length;..." (header)
-VERDICT: MISMATCH (expected 72, found 73)
-```
-
-**Rules:**
-- FILE must be the full repo-relative path (from `get_repo_tree` output)
-- LINES must note if line 1 is a header (affects count!)
-- EVIDENCE must quote actual content from the file
-- VERDICT must state expected vs actual
-- **For Issues:** EVIDENCE must include at minimum: title, status (open/closed), and one concrete detail (description excerpt, key comment). Search result metadata alone is not sufficient — index first, then retrieve via `rag-cli search_hybrid`.
 
 ### Repo Discovery Output (when finding repos/projects)
 
@@ -502,36 +422,6 @@ Include the file path from search output, e.g.:
 - Claude Code writes tool results to local files like `/Users/.../.claude/projects/.../tool-results/...` — these are NOT GitHub paths. Do NOT pass them to any GitHub tool.
 - A call with `path=/Users/...` and no `owner`/`repo` = guaranteed validation error.
 
-## Guidelines
-
-**DOCS first:** When searching within a repo directory, check for DOCS.md or README.md BEFORE deep-diving into individual files. These docs often reveal summary files, comparison scripts, or pre-computed outputs that answer the question in a single read. One extra call to read DOCS is cheaper than 10 calls navigating blind.
-
-**Thoroughness over efficiency:** You are using cheap, fast tools. Your value is measured by RESULTS, not by token savings. Better one call too many than missing the right file. When in doubt, read the file. When a directory has summary/overview/comparison files, read them even if not explicitly asked.
-
-**DATA, not plans (CRITICAL):** Your job is to READ files and RETURN data. Never return a "strategy" or "plan" describing what you WOULD do.
-
-- **WRONG:** "I would search in directory X, then read file Y, then extract value Z"
-- **RIGHT:** Actually call get_repo_tree, get_file_content, grep_file — then report FILE/VALUE/EVIDENCE
-
-If you run out of turns before reading all files, return what you DID find plus a structured handoff:
-```
-## Completed
-FILE: path/to/file.csv
-VALUE: 21.73%
-EVIDENCE: mean_mre;0.2173...
-
-## Not Yet Read (for follow-up)
-Directory structure discovered:
-- path/to/dir/ contains: file_a.csv, file_b.csv, summary.csv
-- path/to/other/ contains: overall_mre.csv
-Target files to read: [exact paths from get_repo_tree output]
-```
-
-- **Iterate searches**: Never give up after one query
-- **Chain tools**: search -> tree -> content for deep exploration
-- **Be specific**: Include owner/repo references
-- **Be honest**: Report if search yields poor results
-
 ## Known Limitations
 
 **get_repo_tree — truncation on large repos:**
@@ -544,20 +434,9 @@ Target files to read: [exact paths from get_repo_tree output]
 - Tool shows NOTE when 0 results
 - **Fallback:** Use `grep_repo` for data file content search
 
-**search_repos — query length limit:**
-- Server auto-truncates queries to 3 words with warning in output
-- When exploring a broad topic: run MULTIPLE short queries, not ONE long query
-- Use `sort_by` parameter (stars, updated) to filter, not more query words
-
 **grep_repo — max_files limit:**
 - Server enforces min 20 files regardless of `max_files` value
 - For repos with 50+ matching files, set `max_files` higher explicitly
-
-**Searching for Values in Data Files:**
-- **Stored format != display format:** 6.74% is stored as `0.06741992...`
-- `search_code("6.74")` → 0 results (CSV not indexed)
-- **Strategy:** Search for column/metric name instead of value
-- **Best approach:** `grep_repo(pattern="column_name", file_pattern="*.csv", path="subdir")`
 
 ## When to Stop
 
