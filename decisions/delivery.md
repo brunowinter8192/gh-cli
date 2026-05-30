@@ -5,7 +5,7 @@
 - **Entry point:** `cli.py` — argparse CLI, 11 subcommands (`search_repos` … `get_release`)
 - **Wrapper:** `~/.local/bin/gh-cli` → invokes `python cli.py`; installed externally; in PATH
 - **Plugin:** skills-only — `.claude-plugin/plugin.json` `"skills": ["./skills/github-search/"]`; no MCP server, no `"tools"` key
-- **Skill:** `skills/github-search/SKILL.md` — CC skill loaded by the plugin; drives `gh-cli` calls via Bash
+- **Skill:** `skills/github-search/SKILL.md` — CC skill loaded by the plugin; drives `gh-cli` calls via Bash; frontmatter: `description` (trigger phrases + negativ-liste for auto-activation), `allowed-tools: Bash` (constraint: no Read/Edit/Glob during GitHub-research activation)
 - **Return contract:** all 11 visible `<tool>_workflow()` functions return `list[TextContent]`; `print(result[0].text)` in `cli.py` `main()` dispatch; `get_issue_workflow` + `get_issue_comments_workflow` internal-only helpers of `index_issues.py`; `get_discussion_workflow` internal-only helper of `index_discussions.py`
 - **REST tools:** 9 visible subcommands + `get_issue`, `get_issue_comments` (internal-only); all via `build_headers()` (`src/github/client.py`) — `GITHUB_API_BASE`, auth, `RESULTS_PER_PAGE=20`
 - **GraphQL tools:** `graphql_query()` (`src/github/graphql_client.py`) — Discussions API (no REST endpoint exists); `index_discussions.py` uses GraphQL directly for `search(type:DISCUSSION)` + delegates to `get_discussion_workflow()`. `search_discussions`, `list_discussions` removed (files deleted).
