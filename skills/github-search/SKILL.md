@@ -180,8 +180,9 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 ### Release Lookup
 ```
 1. list_releases owner repo --per-page 5  -> Find versions and changelogs
-2. get_release owner repo --tag v2.0.0    -> Read specific release notes
-3. get_release owner repo                 -> Read latest release
+2. list_releases owner repo --page 2      -> Releases 11-20 (page through history)
+3. get_release owner repo --tag v2.0.0    -> Read specific release notes
+4. get_release owner repo                 -> Read latest release
 ```
 
 ## Parameter Reference
@@ -272,6 +273,7 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 | owner | str | required | Repository owner |
 | repo | str | required | Repository name |
 | per_page | int | 10 | Number of releases to return |
+| --page | int | 1 | Page number (10 per page → page 2 = releases 11–20) |
 
 ### get_release
 

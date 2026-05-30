@@ -99,6 +99,7 @@ def main():
     p.add_argument("owner")
     p.add_argument("repo")
     p.add_argument("--per-page", dest="per_page", type=int, default=10)
+    p.add_argument("--page", dest="page", type=int, default=1)
 
     # ── get_release ───────────────────────────────────────────────────────────
     p = sub.add_parser("get_release", help="Read release notes.")
@@ -147,7 +148,7 @@ def main():
         result = get_repo_workflow(args.owner, args.repo)
 
     elif args.cmd == "list_releases":
-        result = list_releases_workflow(args.owner, args.repo, args.per_page)
+        result = list_releases_workflow(args.owner, args.repo, args.per_page, args.page)
 
     elif args.cmd == "get_release":
         result = get_release_workflow(args.owner, args.repo, args.tag)
