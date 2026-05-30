@@ -2,7 +2,9 @@
 
 ## Status Quo (IST)
 
-- 18 tools registered in `cli.py` (argparse subcommands); 17 are query/research tools, 1 (`index_issues`) is a RAG-indexing command (fetch + strip + write MDs + `workflow.py index-dir`)
+- 13 tools registered in `cli.py` (argparse subcommands); 12 are query/research tools, 1 (`index_issues`) is a RAG-indexing command (fetch + strip + write MDs + `workflow.py index-dir`)
+- `get_issue`, `get_issue_comments` retained as internal helpers of `index_issues.py`; no subcommand (not CLI-accessible directly)
+- `search_items`, `list_commits`, `compare_commits` removed from CLI surface; module files deleted from `src/github/`
 - Query truncation: `search_repos` enforces `MAX_QUERY_WORDS=3` (GitHub Search returns 0 for long queries)
 - Pagination: fixed `RESULTS_PER_PAGE=20` from `client.py`, no cursor-based pagination
 - `grep_repo` default `max_files=10`, caller can override
@@ -22,7 +24,6 @@ Pending — needs evaluation.
 
 - Is MAX_QUERY_WORDS=3 optimal or too aggressive?
 - Should pagination be exposed as a tool parameter (page number)?
-- Should `search_items` (issues + PRs) be split into separate tools?
 
 ## Quellen
 

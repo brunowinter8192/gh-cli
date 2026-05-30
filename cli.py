@@ -13,16 +13,11 @@ from src.github.get_repo_tree import get_repo_tree_workflow
 from src.github.get_file_content import get_file_content_workflow
 from src.github.grep_file import grep_file_workflow
 from src.github.grep_repo import grep_repo_workflow
-from src.github.search_items import search_items_workflow
-from src.github.get_issue import get_issue_workflow
-from src.github.get_issue_comments import get_issue_comments_workflow
 from src.github.index_issues import index_issues_workflow
 from src.github.get_repo import get_repo_workflow
 from src.github.search_discussions import search_discussions_workflow
 from src.github.list_discussions import list_discussions_workflow
 from src.github.get_discussion import get_discussion_workflow
-from src.github.list_commits import list_commits_workflow
-from src.github.compare_commits import compare_commits_workflow
 from src.github.list_releases import list_releases_workflow
 from src.github.get_release import get_release_workflow
 
@@ -30,7 +25,7 @@ from src.github.get_release import get_release_workflow
 def main():
     parser = argparse.ArgumentParser(
         prog="cli.py",
-        description="GitHub Research CLI — 18 tools for searching repos, code, issues, discussions, releases."
+        description="GitHub Research CLI — 13 tools for searching repos, code, issues, discussions, releases."
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -82,27 +77,6 @@ def main():
     p.add_argument("--max-files", dest="max_files", type=int, default=10,
                    help="Max files to search (server enforces min 20)")
 
-    # ── search_items ──────────────────────────────────────────────────────────
-    p = sub.add_parser("search_items", help="Search GitHub issues or PRs.")
-    p.add_argument("query")
-    p.add_argument("--type", dest="item_type", required=True,
-                   choices=["issue", "pr"], help="Item type to search")
-    p.add_argument("--sort-by", dest="sort_by",
-                   choices=["comments", "reactions", "created", "updated", "best_match"],
-                   default="best_match")
-
-    # ── get_issue ─────────────────────────────────────────────────────────────
-    p = sub.add_parser("get_issue", help="Read GitHub issue.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("issue_number", type=int)
-
-    # ── get_issue_comments ────────────────────────────────────────────────────
-    p = sub.add_parser("get_issue_comments", help="Read issue comments.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("issue_number", type=int)
-
     # ── index_issues ──────────────────────────────────────────────────────────
     p = sub.add_parser("index_issues", help="Fetch issues matching a query and index into RAG.")
     p.add_argument("query", help="Search keywords (max 3; most distinctive first)")
@@ -140,22 +114,6 @@ def main():
     p.add_argument("--comment-limit", dest="comment_limit", type=int, default=50)
     p.add_argument("--comment-sort", dest="comment_sort",
                    choices=["upvotes", "chronological"], default="upvotes")
-
-    # ── list_commits ──────────────────────────────────────────────────────────
-    p = sub.add_parser("list_commits", help="List commit history.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("--sha", default="", help="Branch or commit SHA to start from")
-    p.add_argument("--path", default="", help="Only commits touching this file path")
-    p.add_argument("--author", default="", help="Filter by author login")
-    p.add_argument("--per-page", dest="per_page", type=int, default=20)
-
-    # ── compare_commits ───────────────────────────────────────────────────────
-    p = sub.add_parser("compare_commits", help="Compare branches/tags/SHAs.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("base", help="Base branch, tag, or SHA")
-    p.add_argument("head", help="Head branch, tag, or SHA")
 
     # ── list_releases ─────────────────────────────────────────────────────────
     p = sub.add_parser("list_releases", help="List repository releases.")
@@ -200,15 +158,6 @@ def main():
             args.file_pattern, args.path, args.max_files
         )
 
-    elif args.cmd == "search_items":
-        result = search_items_workflow(args.query, args.item_type, args.sort_by)
-
-    elif args.cmd == "get_issue":
-        result = get_issue_workflow(args.owner, args.repo, args.issue_number)
-
-    elif args.cmd == "get_issue_comments":
-        result = get_issue_comments_workflow(args.owner, args.repo, args.issue_number)
-
     elif args.cmd == "index_issues":
         result = index_issues_workflow(args.query, args.repo, args.limit)
 
@@ -228,15 +177,6 @@ def main():
             args.owner, args.repo, args.number,
             args.comment_limit, args.comment_sort
         )
-
-    elif args.cmd == "list_commits":
-        result = list_commits_workflow(
-            args.owner, args.repo, args.sha,
-            args.path, args.author, args.per_page
-        )
-
-    elif args.cmd == "compare_commits":
-        result = compare_commits_workflow(args.owner, args.repo, args.base, args.head)
 
     elif args.cmd == "list_releases":
         result = list_releases_workflow(args.owner, args.repo, args.per_page)

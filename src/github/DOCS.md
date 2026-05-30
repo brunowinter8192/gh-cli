@@ -2,7 +2,7 @@
 
 ## Role
 
-18 tool modules (15 REST, 3 GraphQL) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py`. Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+15 tool modules (10 visible REST, 2 internal REST helpers, 3 GraphQL) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -107,22 +107,12 @@
 
 ---
 
-### search_items.py (92 LOC)
-
-**Purpose:** Search GitHub issues or PRs using the Search Issues API with type qualifier.
-**Reads:** GitHub Search Issues API (`/search/issues`) with `is:issue` or `is:pr` qualifier injected.
-**Writes:** returns `list[TextContent]` — up to 20 items with number, title, state (MERGED detection for PRs), author, labels, URL.
-**Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
-
----
-
 ### get_issue.py (53 LOC)
 
 **Purpose:** Retrieve full issue details including body.
 **Reads:** GitHub Issues API (`/issues/{number}`).
 **Writes:** returns `list[TextContent]` — title, state, author, dates, labels, comment count, body.
-**Called by:** `cli.py`; `index_issues.py` (imports `get_issue_workflow`).
+**Called by:** `index_issues.py` (imports `get_issue_workflow`). Internal-only helper — no CLI subcommand.
 **Calls out:** `requests`, `mcp.types`.
 
 ---
@@ -132,7 +122,7 @@
 **Purpose:** Retrieve all comments on a GitHub issue.
 **Reads:** GitHub Issue Comments API (`/issues/{number}/comments`).
 **Writes:** returns `list[TextContent]` — comment count, each comment with author, date, body.
-**Called by:** `cli.py`; `index_issues.py` (imports `get_issue_comments_workflow`).
+**Called by:** `index_issues.py` (imports `get_issue_comments_workflow`). Internal-only helper — no CLI subcommand.
 **Calls out:** `requests`, `mcp.types`.
 
 ---
@@ -144,26 +134,6 @@
 **Writes:** per-issue MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `workflow.py index-dir` via subprocess (RAG venv); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`.
-
----
-
-### list_commits.py (64 LOC)
-
-**Purpose:** List commits in a repository with optional filters for branch, file path, and author.
-**Reads:** GitHub Commits API (`/commits`) with optional `sha`, `path`, `author`, `per_page` params.
-**Writes:** returns `list[TextContent]` — short SHA, commit message (first line), author, date, URL per commit.
-**Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
-
----
-
-### compare_commits.py (72 LOC)
-
-**Purpose:** Compare two branches, tags, or SHAs showing commits and file changes between them.
-**Reads:** GitHub Compare API (`/compare/{base}...{head}`).
-**Writes:** returns `list[TextContent]` — status, ahead/behind counts, commit list (max 20), files changed (max 30) with status icons and diff stats.
-**Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
 
 ---
 
