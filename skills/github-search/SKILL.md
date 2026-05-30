@@ -1,5 +1,7 @@
 ---
 name: github-search
+description: "GitHub remote research via gh-cli. Use when the user asks to find repos/projects ('finde repos für X', 'was gibt es zu Y'), read remote files ('lies das README von Z'), search code patterns ('zeig mir wie X in Y implementiert ist'), index and search issues or discussions ('index issues von X', 'index discussions von Y', 'bekannte issues in Z für RAG'), or look up releases on GitHub. Do NOT use for: editing local files, running local git commands, searching local code (use Grep/Glob instead), or operations on the user's own GitHub account."
+allowed-tools: Bash
 ---
 
 # GitHub Search — Skill
@@ -12,7 +14,7 @@ All tools are invoked via the `gh-cli` wrapper (installed at `~/.local/bin/gh-cl
 gh-cli <cmd> [args]
 ```
 
-### Quick Reference — All 18 Tools
+### Quick Reference — All 11 Tools
 
 ```bash
 # Discovery
@@ -30,22 +32,11 @@ gh-cli get_file_content anthropics claude-code src/ --metadata-only
 gh-cli grep_file anthropics claude-code src/main.py "def run" --context-lines 3
 gh-cli grep_repo anthropics claude-code "class.*Tool" --file-pattern "*.py" --path src --max-files 20
 
-# Issues & PRs
-gh-cli search_items "memory leak repo:anthropics/claude-code" --type issue --sort-by comments
-gh-cli get_issue anthropics claude-code 1234
-gh-cli get_issue_comments anthropics claude-code 1234
+# RAG Indexing (Issues + Discussions)
 gh-cli index_issues "streaming" anthropics/claude-code --limit 30
+gh-cli index_discussions "memory" gastownhall/beads --limit 30
 
-# Discussions
-gh-cli search_discussions "context window topic:claude"
-gh-cli list_discussions anthropics claude-code --first 20 --category q-a --answered
-gh-cli list_discussions anthropics claude-code --not-answered
-gh-cli get_discussion anthropics claude-code 89 --comment-sort upvotes --comment-limit 30
-
-# Commits & Releases
-gh-cli list_commits anthropics claude-code --path src/main.py --per-page 10
-gh-cli list_commits anthropics claude-code --sha main --author octocat
-gh-cli compare_commits anthropics claude-code v1.0 v2.0
+# Releases
 gh-cli list_releases anthropics claude-code --per-page 5
 gh-cli get_release anthropics claude-code --tag v2.0.0
 gh-cli get_release anthropics claude-code  # latest release
@@ -55,8 +46,8 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 
 ## Two Access Patterns
 
-- **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo`, `get_repo_tree`, `get_file_content`, `grep_file`, `grep_repo` (+ commit/release metadata). Direct `gh-cli` calls — read the output.
-- **The conversation layer → query-driven RAG indexing.** The discussion/text layer AROUND the code. Issues (LIVE): `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. A few broad vector searches replace many fine-grained issue tool-calls. (Discussions and changelogs are moving to the same index-then-search pattern — planned, not yet built.)
+- **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo`, `get_repo_tree`, `get_file_content`, `grep_file`, `grep_repo`. Release metadata: `list_releases`, `get_release`. Direct `gh-cli` calls — read the output.
+- **The conversation layer → query-driven RAG indexing.** The discussion/text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_discussions`. A few broad vector searches replace many fine-grained tool-calls. Releases stay CLI-direct (exact-artifact lookup, not fuzzy retrieval).
 
 ## Regex Patterns (grep_file / grep_repo)
 
@@ -91,42 +82,43 @@ Patterns are compiled with Python `re` — **NOT** POSIX ERE.
 | grep_file | Search within a single file by regex |
 | grep_repo | Search across multiple files in a repo by regex + file glob |
 
-### Issues & PRs
+### RAG-Semantic
 
 | Tool | Purpose |
 |------|---------|
-| search_items | Find issues or PRs across GitHub |
-| get_issue | Read full issue with body |
-| get_issue_comments | Read issue discussion thread |
-| index_issues | Fetch issues by keyword query and index into RAG (`github_issues` collection) |
+| index_issues | Fetch issues by keyword query, strip noise, index into `github_issues` RAG collection |
+| index_discussions | Fetch discussions by keyword query, strip noise, index into `github_discussions` RAG collection |
 
-### Discussions
+### Releases
 
 | Tool | Purpose |
 |------|---------|
-| search_discussions | Find discussions across GitHub |
-| list_discussions | Browse discussions in a specific repo |
-| get_discussion | Read full discussion with comments |
-
-### Commits & Releases
-
-| Tool | Purpose |
-|------|---------|
-| list_commits | Browse commit history, find when a file changed |
-| compare_commits | See diff between two branches, tags, or SHAs |
 | list_releases | List all releases with changelogs |
-| get_release | Read full release notes for a specific tag |
+| get_release | Read full release notes for a specific tag or latest |
 
 ## Query Engineering (index_issues)
 
 - **MAX 3 keywords** (mandatory) — the wrapper hard-caps at 3; extra words are silently dropped before the search call.
 - **Most distinctive keyword first** — the fallback loop drops from the back (3→2→1 keywords). If the 3-keyword query returns 0 results, it retries with 2, then 1. A nonsense or overly-narrow last keyword won't block the run; an overly-narrow *first* keyword will error.
-- **After indexing, search via RAG** — run `rag-cli search_hybrid "<terms>" github_issues` for broad thematic retrieval instead of many `get_issue` calls:
+- **After indexing, search via RAG** — run `rag-cli search_hybrid "<terms>" github_issues` for broad thematic retrieval instead of many fine-grained issue tool-calls:
   ```
   gh-cli index_issues "streaming" anthropics/claude-code --limit 30
   rag-cli search_hybrid "streaming context window tool_use" github_issues
   ```
 - **Re-run = re-index** — `index_issues` always overwrites MDs and re-indexes. Issues with new comments get re-chunked automatically (RAG `index-dir` skips unchanged content-hash).
+
+## Query Engineering (index_discussions)
+
+- **MAX 3 keywords** — same cap as `index_issues`; extra words dropped silently.
+- **Most distinctive keyword first** — fallback loop 3→2→1 drops from the back.
+- **repo: injection automatic** — `index_discussions` scopes search to the target repo; no cross-repo search.
+- **After indexing, search via RAG:**
+  ```
+  gh-cli index_discussions "memory" gastownhall/beads --limit 30
+  rag-cli search_hybrid "memory tracking workflow" github_discussions
+  ```
+- **Re-run = re-index** — always overwrites MDs; index-dir skips unchanged content-hash.
+- **Accepted-answer threading** — accepted answers appear in `### Accepted Answer` block; duplicate in-list `[ANSWER]` tag is stripped automatically during indexing.
 
 ## Search Strategy
 
@@ -153,7 +145,7 @@ Patterns are compiled with Python `re` — **NOT** POSIX ERE.
 ### Repo-Scoped Search (CRITICAL)
 
 When the task specifies a target repo (e.g., "search anthropics/claude-code"):
-- **ALWAYS** add `repo:owner/repo` to ALL search_code and search_items queries
+- **ALWAYS** add `repo:owner/repo` to ALL search_code queries
 - `search_code("session IPC repo:anthropics/claude-code")` — not just `search_code("session IPC")`
 - Broad queries without `repo:` return results from unrelated repos and waste turns
 
@@ -171,7 +163,6 @@ When the task specifies a target repo (e.g., "search anthropics/claude-code"):
    - `language:python`
    - `stars:>100`
    - `repo:owner/repo`
-   - `is:open` / `is:closed` / `is:merged`
 
 **Example Flow:**
 ```
@@ -199,19 +190,20 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 - Config files (`settings.py`, `config.py`, `pyproject.toml`)
 - Entry points (`main.py`, `server.py`, `__init__.py`)
 
-### Issue Investigation
+### Issue Investigation (RAG)
 ```
-1. search_items "error message repo:owner/repo" type="issue" -> Find related issues
-2. get_issue owner, repo, issue_number -> Read full issue
-3. get_issue_comments owner, repo, issue_number -> Read discussion
+1. index_issues "<1-3 kw>" owner/repo [--limit 30]
+   → fetches top-N issues by relevance, strips noise, writes MDs, indexes into github_issues
+2. rag-cli search_hybrid "<symptom or topic terms>" github_issues
+   → broad vector search replaces many fine-grained issue tool-calls
 ```
 
-### Index + Search Workflow
+### Discussion Research (RAG)
 ```
-1. index_issues "streaming" anthropics/claude-code --limit 30
-   → fetches top-30 issues, strips noise, writes MDs, indexes into github_issues
-2. rag-cli search_hybrid "streaming context window" github_issues
-   → broad vector search replaces many fine-grained get_issue calls
+1. index_discussions "<1-3 kw>" owner/repo [--limit 30]
+   → fetches top-N discussions by relevance, strips noise, writes MDs, indexes into github_discussions
+2. rag-cli search_hybrid "<terms>" github_discussions
+   → broad vector search across all indexed threads
 ```
 
 ### Code Pattern Discovery
@@ -222,19 +214,11 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 3. get_repo_tree owner, repo, "src/" -> Understand context
 ```
 
-### Discussion Research
+### Release Lookup
 ```
-1. search_discussions "error message topic" -> Find Q&A across repos
-2. list_discussions owner, repo, category="q-a" -> Browse repo discussions
-3. get_discussion owner, repo, number, comment_sort="upvotes" -> Read top answers
-```
-
-### Commit History & Version Analysis
-```
-1. list_commits owner, repo -> Browse recent commits
-2. list_commits owner, repo, path="src/main.py" -> Find when file was changed
-3. compare_commits owner, repo, base="v1.0", head="v2.0" -> See what changed between versions
-4. list_releases owner, repo -> Find versions and changelogs
+1. list_releases owner repo --per-page 5  -> Find versions and changelogs
+2. get_release owner repo --tag v2.0.0    -> Read specific release notes
+3. get_release owner repo                 -> Read latest release
 ```
 
 ## Navigation Rules
@@ -355,27 +339,6 @@ When any tool returns a truncation warning:
 | path | str | "" | Subdirectory scope (narrows search, avoids truncation) |
 | max_files | int | 10 | Max files to search (server enforces min 20) |
 
-### search_items
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| query | str | required | Search query with qualifiers |
-| type | "issue"/"pr" | required | Item type to search |
-| sort_by | comments/reactions/created/updated/best_match | best_match | Sort order |
-
-**Empty result handling:** Response < 100 chars = 0 results found.
-- The topic does NOT exist in that repo as an issue/PR — do NOT retry with synonyms on the same repo
-- NEVER repeat the exact same query in the same session
-- Pivot immediately: use `search_code`, `grep_repo`, or read the relevant docs file directly
-
-### get_issue / get_issue_comments
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| issue_number | int | required | Issue number |
-
 ### index_issues
 
 | Parameter | Type | Default | Description |
@@ -384,59 +347,20 @@ When any tool returns a truncation warning:
 | repo | str | required | Repository as owner/repo |
 | --limit | int | 30 | Max issues to fetch and index |
 
+### index_discussions
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| query | str | required | Search keywords (max 3; most distinctive first) |
+| repo | str | required | Repository as owner/repo |
+| --limit | int | 30 | Max discussions to fetch and index |
+
 ### get_repo
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | owner | str | required | Repository owner |
 | repo | str | required | Repository name |
-
-### search_discussions
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| query | str | required | Search query |
-| first | int | 10 | Max results to return |
-
-### list_discussions
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| first | int | 10 | Max results |
-| category | str/null | null | Filter by category slug |
-| answered | bool/null | null | Filter by answered status |
-
-### get_discussion
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| number | int | required | Discussion number |
-| comment_limit | int | 50 | Max comments to return |
-| comment_sort | upvotes/chronological | upvotes | Comment sort order |
-
-### list_commits
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| sha | str | "" | Branch or commit SHA to start from |
-| path | str | "" | Only commits touching this file path |
-| author | str | "" | Filter by author login |
-| per_page | int | 20 | Number of commits to return |
-
-### compare_commits
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| base | str | required | Base branch, tag, or SHA |
-| head | str | required | Head branch, tag, or SHA |
 
 ### list_releases
 
@@ -462,8 +386,7 @@ GitHub search supports qualifiers in query strings:
 |-----------|---------|------------|
 | language:X | "fastapi language:python" | search_repos, search_code |
 | stars:>N | "mcp stars:>100" | search_repos |
-| repo:owner/repo | "error repo:anthropics/claude-code" | search_code, search_items |
-| is:open/closed/merged | "bug is:open" | search_items |
+| repo:owner/repo | "error repo:anthropics/claude-code" | search_code |
 | topic:X | "topic:mcp-server" | search_repos |
 
 ## Path Integrity (CRITICAL)
@@ -535,7 +458,7 @@ VERDICT: MISMATCH (expected 72, found 73)
 - LINES must note if line 1 is a header (affects count!)
 - EVIDENCE must quote actual content from the file
 - VERDICT must state expected vs actual
-- **For Issues:** EVIDENCE must include at minimum: title, status (open/closed), and one concrete detail (description excerpt, key comment). Search result metadata alone (e.g., "labels: python") is not sufficient — read with `get_issue` or `get_issue_comments` first. For PR results from `search_items --type pr`: search output is the available detail level (no dedicated PR-fetch tool).
+- **For Issues:** EVIDENCE must include at minimum: title, status (open/closed), and one concrete detail (description excerpt, key comment). Search result metadata alone is not sufficient — index first, then retrieve via `rag-cli search_hybrid`.
 
 ### Repo Discovery Output (when finding repos/projects)
 
