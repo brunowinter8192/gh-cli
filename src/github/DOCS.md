@@ -2,7 +2,7 @@
 
 ## Role
 
-15 tool modules (10 visible REST, 2 internal REST helpers, 3 GraphQL) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+13 tool modules (9 visible REST, 2 internal REST helpers, 1 GraphQL internal helper, 1 RAG-indexing discussion module) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -32,7 +32,7 @@
 **Purpose:** GraphQL infrastructure — single HTTP POST wrapper for GitHub GraphQL API v4.
 **Reads:** `GITHUB_TOKEN` from `client.py`; accepts query string + variables dict from caller.
 **Writes:** returns `data` dict from response; raises on HTTP errors or GraphQL `errors` key.
-**Called by:** `search_discussions.py`, `list_discussions.py`, `get_discussion.py`.
+**Called by:** `get_discussion.py`, `index_discussions.py`.
 **Calls out:** `requests`.
 
 ---
@@ -157,30 +157,20 @@
 
 ---
 
-### search_discussions.py (79 LOC)
-
-**Purpose:** Search GitHub Discussions across all repositories using GraphQL Search API.
-**Reads:** GitHub GraphQL API via `graphql_query()` (`graphql_client.py`) — `search(type: DISCUSSION)`.
-**Writes:** returns `list[TextContent]` — discussion count, title, category, repository, author, comment count, upvotes, answered status, URL.
-**Called by:** `cli.py`.
-**Calls out:** `mcp.types`; imports from `graphql_client.py`.
-
----
-
-### list_discussions.py (127 LOC)
-
-**Purpose:** List discussions in a specific repository with optional category and answered filters.
-**Reads:** GitHub GraphQL API via `graphql_query()` — repository discussions ordered by UPDATED_AT DESC; optionally queries `discussionCategories` to resolve category slug to ID.
-**Writes:** returns `list[TextContent]` — title, category, author, comment count, upvotes, answered status, update date, discussion number.
-**Called by:** `cli.py`.
-**Calls out:** `mcp.types`; imports from `graphql_client.py`.
-
----
-
 ### get_discussion.py (139 LOC)
 
-**Purpose:** Retrieve a full discussion with comments, accepted answer, and configurable comment sort.
+**Purpose:** Retrieve a full discussion with comments, accepted answer, and configurable comment sort. Internal-only fetch helper for `index_discussions.py`.
 **Reads:** GitHub GraphQL API via `graphql_query()` — discussion by number with body, answer, comments, and nested replies.
 **Writes:** returns `list[TextContent]` — title, category, author, upvotes, body, accepted answer section, sorted/limited comments with `[ANSWER]` tag.
-**Called by:** `cli.py`.
+**Called by:** `index_discussions.py` (imports `get_discussion_workflow`). Internal-only helper — no CLI subcommand.
 **Calls out:** `mcp.types`; imports from `graphql_client.py`.
+
+---
+
+### index_discussions.py (185 LOC)
+
+**Purpose:** Fetch GitHub discussions matching a query, strip noise, redact tokens, write per-discussion MDs, and index into the `github_discussions` RAG collection. Keyword-fallback loop (3→2→1); Accepted-Answer dedup removes in-list `[ANSWER]` copy while keeping `### Accepted Answer` block.
+**Reads:** GitHub GraphQL Search API (repo-scoped `search(type:DISCUSSION)`) + `get_discussion_workflow()` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
+**Writes:** per-discussion MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `workflow.py index-dir` via subprocess (RAG venv); returns `list[TextContent]` summary.
+**Called by:** `cli.py`.
+**Calls out:** `mcp.types`; imports from `graphql_client.py`, `get_discussion.py`.
