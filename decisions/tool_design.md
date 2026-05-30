@@ -2,15 +2,15 @@
 
 ## Status Quo (IST)
 
-- 13 tools registered in `cli.py` (argparse subcommands); 12 are query/research tools, 1 (`index_issues`) is a RAG-indexing command (fetch + strip + write MDs + `workflow.py index-dir`)
+- 11 tools registered in `cli.py` (argparse subcommands); 9 are query/research tools, 2 (`index_issues`, `index_discussions`) are RAG-indexing commands (fetch + strip + write MDs + `workflow.py index-dir`)
 - `get_issue`, `get_issue_comments` retained as internal helpers of `index_issues.py`; no subcommand (not CLI-accessible directly)
-- `search_items`, `list_commits`, `compare_commits` removed from CLI surface; module files deleted from `src/github/`
-- Query truncation: `search_repos` enforces `MAX_QUERY_WORDS=3` (GitHub Search returns 0 for long queries)
+- `get_discussion` retained as internal helper of `index_discussions.py`; no subcommand (not CLI-accessible directly)
+- `search_items`, `list_commits`, `compare_commits`, `search_discussions`, `list_discussions` removed from CLI surface; module files deleted from `src/github/`
+- Query truncation: `search_repos` enforces `MAX_QUERY_WORDS=3` (GitHub Search returns 0 for long queries); `index_issues`/`index_discussions` cap at 3 keywords with 3→2→1 fallback
 - Pagination: fixed `RESULTS_PER_PAGE=20` from `client.py`, no cursor-based pagination
 - `grep_repo` default `max_files=10`, caller can override
 - `get_file_content` supports `offset`/`limit` for line-range reads and `metadata_only` mode
 - `get_repo_tree` supports `depth` filtering and `pattern` glob matching
-- `get_discussion` supports `comment_sort` (upvotes vs chronological) and `comment_limit`
 
 ## Evidenz
 

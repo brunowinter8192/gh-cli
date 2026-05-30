@@ -14,10 +14,8 @@ from src.github.get_file_content import get_file_content_workflow
 from src.github.grep_file import grep_file_workflow
 from src.github.grep_repo import grep_repo_workflow
 from src.github.index_issues import index_issues_workflow
+from src.github.index_discussions import index_discussions_workflow
 from src.github.get_repo import get_repo_workflow
-from src.github.search_discussions import search_discussions_workflow
-from src.github.list_discussions import list_discussions_workflow
-from src.github.get_discussion import get_discussion_workflow
 from src.github.list_releases import list_releases_workflow
 from src.github.get_release import get_release_workflow
 
@@ -25,7 +23,7 @@ from src.github.get_release import get_release_workflow
 def main():
     parser = argparse.ArgumentParser(
         prog="cli.py",
-        description="GitHub Research CLI — 13 tools for searching repos, code, issues, discussions, releases."
+        description="GitHub Research CLI — 11 tools for searching repos, code, issues, discussions, releases."
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -84,36 +82,17 @@ def main():
     p.add_argument("--limit", type=int, default=30,
                    help="Max issues to fetch and index (default 30)")
 
+    # ── index_discussions ─────────────────────────────────────────────────────
+    p = sub.add_parser("index_discussions", help="Fetch discussions matching a query and index into RAG.")
+    p.add_argument("query", help="Search keywords (max 3; most distinctive first)")
+    p.add_argument("repo", help="Repository as owner/repo")
+    p.add_argument("--limit", type=int, default=30,
+                   help="Max discussions to fetch and index (default 30)")
+
     # ── get_repo ──────────────────────────────────────────────────────────────
     p = sub.add_parser("get_repo", help="Read repository metadata.")
     p.add_argument("owner")
     p.add_argument("repo")
-
-    # ── search_discussions ────────────────────────────────────────────────────
-    p = sub.add_parser("search_discussions", help="Search GitHub discussions.")
-    p.add_argument("query")
-    p.add_argument("--first", type=int, default=10, help="Max results to return")
-
-    # ── list_discussions ──────────────────────────────────────────────────────
-    p = sub.add_parser("list_discussions", help="List repository discussions.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("--first", type=int, default=10)
-    p.add_argument("--category", default=None, help="Filter by category slug")
-    ans_group = p.add_mutually_exclusive_group()
-    ans_group.add_argument("--answered", dest="answered", action="store_true", default=None,
-                           help="Show only answered discussions")
-    ans_group.add_argument("--not-answered", dest="answered", action="store_false",
-                           help="Show only unanswered discussions")
-
-    # ── get_discussion ────────────────────────────────────────────────────────
-    p = sub.add_parser("get_discussion", help="Read discussion with comments.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("number", type=int)
-    p.add_argument("--comment-limit", dest="comment_limit", type=int, default=50)
-    p.add_argument("--comment-sort", dest="comment_sort",
-                   choices=["upvotes", "chronological"], default="upvotes")
 
     # ── list_releases ─────────────────────────────────────────────────────────
     p = sub.add_parser("list_releases", help="List repository releases.")
@@ -161,22 +140,11 @@ def main():
     elif args.cmd == "index_issues":
         result = index_issues_workflow(args.query, args.repo, args.limit)
 
+    elif args.cmd == "index_discussions":
+        result = index_discussions_workflow(args.query, args.repo, args.limit)
+
     elif args.cmd == "get_repo":
         result = get_repo_workflow(args.owner, args.repo)
-
-    elif args.cmd == "search_discussions":
-        result = search_discussions_workflow(args.query, args.first)
-
-    elif args.cmd == "list_discussions":
-        result = list_discussions_workflow(
-            args.owner, args.repo, args.first, args.category, args.answered
-        )
-
-    elif args.cmd == "get_discussion":
-        result = get_discussion_workflow(
-            args.owner, args.repo, args.number,
-            args.comment_limit, args.comment_sort
-        )
 
     elif args.cmd == "list_releases":
         result = list_releases_workflow(args.owner, args.repo, args.per_page)
