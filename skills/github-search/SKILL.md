@@ -70,6 +70,7 @@ Patterns are compiled with Python `re` — **NOT** POSIX ERE.
 
 - **MAX 3 keywords** (mandatory) — the wrapper hard-caps at 3; extra words are silently dropped before the search call.
 - **Most distinctive keyword first** — the fallback loop drops from the back (3→2→1 keywords). If the 3-keyword query returns 0 results, it retries with 2, then 1. A nonsense or overly-narrow last keyword won't block the run; an overly-narrow *first* keyword will error.
+- **Indexing runs in the BACKGROUND — never poll for completion.** `index_issues` / `index_discussions` dispatch the fetch+embed job and return immediately with a background task ID. On completion you are NOTIFIED automatically. Do NOT `tail` the task output file, do NOT re-check status, do NOT loop/sleep waiting. Fire the index command, then either do other work or go idle — run the `rag-cli search_hybrid` step only AFTER the completion notification arrives. Polling the index output is a rule violation (wasted tool calls + context).
 - **After indexing, search via RAG:**
   ```
   gh-cli index_issues "streaming" anthropics/claude-code --limit 30
@@ -324,6 +325,18 @@ This check must be done every time, even for paths that "look like files".
 **grep_repo — max_files limit:**
 - Server enforces min 20 files regardless of `max_files` value
 - For repos with 50+ matching files, set `max_files` higher explicitly
+
+**grep_repo can return "No matches" when matches DO exist (false negative).** Observed 2026-05-30: `grep_repo` returned "No matches" with 50/50 files searched on a file where `search_code "<term> repo:owner/repo"` found 6 hits — same repo, same term. A 0-result from one tool is NOT proof of absence.
+
+## Search-Failure Escalation (NON-NEGOTIABLE)
+
+When ANY search (search_code, grep_repo, search_repos, RAG) returns 0 / "No matches", do NOT conclude "it isn't there" from a single tool. Escalate:
+
+1. `grep_repo` empty → `search_code "<term> repo:owner/repo"` (different index, catches what grep_repo silently misses).
+2. `search_code` empty → `get_repo_tree(pattern="*<keyword>*", path="<dir>")` to locate the file by NAME, then `get_file_content` / `grep_file` on the exact path.
+3. Still empty → vary the term itself: synonym, shorter substring, different casing. Do NOT re-run the identical term in the identical tool (guessing).
+
+Rule: only **two different tools** both returning nothing counts as evidence of absence. One tool's silence is not — it's a prompt to switch tools, not to give up.
 
 ## When to Stop
 
