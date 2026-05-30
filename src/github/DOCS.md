@@ -137,10 +137,10 @@
 
 ---
 
-### list_releases.py (65 LOC)
+### list_releases.py (66 LOC)
 
 **Purpose:** List releases in a repository with version tags and changelog previews.
-**Reads:** GitHub Releases API (`/releases`) with `per_page` param.
+**Reads:** GitHub Releases API (`/releases`) with `per_page` (clamped to 100) and `page` params.
 **Writes:** returns `list[TextContent]` — tag, name, date, prerelease/draft flags, asset count, 300-char changelog preview.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`.
