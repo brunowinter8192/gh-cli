@@ -10,34 +10,35 @@ MAX_BODY_LENGTH = 300
 
 
 # ORCHESTRATOR
-def list_releases_workflow(owner: str, repo: str, per_page: int = 10) -> list[TextContent]:
-    logger.info("list_releases owner=%s repo=%s", owner, repo)
-    raw_data = fetch_releases(owner, repo, per_page)
-    formatted = format_releases(raw_data, owner, repo)
+def list_releases_workflow(owner: str, repo: str, per_page: int = 10, page: int = 1) -> list[TextContent]:
+    logger.info("list_releases owner=%s repo=%s page=%s", owner, repo, page)
+    raw_data = fetch_releases(owner, repo, per_page, page)
+    formatted = format_releases(raw_data, owner, repo, page)
     return [TextContent(type="text", text=formatted)]
 
 
 # FUNCTIONS
 
 # Fetch releases from repository
-def fetch_releases(owner: str, repo: str, per_page: int) -> list:
+def fetch_releases(owner: str, repo: str, per_page: int, page: int) -> list:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/releases"
     logger.debug("Fetching from %s", url)
-    params = {"per_page": per_page}
+    params = {"per_page": min(per_page, 100), "page": page}
     response = requests.get(url, params=params, headers=build_headers())
     response.raise_for_status()
     return response.json()
 
 
 # Format release list for display
-def format_releases(releases: list, owner: str, repo: str) -> str:
+def format_releases(releases: list, owner: str, repo: str, page: int) -> str:
     lines = []
-    lines.append(f"# Releases in {owner}/{repo}")
-    lines.append(f"Showing {len(releases)} releases\n")
+    lines.append(f"# Releases in {owner}/{repo} (page {page}, showing {len(releases)})")
 
     if not releases:
-        lines.append("No releases found.")
+        lines.append(f"No releases on page {page}.")
         return "\n".join(lines)
+
+    lines.append("")
 
     for idx, r in enumerate(releases, 1):
         tag = r.get("tag_name", "")
