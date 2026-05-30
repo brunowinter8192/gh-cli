@@ -80,3 +80,40 @@ Replaced domain-specific example strings with GitHub-general equivalents:
 - `Datasets/approach_3/` ... `Datasets/Baseline_SVM/approach_3/` → `src/handlers/` ... `src/server/handlers/`
 
 The underlying rules (DOCS-first, ambiguous-matches, path-integrity 404 rule, pre-call check, filename-search-before-content-search) are preserved unchanged.
+
+---
+
+## Slimming Cut-Log — Pass 2 (output/navigation overhead) — 2026-05-30
+
+Skill reduced from 459 → ~345 lines. Governing principle: a skill describes its TOOLS (capabilities, parameters, landmines). Output templates and navigation discipline are either the caller's responsibility or generic agent competence — they do not belong in tool documentation. EXCEPTION: any rule that describes a concrete tool failure mode (wrong arg type → error, retry pattern → truncation, search order → silent misses) is a tool landmine and stays, extracted into `## Gotchas`.
+
+### CUT A — `## Navigation Rules` (60 lines)
+
+Six numbered rules (DOCS-first, ambiguous-matches, check-all, search-mode, filename-before-content, session-context) + three subsections (Truncation Handling, Reading Priority, Result Limits). These are general research discipline, not github-tool behavior. An agent that doesn't know to check all candidates before reporting isn't missing tool knowledge; it's missing general reasoning skill.
+
+**Landmines extracted before removal:**
+- `### Truncation Handling` → Gotcha 2 (tool behavior: truncation warning means narrow scope, specific API pattern `get_repo_tree(path=<dir>, depth=1)`)
+- Bullet 5 (filename before content search) → Gotcha 3 (tool constraint: `grep_repo` `max_files` cap silently misses files on large repos)
+
+### CUT B — `## Report Format` (19 lines)
+
+"End with a structured report, not narration" + `### For Repo Discovery` output template. Generic agent output discipline, not a tool capability or failure mode. Zero tool-specific information.
+
+### CUT C — `## Output Requirements` + `### Repo Discovery Output` (26 lines)
+
+Cosmetic output format for repo discovery results (`owner/repo`, Key Files, Good/Bad example with `qdrant/mcp-server-qdrant`). Caller decides output format; the skill's job is to get the data. After removing `### Repo Discovery Output`, the `## Output Requirements` header was empty → also removed.
+
+### CUT D — `## Output Hygiene` (18 lines)
+
+Three blocks: "NEVER include local paths in output" (cosmetic output rule), "ONLY GitHub references" (cosmetic), "NEVER use local paths as tool parameters" (tool landmine). First two are output cosmetics. Third is a real tool failure mode.
+
+**Landmine extracted before removal:**
+- `**NEVER use local paths as tool parameters**` → Gotcha 1 (tool behavior: `get_file_content`/`grep_file`/`grep_repo` require repo-relative `path`; CC tool-result files at `/Users/.../.claude/projects/.../tool-results/...` cause immediate validation errors)
+
+### ADD — `## Gotchas` section (9 lines)
+
+Three tool-landmine bullets, placed after `## Regex Patterns` (groups the two tool-landmine sections near the top):
+
+1. **Local paths as tool params → validation error** — `get_file_content`, `grep_file`, `grep_repo` take repo-relative path only. CC tool-result local paths → guaranteed validation error.
+2. **Truncation warning → narrow scope, don't retry** — use `get_repo_tree(path="<dir>", depth=1)` + `grep_repo(path=<subdir>)`. Retrying same broad scope reproduces the truncation.
+3. **Filename pattern before content search** — `get_repo_tree(pattern="*keyword*")` locates files in one call; `grep_repo` `max_files` cap silently misses files on large repos.
