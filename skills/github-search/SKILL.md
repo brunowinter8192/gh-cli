@@ -58,6 +58,14 @@ Patterns are compiled with Python `re` — **NOT** POSIX ERE.
 - Good: `"MOUSE_WHEEL_UP|MOUSE_WHEEL_DOWN"`, `"def (run|start)"`
 - Bad: `"MOUSE\|mouse\|button"` (escaped pipes; auto-corrected but wastes a call)
 
+## Gotchas
+
+- **Local paths as tool params → validation error.** `get_file_content`, `grep_file`, `grep_repo` take repo-relative `path` only (e.g., `src/main.py`). Claude Code writes tool results to `/Users/.../.claude/projects/.../tool-results/...` — those are local filesystem paths. Passing one as `path`, or omitting `owner`/`repo`, fails immediately.
+
+- **Truncation warning → narrow scope, don't retry.** On any truncation warning: `get_repo_tree(path="<dir>", depth=1)` to find subdirectories, then `grep_repo(path=<subdir>)` per subdirectory. Retrying the same broad scope reproduces the truncation.
+
+- **Filename pattern before content search.** `get_repo_tree(pattern="*keyword*", path="<dir>")` locates files in one call. `grep_repo` has a `max_files` cap (server min 20) — on large repos it silently misses files beyond the limit. Find candidates with tree pattern first, then grep on known paths.
+
 ## Query Engineering (index_issues / index_discussions)
 
 - **MAX 3 keywords** (mandatory) — the wrapper hard-caps at 3; extra words are silently dropped before the search call.
@@ -175,66 +183,6 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 2. get_release owner repo --tag v2.0.0    -> Read specific release notes
 3. get_release owner repo                 -> Read latest release
 ```
-
-## Navigation Rules
-
-**1. DOCS first — always.**
-Before opening data files or CSVs in any directory, check for README.md or DOCS.md in that directory (or parent). Well-documented repos explain which files are authoritative and what each subdirectory contains. Skipping DOCS leads to reading the wrong file.
-
-**2. Ambiguous matches — check ALL before reporting.**
-When multiple candidates exist (same filename in different paths, multiple subdirectories, different versions): check ALL of them BEFORE reporting any result. Never report a mismatch after checking only one candidate when others remain unchecked. The correct workflow is:
-1. Identify all candidates (parallel `get_file_content` or `grep_file` calls)
-2. Compare each against the expected data
-3. Report the full picture: which matches, which don't, and why
-
-**3. When no candidate matches — show all.**
-If after checking ALL candidates none matches, present all findings with their full paths. One wrong assumption wastes more time than a few extra tool calls.
-
-**4. Search Mode — targeted vs exploratory.**
-
-- **Targeted search** (asked for specific data, verification, comparison):
-  Exhaust cheap self-serve options first:
-  1. `get_repo_tree(pattern="*keyword*")` or `grep_repo` to locate files directly
-  2. If file found but content doesn't match → **check same directory first** (`depth=1`) for variants (filtered, selected, final, summary...)
-  3. If same directory has nothing → broaden scope one level up
-  4. Only after 2-3 failed attempts → report as NOT FOUND
-
-- **Exploratory search** (discover trends, compare repos, survey landscape):
-  Navigate freely with tools. Drill down via get_repo_tree, read READMEs, follow interesting leads.
-
-**5. Filename search before content search.**
-When looking for a specific example or report, search by the broadest known identifier in the filename FIRST (e.g., template name, query ID), not by specific content details (e.g., node IDs, exact values).
-- `get_repo_tree(pattern="*v2*", path="docs/")` → finds all v2 docs in one call
-- `grep_repo(pattern="def.*Handler", file_pattern="*.py")` → may miss due to `max_files` limit
-
-**6. Session context before new searches.**
-Before making new tool calls, check if the referenced data was already read in this session. New claims often reference the same source files as previous ones. Re-reading known files wastes tool calls.
-
-### Truncation Handling
-
-When any tool returns a truncation warning:
-1. Do NOT retry with same scope
-2. Use `get_repo_tree(path="<truncated_dir>", depth=1)` to discover subdirectories
-3. Run `grep_repo` with narrower `path` parameter on each subdirectory
-4. Report which subdirectories were searched and which were skipped
-
-### Reading Priority (per repository)
-
-1. **README.md** - Overview, features, usage
-2. **package.json / pyproject.toml** - Dependencies, metadata
-3. **docs/ or examples/** - Usage patterns
-4. **src/** - Only if critical to answer question
-
-### Result Limits
-
-**search_repos / search_code:**
-- Fetch: Top 10-15 results
-- Read in depth: Top 3-5
-- Skim rest: Only for outliers
-
-**Files per repo:**
-- Max 3-4 files (README + key sources)
-- Use get_repo_tree first to identify critical files
 
 ## Parameter Reference
 
@@ -358,69 +306,6 @@ GitHub search supports qualifiers in query strings:
 2. If YES → proceed.
 3. If NO, or if path ends with `/` in tree output → use `get_repo_tree(path=<dir>, depth=1)` instead.
 This check must be done every time, even for paths that "look like files".
-
-## Report Format
-
-**CRITICAL: Your FINAL response MUST be the structured report. Never end with narration.**
-
-Wrong: "Excellent! I found the issue. Let me get the details:" — in-progress comment, NOT a final response.
-Wrong: "I have enough information. Let me compile the findings now." — same anti-pattern.
-Wrong: "I'll now summarize what I found:" — transition sentence, forbidden before the report.
-Right: Start DIRECTLY with the report. Zero intro text.
-
-When you have completed your research (or are approaching turn limits), output the structured report IMMEDIATELY as your final message. No commentary before it, no "let me now..." transitions.
-
-### For Repo Discovery
-```
-## Summary (2-4 sentences)
-## Top Results (Max 3-5) — with paths!
-## Search Process
-## Next Step (singular!)
-```
-
-## Output Requirements
-
-### Repo Discovery Output (when finding repos/projects)
-
-**For each relevant repo:**
-- **Repo:** `owner/repo` (consistent format, no leading `/`)
-- **Key Files:** Exact paths from `get_repo_tree` output
-- **GitHub URL:** Only when explicitly requested
-
-**Good Example:**
-```
-**qdrant/mcp-server-qdrant** (1,183 Stars)
-- Implementation: `src/mcp_server_qdrant/server.py`
-- Config: `src/mcp_server_qdrant/settings.py`
-- Tools: qdrant-store, qdrant-find
-```
-
-**Bad Example (no paths):**
-```
-qdrant/mcp-server-qdrant implements FastMCP pattern
-```
-
-**For search_code results:**
-Include the file path from search output, e.g.:
-- "MCP tools defined in `internal/mcp/server.go`"
-
-## Output Hygiene
-
-**NEVER include in output:**
-- Local filesystem paths (`/Users/...`, `/home/...`, `C:\...`)
-- References to "current context" or "workspace"
-- Any path that is not a GitHub repository path
-
-**ONLY GitHub references:**
-- `owner/repo` for repositories
-- `path/to/file.py` for files within repos
-- `https://github.com/...` URLs only when specifically asked
-
-**NEVER use local paths as tool parameters (CRITICAL):**
-- `get_file_content` requires THREE params: `owner`, `repo`, `path` — ALL mandatory
-- `path` must be a repo-relative path (e.g., `src/main.py`) — NEVER a local filesystem path
-- Claude Code writes tool results to local files like `/Users/.../.claude/projects/.../tool-results/...` — these are NOT GitHub paths. Do NOT pass them to any GitHub tool.
-- A call with `path=/Users/...` and no `owner`/`repo` = guaranteed validation error.
 
 ## Known Limitations
 
