@@ -53,6 +53,11 @@ gh-cli get_release anthropics claude-code  # latest release
 
 On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr and exits non-zero. Check `GH_TOKEN` env var is set.
 
+## Two Access Patterns
+
+- **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo`, `get_repo_tree`, `get_file_content`, `grep_file`, `grep_repo` (+ commit/release metadata). Direct `gh-cli` calls — read the output.
+- **The conversation layer → query-driven RAG indexing.** The discussion/text layer AROUND the code. Issues (LIVE): `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. A few broad vector searches replace many fine-grained issue tool-calls. (Discussions and changelogs are moving to the same index-then-search pattern — planned, not yet built.)
+
 ## Regex Patterns (grep_file / grep_repo)
 
 Patterns are compiled with Python `re` — **NOT** POSIX ERE.
