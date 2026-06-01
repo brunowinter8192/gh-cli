@@ -17,7 +17,6 @@ CLI tool delivering 11 GitHub research commands (search, browse, issues, discuss
 | `src/github/` | Tool + infrastructure modules | 1511 | 16 |
 | `skills/github-search/` | CC skill config + Bash usage docs | — | 1 |
 | `decisions/` | Pipeline decision records + OldThemes history | — | — |
-| `sources/` | Research sources index | — | — |
 | `dev/` | Legacy test artifacts | — | — |
 | `.claude-plugin/` | Plugin metadata (skills-only) | — | 1 |
 
