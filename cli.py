@@ -11,8 +11,6 @@ from src.github.search_repos import search_repos_workflow
 from src.github.search_code import search_code_workflow
 from src.github.get_repo_tree import get_repo_tree_workflow
 from src.github.get_file_content import get_file_content_workflow
-from src.github.grep_file import grep_file_workflow
-from src.github.grep_repo import grep_repo_workflow
 from src.github.index_issues import index_issues_workflow
 from src.github.index_discussions import index_discussions_workflow
 from src.github.get_repo import get_repo_workflow
@@ -28,7 +26,7 @@ from src.github.delete_issue import delete_issue_workflow
 def main():
     parser = argparse.ArgumentParser(
         prog="cli.py",
-        description="GitHub Research CLI — 16 tools for searching, browsing, and managing repos, code, issues, discussions, releases."
+        description="GitHub Research CLI — 14 tools for searching, browsing, and managing repos, code, issues, discussions, releases."
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -59,26 +57,6 @@ def main():
     p.add_argument("--metadata-only", dest="metadata_only", action="store_true", default=False)
     p.add_argument("--offset", type=int, default=0, help="Start reading from this line number")
     p.add_argument("--limit", type=int, default=0, help="Number of lines to return (0=all)")
-
-    # ── grep_file ─────────────────────────────────────────────────────────────
-    p = sub.add_parser("grep_file", help="Regex search within a single file.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("path")
-    p.add_argument("pattern", help="Regex pattern")
-    p.add_argument("--context-lines", dest="context_lines", type=int, default=0)
-    p.add_argument("--max-matches", dest="max_matches", type=int, default=50)
-
-    # ── grep_repo ─────────────────────────────────────────────────────────────
-    p = sub.add_parser("grep_repo", help="Regex search across repo files.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("pattern", help="Regex pattern to search in file content")
-    p.add_argument("--file-pattern", dest="file_pattern", default="*",
-                   help="Glob pattern for file selection (e.g. '*.py')")
-    p.add_argument("--path", default="", help="Subdirectory scope")
-    p.add_argument("--max-files", dest="max_files", type=int, default=10,
-                   help="Max files to search (server enforces min 20)")
 
     # ── index_issues ──────────────────────────────────────────────────────────
     p = sub.add_parser("index_issues", help="Fetch issues matching a query and index into RAG.")
@@ -173,18 +151,6 @@ def main():
         result = get_file_content_workflow(
             args.owner, args.repo, args.path,
             args.metadata_only, args.offset, args.limit
-        )
-
-    elif args.cmd == "grep_file":
-        result = grep_file_workflow(
-            args.owner, args.repo, args.path,
-            args.pattern, args.context_lines, args.max_matches
-        )
-
-    elif args.cmd == "grep_repo":
-        result = grep_repo_workflow(
-            args.owner, args.repo, args.pattern,
-            args.file_pattern, args.path, args.max_files
         )
 
     elif args.cmd == "index_issues":

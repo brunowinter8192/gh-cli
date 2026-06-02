@@ -2,11 +2,11 @@
 
 ## Role
 
-18 tool modules (16 visible CLI subcommands: 14 REST + 2 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+16 tool modules (14 visible CLI subcommands: 12 REST + 2 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
-`__init__.py` is empty — no package-level exports. `cli.py` imports each tool directly: `from src.github.<module> import <module>_workflow`. No other callers outside `src/github/` exist except `grep_file.py`, `grep_repo.py` (cross-module internal imports documented per module below).
+`__init__.py` is empty — no package-level exports. `cli.py` imports each tool directly: `from src.github.<module> import <module>_workflow`. Cross-module imports within `src/github/` are documented per module below.
 
 ## Flow
 
@@ -22,7 +22,7 @@
 **Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers, generic HTTP helper.
 **Reads:** `~/.zshrc` (last `export GH_TOKEN=` line via `_read_zshrc_token()`); `os.environ["GH_TOKEN"]`; `os.environ["GITHUB_TOKEN"]`. Resolves at module-import time.
 **Writes:** exports `GITHUB_TOKEN` (str), `GITHUB_API_BASE` (str), `RESULTS_PER_PAGE` (int); `build_headers()` returns headers dict; `request(method, path, json, params)` executes any HTTP method and returns parsed JSON.
-**Called by:** all 15 REST modules (14 visible subcommands + `get_issue_comments`; read modules import `build_headers`/`GITHUB_API_BASE`; write/list modules use `request()`); `graphql_client.py` (imports `GITHUB_TOKEN`).
+**Called by:** all 13 REST modules (12 visible subcommands + `get_issue_comments`; read modules import `build_headers`/`GITHUB_API_BASE`; write/list modules use `request()`); `graphql_client.py` (imports `GITHUB_TOKEN`).
 **Calls out:** `requests`; stdlib (`os`, `re`, `pathlib`).
 
 ---
@@ -72,7 +72,7 @@
 **Purpose:** Traverse repository file tree with depth limiting and glob-pattern file search.
 **Reads:** GitHub Repos API (default branch), Git Trees API (`/git/trees`), Contents API (for sub-path SHA resolution).
 **Writes:** returns `list[TextContent]` — directory/file listing (browse mode) or pattern matches (search mode). Warns when GitHub API tree is truncated (>100k entries) or output exceeds `MAX_TREE_CHARS`.
-**Called by:** `cli.py`; `grep_repo.py` (imports `fetch_default_branch`, `get_tree_sha`, `fetch_tree`, `filter_by_pattern`).
+**Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`.
 
 ---
@@ -82,28 +82,8 @@
 **Purpose:** Retrieve and decode file content from a repository with optional line range and metadata-only mode.
 **Reads:** GitHub Contents API (`/contents/{path}`). Decodes base64 content.
 **Writes:** returns `list[TextContent]` — file metadata + content (or metadata only); directory entry counts when path is a directory.
-**Called by:** `cli.py`; `grep_file.py` (imports `fetch_file_content`, `decode_content`); `grep_repo.py` (imports `fetch_file_content`, `decode_content`).
-**Calls out:** `requests`, `mcp.types`.
-
----
-
-### grep_file.py (83 LOC)
-
-**Purpose:** Regex search within a single file, returning matching lines with optional context.
-**Reads:** file content via `fetch_file_content()` + `decode_content()` from `get_file_content.py`.
-**Writes:** returns `list[TextContent]` — matching lines with line numbers, context lines marked with `>` / ` `.
-**Called by:** `cli.py`; `grep_repo.py` (imports `search_lines`).
-**Calls out:** `mcp.types`; imports from `get_file_content.py`.
-
----
-
-### grep_repo.py (81 LOC)
-
-**Purpose:** Regex search across multiple files in a repository, combining tree traversal with per-file content search.
-**Reads:** repository tree via imports from `get_repo_tree.py`; file content via imports from `get_file_content.py`; regex matching via `search_lines` from `grep_file.py`.
-**Writes:** returns `list[TextContent]` — per-file match results with line numbers; lists files without matches.
 **Called by:** `cli.py`.
-**Calls out:** `mcp.types`; imports from `get_repo_tree.py`, `get_file_content.py`, `grep_file.py`.
+**Calls out:** `requests`, `mcp.types`.
 
 ---
 

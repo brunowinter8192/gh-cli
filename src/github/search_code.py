@@ -41,8 +41,7 @@ def format_code_results(raw_response: dict) -> str:
     if not items:
         lines.append("No results to display.")
         lines.append("\nNOTE: GitHub Code Search does not index all file types. CSV, TSV, and other data files")
-        lines.append("are not searchable. Use grep_file with a known file path, or grep_repo to search file")
-        lines.append("content by pattern.")
+        lines.append("are not searchable. Use get_file_content to read a known file path directly.")
         return "\n".join(lines)
 
     lines.append("Top Matches:\n")
