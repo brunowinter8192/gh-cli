@@ -15,7 +15,7 @@ CLI tool delivering 16 GitHub commands: 11 read-only research commands (search, 
 | Subdir | Role | LOC | Modules |
 |--------|------|-----|---------|
 | `src/github/` | Tool + infrastructure modules | ~1727 | 20 |
-| `skills/github-search/` | CC skill config + Bash usage docs | — | 1 |
+| `skills/gh-cli-search/` | CC skill config + Bash usage docs | — | 1 |
 | `decisions/` | Pipeline decision records + OldThemes history | — | — |
 | `dev/` | Legacy test artifacts | — | — |
 | `.claude-plugin/` | Plugin metadata (skills-only) | — | 1 |
