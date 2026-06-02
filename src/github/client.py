@@ -2,6 +2,7 @@
 import logging
 import os
 import re
+import requests
 from pathlib import Path
 
 GITHUB_API_BASE = "https://api.github.com"
@@ -60,3 +61,11 @@ def build_headers(accept: str = "application/vnd.github+json") -> dict:
     if GITHUB_TOKEN:
         headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
     return headers
+
+
+def request(method: str, path: str, json: dict | None = None, params: dict | None = None) -> dict:
+    url = f"{GITHUB_API_BASE}{path}"
+    logger.debug("%s %s", method, url)
+    response = requests.request(method, url, headers=build_headers(), json=json, params=params)
+    response.raise_for_status()
+    return response.json()
