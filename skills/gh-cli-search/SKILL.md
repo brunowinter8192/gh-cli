@@ -88,10 +88,10 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 - BAD: `search_code("reddit post selenium")` → finds 2000+ unrelated files globally
 
 **`search_repos` query limit (NON-NEGOTIABLE):**
-- Maximum 2-3 words. 4+ word queries are auto-truncated to 3 (CLI warns) or return 0 results.
-- WRONG: `search_repos("reddit browser submit post without api")` → 0 results
+- MAX 3 keywords — most distinctive first. Extra words are dropped before the search call.
+- Automatic 3→2→1 fallback: if the 3-keyword query returns 0, it retries with 2 keywords, then 1. A narrow last keyword won't block the run; a narrow *first* keyword will.
+- WRONG: `search_repos("reddit browser submit post without api")` → first 3 words used
 - RIGHT: `search_repos("reddit bot")` → then narrow with `sort_by=stars`
-- When no results: try synonyms as SEPARATE 2-word queries, don't add words to the failing query
 
 ### Repo-Scoped Search (CRITICAL)
 

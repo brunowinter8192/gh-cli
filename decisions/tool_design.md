@@ -9,8 +9,9 @@
 - `grep_file`, `grep_repo` removed from surface; files deleted from `src/github/`. Client-side grep tools with no own GitHub API endpoint; `search_code` covers the research use-case
 - `comment_issue` removed from surface; `src/github/comment_issue.py` deleted
 - `search_items`, `list_commits`, `compare_commits`, `search_discussions`, `list_discussions` removed from CLI surface; module files deleted from `src/github/`
-- Query truncation: `search_repos` enforces `MAX_QUERY_WORDS=3` (GitHub Search returns 0 for long queries); `index_issues`/`index_discussions` cap at 3 keywords with 3→2→1 fallback
-- Pagination: fixed `RESULTS_PER_PAGE=20` from `client.py`, no cursor-based pagination; `list_releases` exposes page-based pagination via `--page` param (GitHub `/releases` API supports `page` natively; `per_page` clamped to 100)
+- Query truncation: `search_repos`, `index_issues`, `index_discussions` all cap at 3 keywords with 3→2→1 fallback (drop from back until `total_count > 0`; `search_repos` hard-truncate removed)
+- Output: `search_repos` emits one line per repo (`full_name stars`, plain integer); decorative headers removed
+- Pagination: `search_repos` uses `SEARCH_REPOS_PER_PAGE=30` (local constant in `search_repos.py`); all other tools use `RESULTS_PER_PAGE=20` from `client.py`; `list_releases` exposes page-based pagination via `--page` param (GitHub `/releases` API supports `page` natively; `per_page` clamped to 100)
 - `get_file_content` supports `offset`/`limit` for line-range reads and `metadata_only` mode
 - `get_repo_tree` supports `depth` filtering and `pattern` glob matching
 
@@ -24,7 +25,7 @@ Pending — needs evaluation.
 
 ## Offene Fragen
 
-- Is MAX_QUERY_WORDS=3 optimal or too aggressive?
+- Is 3-keyword cap optimal or too aggressive? → **Resolved for `search_repos`**: 3-word cap retained; hard-truncate replaced by 3→2→1 fallback so narrow trailing keywords no longer block results.
 - Should pagination be exposed as a tool parameter (page number)? → **Resolved for `list_releases`**: yes, page-based (`--page`). Other tools TBD.
 
 ## Quellen

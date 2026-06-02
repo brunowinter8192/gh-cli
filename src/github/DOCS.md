@@ -37,11 +37,11 @@
 
 ---
 
-### search_repos.py (102 LOC)
+### search_repos.py (61 LOC)
 
 **Purpose:** Search GitHub repositories by keyword using the Search Repositories API.
-**Reads:** GitHub Search API (`/search/repositories`). Enforces `MAX_QUERY_WORDS=3` (long queries return 0 results from GitHub).
-**Writes:** returns `list[TextContent]` — up to 20 repos with name, description, stars, forks, language, URL.
+**Reads:** GitHub Search API (`/search/repositories`); `SEARCH_REPOS_PER_PAGE=30` (local); 3→2→1 keyword fallback (drops trailing keywords until `total_count > 0`).
+**Writes:** returns `list[TextContent]` — one line per repo: `full_name stars` (plain integer); up to 30 results.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`.
 
