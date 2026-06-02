@@ -42,9 +42,6 @@ def format_issue(issue: dict, owner: str, repo: str) -> str:
     lines.append(f"Comments: {issue['comments']}")
     lines.append(f"URL: {issue['html_url']}")
 
-    if issue['comments'] > 0:
-        lines.append(f"\n[get_issue_comments: owner=\"{owner}\" repo=\"{repo}\" issue_number={issue['number']}]")
-
     lines.append("\n---\n")
 
     body = issue.get("body") or "(No description provided)"

@@ -14,7 +14,7 @@ All tools are invoked via the `gh-cli` wrapper (installed at `~/.local/bin/gh-cl
 gh-cli <cmd> [args]
 ```
 
-### Quick Reference — All 11 Tools
+### Quick Reference — All 16 Tools
 
 ```bash
 # Discovery
@@ -40,6 +40,13 @@ gh-cli index_discussions "memory" gastownhall/beads --limit 30
 gh-cli list_releases anthropics claude-code --per-page 5
 gh-cli get_release anthropics claude-code --tag v2.0.0
 gh-cli get_release anthropics claude-code  # latest release
+
+# Issue Management
+gh-cli get_issue anthropics claude-code 1234           # read issue body (read-modify-write)
+gh-cli list_issues anthropics claude-code --state open --limit 20
+gh-cli create_issue anthropics claude-code "Bug: X" --body "Details..."
+gh-cli update_issue anthropics claude-code 1234 --body "Updated body" --state closed
+gh-cli delete_issue anthropics claude-code 1234 --confirm
 ```
 
 On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr and exits non-zero. Check `GH_TOKEN` env var is set.
@@ -283,6 +290,14 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 | owner | str | required | Repository owner |
 | repo | str | required | Repository name |
 | tag | str/null | null | Release tag (e.g., "v2.0.0") — omit for latest release |
+
+### get_issue
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| owner | str | required | Repository owner |
+| repo | str | required | Repository name |
+| number | int | required | Issue number |
 
 ## Search Qualifiers
 

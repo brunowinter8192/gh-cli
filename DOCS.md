@@ -2,19 +2,19 @@
 
 ## Role
 
-CLI tool delivering 16 GitHub commands: 11 read-only research commands (search, browse, issues, discussions, releases) plus 5 issue-management write commands (create, update, list, comment, delete). `cli.py` is the argparse entry point; each subcommand delegates to a `<tool>_workflow()` function in `src/github/`. Delivered to Claude Code sessions via the `gh-cli` wrapper and `github-search` skill — invoked through Bash calls, no MCP protocol.
+CLI tool delivering 16 GitHub commands: 11 read-only research commands (search, browse, issues, discussions, releases) plus 5 issue-management commands (3 write: create, update, delete; 2 read: list, get). `cli.py` is the argparse entry point; each subcommand delegates to a `<tool>_workflow()` function in `src/github/`. Delivered to Claude Code sessions via the `gh-cli` wrapper and `gh-cli-search` skill — invoked through Bash calls, no MCP protocol.
 
 ## Entry Points
 
 - `cli.py` → 16 argparse subcommands; each imports `<tool>_workflow` from `src.github.<tool>`
 - `~/.local/bin/gh-cli` wrapper → resolves to `python cli.py`; installed externally
-- `skills/github-search/SKILL.md` → CC skill loaded by `.claude-plugin/plugin.json`; drives `gh-cli` calls from Claude Code sessions via Bash
+- `skills/gh-cli-search/SKILL.md` → CC skill loaded by `.claude-plugin/plugin.json`; drives `gh-cli` calls from Claude Code sessions via Bash
 
 ## Directory Map
 
 | Subdir | Role | LOC | Modules |
 |--------|------|-----|---------|
-| `src/github/` | Tool + infrastructure modules | ~1700 | 21 |
+| `src/github/` | Tool + infrastructure modules | ~1727 | 20 |
 | `skills/github-search/` | CC skill config + Bash usage docs | — | 1 |
 | `decisions/` | Pipeline decision records + OldThemes history | — | — |
 | `dev/` | Legacy test artifacts | — | — |
@@ -33,15 +33,15 @@ CLI tool delivering 16 GitHub commands: 11 read-only research commands (search, 
 
 | Owner | State | Who reads |
 |-------|-------|-----------|
-| `client.py` | `GITHUB_TOKEN` (str, module-level) — resolved once at import via `_resolve_token()` | all 17 REST tool modules via `build_headers()` / `request()`; `graphql_client.py` at import |
+| `client.py` | `GITHUB_TOKEN` (str, module-level) — resolved once at import via `_resolve_token()` | all 15 REST modules (14 visible + `get_issue_comments`) via `build_headers()` / `request()`; `graphql_client.py` at import |
 
 ## Root-Level Files
 
 | File | LOC | Why at root |
 |------|-----|-------------|
-| `cli.py` | ~215 | Entry point — argparse dispatch for all 16 tools |
+| `cli.py` | 233 | Entry point — argparse dispatch for all 16 tools |
 | `requirements.txt` | 2 | Dependencies: `mcp` (TextContent type), `requests` |
 
 ## Subdir DOCS
 
-- [src/github/DOCS.md](src/github/DOCS.md) — Module map for 19 tool modules + 2 infrastructure modules
+- [src/github/DOCS.md](src/github/DOCS.md) — Module map for 18 tool modules + 2 infrastructure modules

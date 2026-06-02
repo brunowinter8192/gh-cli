@@ -21,7 +21,7 @@ from src.github.get_release import get_release_workflow
 from src.github.create_issue import create_issue_workflow
 from src.github.update_issue import update_issue_workflow
 from src.github.list_issues import list_issues_workflow
-from src.github.comment_issue import comment_issue_workflow
+from src.github.get_issue import get_issue_workflow
 from src.github.delete_issue import delete_issue_workflow
 
 
@@ -143,12 +143,11 @@ def main():
     p.add_argument("--labels", default=None, help="Comma-separated label filter")
     p.add_argument("--limit", type=int, default=30, help="Max issues to return (default 30)")
 
-    # ── comment_issue ─────────────────────────────────────────────────────────
-    p = sub.add_parser("comment_issue", help="Post a comment on an issue.")
+    # ── get_issue ─────────────────────────────────────────────────────────────
+    p = sub.add_parser("get_issue", help="Read a single issue (title, state, body).")
     p.add_argument("owner")
     p.add_argument("repo")
     p.add_argument("number", type=int)
-    p.add_argument("body", help="Comment body (Markdown)")
 
     # ── delete_issue ──────────────────────────────────────────────────────────
     p = sub.add_parser("delete_issue", help="Permanently delete an issue via GraphQL (irreversible).")
@@ -218,8 +217,8 @@ def main():
     elif args.cmd == "list_issues":
         result = list_issues_workflow(args.owner, args.repo, args.state, args.labels, args.limit)
 
-    elif args.cmd == "comment_issue":
-        result = comment_issue_workflow(args.owner, args.repo, args.number, args.body)
+    elif args.cmd == "get_issue":
+        result = get_issue_workflow(args.owner, args.repo, args.number)
 
     elif args.cmd == "delete_issue":
         result = delete_issue_workflow(args.owner, args.repo, args.number, args.confirm)
