@@ -3,40 +3,32 @@ import logging
 import requests
 from typing import Literal
 from mcp.types import TextContent
-from src.github.client import GITHUB_API_BASE, RESULTS_PER_PAGE, build_headers
+from src.github.client import GITHUB_API_BASE, build_headers
 
 logger = logging.getLogger(__name__)
 
+SEARCH_REPOS_PER_PAGE = 30
+
 
 # ORCHESTRATOR
-MAX_QUERY_WORDS = 3
-MAX_OUTPUT_CHARS = 80_000
-
 
 def search_repos_workflow(
     query: str,
     sort_by: Literal["stars", "forks", "updated", "best_match"] = "best_match"
 ) -> list[TextContent]:
     logger.info("search_repos query=%s sort_by=%s", query, sort_by)
-    query, truncation_warning = enforce_query_length(query)
-    raw_response = fetch_repositories(query, sort_by)
-    formatted_string = format_repo_results(raw_response)
-    if truncation_warning:
-        formatted_string = truncation_warning + "\n\n" + formatted_string
-    if len(formatted_string) > MAX_OUTPUT_CHARS:
-        formatted_string = formatted_string[:MAX_OUTPUT_CHARS]
-        formatted_string += f"\n\nNOTE: Output truncated at {MAX_OUTPUT_CHARS:,} chars. Add qualifiers to narrow results (e.g. stars:>1000, language:python)."
-    return [TextContent(type="text", text=formatted_string)]
-
-
-def enforce_query_length(query: str) -> tuple[str, str]:
-    words = query.split()
-    if len(words) <= MAX_QUERY_WORDS:
-        return query, ""
-    original = query
-    truncated = " ".join(words[:MAX_QUERY_WORDS])
-    warning = f"NOTE: Query truncated to {MAX_QUERY_WORDS} words ('{original}' → '{truncated}'). GitHub Search returns 0 results for long queries. Run multiple short queries instead."
-    return truncated, warning
+    keywords = query.split()[:3]
+    if not keywords:
+        return [TextContent(type="text", text="Empty query — provide 1-3 keywords.")]
+    raw_response = None
+    for k in range(len(keywords), 0, -1):
+        sub_q = " ".join(keywords[:k])
+        raw_response = fetch_repositories(sub_q, sort_by)
+        if raw_response["total_count"] > 0:
+            break
+    if raw_response["total_count"] == 0:
+        return [TextContent(type="text", text=f"No repositories found for '{keywords[0]}'.")]
+    return [TextContent(type="text", text=format_repo_results(raw_response))]
 
 
 # FUNCTIONS
@@ -48,7 +40,7 @@ def fetch_repositories(query: str, sort_by: str) -> dict:
 
     params = {
         "q": query,
-        "per_page": RESULTS_PER_PAGE,
+        "per_page": SEARCH_REPOS_PER_PAGE,
         "order": "desc"
     }
 
@@ -60,43 +52,10 @@ def fetch_repositories(query: str, sort_by: str) -> dict:
     return response.json()
 
 
-# Extract relevant fields from raw API response
+# Emit one line per repo: full_name stars
 def format_repo_results(raw_response: dict) -> str:
-    total = raw_response["total_count"]
     items = raw_response.get("items", [])
-
     lines = []
-    lines.append(f"Found {total:,} repositories matching your query.\n")
-
-    if not items:
-        lines.append("No results to display.")
-        return "\n".join(lines)
-
-    lines.append("Top Results:\n")
-
-    for idx, repo in enumerate(items, 1):
-        owner = repo["owner"]["login"]
-        name = repo["name"]
-        full_name = repo["full_name"]
-        desc = repo.get("description", "No description")
-        stars = repo["stargazers_count"]
-        forks = repo["forks_count"]
-        lang = repo.get("language", "Unknown")
-        topics = repo.get("topics") or []
-        url = repo["html_url"]
-
-        topics_str = ", ".join(topics[:5]) if topics else "None"
-        license_info = repo.get("license") or {}
-        license_name = license_info.get("name", "None")
-        updated = (repo.get("updated_at", "") or "")[:10]
-        open_issues = repo.get("open_issues_count", 0)
-
-        lines.append(f"{idx}. {full_name}")
-        lines.append(f"   Description: {desc}")
-        lines.append(f"   Language: {lang} | Stars: {stars:,} | Forks: {forks:,}")
-        lines.append(f"   Topics: {topics_str}")
-        lines.append(f"   License: {license_name} | Updated: {updated} | Open Issues: {open_issues}")
-        lines.append(f"   URL: {url}")
-        lines.append("")
-
+    for repo in items:
+        lines.append(f"{repo['full_name']} {repo['stargazers_count']}")
     return "\n".join(lines)
