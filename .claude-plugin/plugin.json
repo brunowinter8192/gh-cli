@@ -1,11 +1,11 @@
 {
-  "name": "github-research",
+  "name": "gh-cli",
   "version": "1.1.0",
   "description": "GitHub research capability - search repos, code, issues, PRs, discussions, releases via CLI",
   "author": {
     "name": "Bruno Winter"
   },
-  "repository": "https://github.com/brunowinter8192/github-MCP",
+  "repository": "https://github.com/brunowinter8192/gh-cli",
   "keywords": ["github", "research", "cli", "search"],
-  "skills": ["./skills/github-search/"]
+  "skills": ["./skills/gh-cli-search/"]
 }
