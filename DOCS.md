@@ -2,7 +2,7 @@
 
 ## Role
 
-CLI tool delivering 16 GitHub commands: 11 read-only research commands (search, browse, issues, discussions, releases) plus 5 issue-management commands (3 write: create, update, delete; 2 read: list, get). `cli.py` is the argparse entry point; each subcommand delegates to a `<tool>_workflow()` function in `src/github/`. Delivered to Claude Code sessions via the `gh-cli` wrapper and `gh-cli-search` skill — invoked through Bash calls, no MCP protocol.
+CLI tool delivering 14 GitHub commands: 9 read-only research commands (search, browse, issues, discussions, releases) plus 5 issue-management commands (3 write: create, update, delete; 2 read: list, get). `cli.py` is the argparse entry point; each subcommand delegates to a `<tool>_workflow()` function in `src/github/`. Delivered to Claude Code sessions via the `gh-cli` wrapper and `gh-cli-search` skill — invoked through Bash calls, no MCP protocol.
 
 ## Entry Points
 
@@ -14,7 +14,7 @@ CLI tool delivering 16 GitHub commands: 11 read-only research commands (search, 
 
 | Subdir | Role | LOC | Modules |
 |--------|------|-----|---------|
-| `src/github/` | Tool + infrastructure modules | ~1727 | 20 |
+| `src/github/` | Tool + infrastructure modules | ~1562 | 18 |
 | `skills/gh-cli-search/` | CC skill config + Bash usage docs | — | 1 |
 | `decisions/` | Pipeline decision records + OldThemes history | — | — |
 | `dev/` | Legacy test artifacts | — | — |
@@ -33,15 +33,15 @@ CLI tool delivering 16 GitHub commands: 11 read-only research commands (search, 
 
 | Owner | State | Who reads |
 |-------|-------|-----------|
-| `client.py` | `GITHUB_TOKEN` (str, module-level) — resolved once at import via `_resolve_token()` | all 15 REST modules (14 visible + `get_issue_comments`) via `build_headers()` / `request()`; `graphql_client.py` at import |
+| `client.py` | `GITHUB_TOKEN` (str, module-level) — resolved once at import via `_resolve_token()` | all 13 REST modules (12 visible + `get_issue_comments`) via `build_headers()` / `request()`; `graphql_client.py` at import |
 
 ## Root-Level Files
 
 | File | LOC | Why at root |
 |------|-----|-------------|
-| `cli.py` | 233 | Entry point — argparse dispatch for all 16 tools |
+| `cli.py` | 199 | Entry point — argparse dispatch for all 14 tools |
 | `requirements.txt` | 2 | Dependencies: `mcp` (TextContent type), `requests` |
 
 ## Subdir DOCS
 
-- [src/github/DOCS.md](src/github/DOCS.md) — Module map for 18 tool modules + 2 infrastructure modules
+- [src/github/DOCS.md](src/github/DOCS.md) — Module map for 16 tool modules + 2 infrastructure modules

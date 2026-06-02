@@ -14,7 +14,7 @@ All tools are invoked via the `gh-cli` wrapper (installed at `~/.local/bin/gh-cl
 gh-cli <cmd> [args]
 ```
 
-### Quick Reference — All 11 Tools
+### Quick Reference — All 9 Tools
 
 ```bash
 # Discovery
@@ -27,10 +27,6 @@ gh-cli get_repo_tree anthropics claude-code --path src --depth 2 --pattern "*.py
 gh-cli get_file_content anthropics claude-code README.md
 gh-cli get_file_content anthropics claude-code src/main.py --offset 100 --limit 50
 gh-cli get_file_content anthropics claude-code src/ --metadata-only
-
-# Content Search
-gh-cli grep_file anthropics claude-code src/main.py "def run" --context-lines 3
-gh-cli grep_repo anthropics claude-code "class.*Tool" --file-pattern "*.py" --path src --max-files 20
 
 # RAG Indexing (Issues + Discussions)
 gh-cli index_issues "streaming" anthropics/claude-code --limit 30
@@ -46,25 +42,16 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 
 ## Two Access Patterns
 
-- **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo`, `get_repo_tree`, `get_file_content`, `grep_file`, `grep_repo`. Release metadata: `list_releases`, `get_release`. Direct `gh-cli` calls — read the output.
+- **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo`, `get_repo_tree`, `get_file_content`. Release metadata: `list_releases`, `get_release`. Direct `gh-cli` calls — read the output.
 - **The conversation layer → query-driven RAG indexing.** The discussion/text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_discussions`. A few broad vector searches replace many fine-grained tool-calls. Releases stay CLI-direct (exact-artifact lookup, not fuzzy retrieval).
-
-## Regex Patterns (grep_file / grep_repo)
-
-Patterns are compiled with Python `re` — **NOT** POSIX ERE.
-
-- Alternation: use bare `|`, never `\|`. POSIX-ERE `\|` matches a literal backslash-pipe in Python and returns zero matches silently.
-- The CLI auto-normalizes `\|` → `|` and emits a warning, but writing the correct pattern first is faster.
-- Good: `"MOUSE_WHEEL_UP|MOUSE_WHEEL_DOWN"`, `"def (run|start)"`
-- Bad: `"MOUSE\|mouse\|button"` (escaped pipes; auto-corrected but wastes a call)
 
 ## Gotchas
 
-- **Local paths as tool params → validation error.** `get_file_content`, `grep_file`, `grep_repo` take repo-relative `path` only (e.g., `src/main.py`). Claude Code writes tool results to `/Users/.../.claude/projects/.../tool-results/...` — those are local filesystem paths. Passing one as `path`, or omitting `owner`/`repo`, fails immediately.
+- **Local paths as tool params → validation error.** `get_file_content` takes a repo-relative `path` only (e.g., `src/main.py`). Claude Code writes tool results to `/Users/.../.claude/projects/.../tool-results/...` — those are local filesystem paths. Passing one as `path`, or omitting `owner`/`repo`, fails immediately.
 
-- **Truncation warning → narrow scope, don't retry.** On any truncation warning: `get_repo_tree(path="<dir>", depth=1)` to find subdirectories, then `grep_repo(path=<subdir>)` per subdirectory. Retrying the same broad scope reproduces the truncation.
+- **Truncation warning → narrow scope, don't retry.** On any truncation warning from `get_repo_tree`: use `get_repo_tree(path="<dir>", depth=1)` to find subdirectories, then narrow the scope. Retrying the same broad scope reproduces the truncation.
 
-- **Filename pattern before content search.** `get_repo_tree(pattern="*keyword*", path="<dir>")` locates files in one call. `grep_repo` has a `max_files` cap (server min 20) — on large repos it silently misses files beyond the limit. Find candidates with tree pattern first, then grep on known paths.
+- **Filename pattern before content search.** `get_repo_tree(pattern="*keyword*", path="<dir>")` locates files in one call. Use that to identify the exact path, then read with `get_file_content`.
 
 ## Query Engineering (index_issues / index_discussions)
 
@@ -222,28 +209,6 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 | offset | int | 0 | Start reading from this line number |
 | limit | int | 0 | Number of lines to return (0=all) |
 
-### grep_file
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| path | str | required | File path to search |
-| pattern | str | required | Regex pattern |
-| context_lines | int | 0 | Lines of context around matches |
-| max_matches | int | 50 | Maximum matches to return |
-
-### grep_repo
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| pattern | str | required | Regex pattern to search in file content |
-| file_pattern | str | "\*" | Glob pattern for file selection |
-| path | str | "" | Subdirectory scope (narrows search, avoids truncation) |
-| max_files | int | 10 | Max files to search (server enforces min 20) |
-
 ### index_issues
 
 | Parameter | Type | Default | Description |
@@ -320,21 +285,14 @@ This check must be done every time, even for paths that "look like files".
 **search_code — does not index CSV/data files:**
 - GitHub Code Search skips `type: data` files (CSV, TSV, etc. per GitHub Linguist)
 - Tool shows NOTE when 0 results
-- **Fallback:** Use `grep_repo` for data file content search
-
-**grep_repo — max_files limit:**
-- Server enforces min 20 files regardless of `max_files` value
-- For repos with 50+ matching files, set `max_files` higher explicitly
-
-**grep_repo can return "No matches" when matches DO exist (false negative).** Observed 2026-05-30: `grep_repo` returned "No matches" with 50/50 files searched on a file where `search_code "<term> repo:owner/repo"` found 6 hits — same repo, same term. A 0-result from one tool is NOT proof of absence.
+- **Fallback:** Use `get_file_content` to read a known file path directly
 
 ## Search-Failure Escalation (NON-NEGOTIABLE)
 
-When ANY search (search_code, grep_repo, search_repos, RAG) returns 0 / "No matches", do NOT conclude "it isn't there" from a single tool. Escalate:
+When ANY search (search_code, search_repos, RAG) returns 0 / "No matches", do NOT conclude "it isn't there" from a single tool. Escalate:
 
-1. `grep_repo` empty → `search_code "<term> repo:owner/repo"` (different index, catches what grep_repo silently misses).
-2. `search_code` empty → `get_repo_tree(pattern="*<keyword>*", path="<dir>")` to locate the file by NAME, then `get_file_content` / `grep_file` on the exact path.
-3. Still empty → vary the term itself: synonym, shorter substring, different casing. Do NOT re-run the identical term in the identical tool (guessing).
+1. `search_code` empty → `get_repo_tree(pattern="*<keyword>*", path="<dir>")` to locate the file by NAME, then `get_file_content` on the exact path.
+2. Still empty → vary the term itself: synonym, shorter substring, different casing. Do NOT re-run the identical term in the identical tool (guessing).
 
 Rule: only **two different tools** both returning nothing counts as evidence of absence. One tool's silence is not — it's a prompt to switch tools, not to give up.
 
