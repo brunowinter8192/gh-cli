@@ -18,12 +18,17 @@ from src.github.index_discussions import index_discussions_workflow
 from src.github.get_repo import get_repo_workflow
 from src.github.list_releases import list_releases_workflow
 from src.github.get_release import get_release_workflow
+from src.github.create_issue import create_issue_workflow
+from src.github.update_issue import update_issue_workflow
+from src.github.list_issues import list_issues_workflow
+from src.github.comment_issue import comment_issue_workflow
+from src.github.delete_issue import delete_issue_workflow
 
 
 def main():
     parser = argparse.ArgumentParser(
         prog="cli.py",
-        description="GitHub Research CLI — 11 tools for searching repos, code, issues, discussions, releases."
+        description="GitHub Research CLI — 16 tools for searching, browsing, and managing repos, code, issues, discussions, releases."
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -108,6 +113,51 @@ def main():
     p.add_argument("--tag", default=None,
                    help="Release tag (e.g. 'v2.0.0') — omit for latest release")
 
+    # ── create_issue ──────────────────────────────────────────────────────────
+    p = sub.add_parser("create_issue", help="Create a new issue.")
+    p.add_argument("owner")
+    p.add_argument("repo")
+    p.add_argument("title")
+    p.add_argument("--body", default=None, help="Issue body (Markdown)")
+    p.add_argument("--labels", default=None, help="Comma-separated label names")
+    p.add_argument("--assignees", default=None, help="Comma-separated GitHub usernames")
+
+    # ── update_issue ──────────────────────────────────────────────────────────
+    p = sub.add_parser("update_issue", help="Update an existing issue (also closes/reopens).")
+    p.add_argument("owner")
+    p.add_argument("repo")
+    p.add_argument("number", type=int)
+    p.add_argument("--title", default=None)
+    p.add_argument("--body", default=None)
+    p.add_argument("--labels", default=None, help="Comma-separated label names (replaces all)")
+    p.add_argument("--state", choices=["open", "closed"], default=None)
+    p.add_argument("--state-reason", dest="state_reason",
+                   choices=["completed", "not_planned", "reopened"], default=None)
+
+    # ── list_issues ───────────────────────────────────────────────────────────
+    p = sub.add_parser("list_issues", help="List repository issues (default: open only).")
+    p.add_argument("owner")
+    p.add_argument("repo")
+    p.add_argument("--state", choices=["open", "closed", "all"], default="open",
+                   help="Filter by state (default: open)")
+    p.add_argument("--labels", default=None, help="Comma-separated label filter")
+    p.add_argument("--limit", type=int, default=30, help="Max issues to return (default 30)")
+
+    # ── comment_issue ─────────────────────────────────────────────────────────
+    p = sub.add_parser("comment_issue", help="Post a comment on an issue.")
+    p.add_argument("owner")
+    p.add_argument("repo")
+    p.add_argument("number", type=int)
+    p.add_argument("body", help="Comment body (Markdown)")
+
+    # ── delete_issue ──────────────────────────────────────────────────────────
+    p = sub.add_parser("delete_issue", help="Permanently delete an issue via GraphQL (irreversible).")
+    p.add_argument("owner")
+    p.add_argument("repo")
+    p.add_argument("number", type=int)
+    p.add_argument("--confirm", action="store_true", default=False,
+                   help="Required: actually perform the deletion (irreversible)")
+
     # ── Dispatch ──────────────────────────────────────────────────────────────
     args = parser.parse_args()
 
@@ -152,6 +202,27 @@ def main():
 
     elif args.cmd == "get_release":
         result = get_release_workflow(args.owner, args.repo, args.tag)
+
+    elif args.cmd == "create_issue":
+        labels = [l.strip() for l in args.labels.split(",")] if args.labels else None
+        assignees = [a.strip() for a in args.assignees.split(",")] if args.assignees else None
+        result = create_issue_workflow(args.owner, args.repo, args.title, args.body, labels, assignees)
+
+    elif args.cmd == "update_issue":
+        labels = [l.strip() for l in args.labels.split(",")] if args.labels else None
+        result = update_issue_workflow(
+            args.owner, args.repo, args.number,
+            args.title, args.body, labels, args.state, args.state_reason
+        )
+
+    elif args.cmd == "list_issues":
+        result = list_issues_workflow(args.owner, args.repo, args.state, args.labels, args.limit)
+
+    elif args.cmd == "comment_issue":
+        result = comment_issue_workflow(args.owner, args.repo, args.number, args.body)
+
+    elif args.cmd == "delete_issue":
+        result = delete_issue_workflow(args.owner, args.repo, args.number, args.confirm)
 
     else:
         parser.error(f"Unknown command: {args.cmd}")

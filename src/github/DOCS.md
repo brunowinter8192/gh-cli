@@ -2,7 +2,7 @@
 
 ## Role
 
-13 tool modules (9 visible REST, 2 internal REST helpers, 1 GraphQL internal helper, 1 RAG-indexing discussion module) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+18 tool modules (14 visible REST/GraphQL, 2 internal REST helpers, 1 GraphQL internal helper, 1 RAG-indexing discussion module) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -19,11 +19,11 @@
 
 ### client.py (62 LOC)
 
-**Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers.
+**Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers, generic HTTP helper.
 **Reads:** `~/.zshrc` (last `export GH_TOKEN=` line via `_read_zshrc_token()`); `os.environ["GH_TOKEN"]`; `os.environ["GITHUB_TOKEN"]`. Resolves at module-import time.
-**Writes:** exports `GITHUB_TOKEN` (str), `GITHUB_API_BASE` (str), `RESULTS_PER_PAGE` (int); `build_headers()` returns headers dict.
-**Called by:** all 12 REST tool modules (import `build_headers`, `GITHUB_API_BASE`, `RESULTS_PER_PAGE`); `graphql_client.py` (imports `GITHUB_TOKEN`).
-**Calls out:** stdlib only (`os`, `re`, `pathlib`).
+**Writes:** exports `GITHUB_TOKEN` (str), `GITHUB_API_BASE` (str), `RESULTS_PER_PAGE` (int); `build_headers()` returns headers dict; `request(method, path, json, params)` executes any HTTP method and returns parsed JSON.
+**Called by:** all 17 REST tool modules (read modules import `build_headers`/`GITHUB_API_BASE`; write/list modules use `request()`); `graphql_client.py` (imports `GITHUB_TOKEN`).
+**Calls out:** `requests`; stdlib (`os`, `re`, `pathlib`).
 
 ---
 
@@ -32,7 +32,7 @@
 **Purpose:** GraphQL infrastructure — single HTTP POST wrapper for GitHub GraphQL API v4.
 **Reads:** `GITHUB_TOKEN` from `client.py`; accepts query string + variables dict from caller.
 **Writes:** returns `data` dict from response; raises on HTTP errors or GraphQL `errors` key.
-**Called by:** `get_discussion.py`, `index_discussions.py`.
+**Called by:** `get_discussion.py`, `index_discussions.py`, `delete_issue.py`.
 **Calls out:** `requests`.
 
 ---
@@ -154,6 +154,56 @@
 **Writes:** returns `list[TextContent]` — tag, name, date, prerelease status, full Markdown body, assets with sizes.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`.
+
+---
+
+### create_issue.py
+
+**Purpose:** Create a new issue in a repository.
+**Reads:** nothing beyond auth.
+**Writes:** POST `/repos/{owner}/{repo}/issues` with title, optional body/labels/assignees; returns `list[TextContent]` — issue number + html_url.
+**Called by:** `cli.py`.
+**Calls out:** `client.request()`, `mcp.types`.
+
+---
+
+### update_issue.py
+
+**Purpose:** Update an existing issue's title, body, labels, or state (close / reopen).
+**Reads:** nothing beyond auth.
+**Writes:** PATCH `/repos/{owner}/{repo}/issues/{number}` with only the fields explicitly provided; returns `list[TextContent]` — updated number, title, state, url.
+**Called by:** `cli.py`.
+**Calls out:** `client.request()`, `mcp.types`.
+
+---
+
+### list_issues.py
+
+**Purpose:** List repository issues with state filter (default: open). Filters out pull-request entries returned by the REST endpoint.
+**Reads:** GET `/repos/{owner}/{repo}/issues` — paginates until `limit` real issues collected.
+**Writes:** returns `list[TextContent]` — one line per issue: number, state, title, labels.
+**Called by:** `cli.py`.
+**Calls out:** `client.request()`, `mcp.types`.
+
+---
+
+### comment_issue.py
+
+**Purpose:** Post a comment on an existing issue.
+**Reads:** nothing beyond auth.
+**Writes:** POST `/repos/{owner}/{repo}/issues/{number}/comments`; returns `list[TextContent]` — issue number + comment html_url.
+**Called by:** `cli.py`.
+**Calls out:** `client.request()`, `mcp.types`.
+
+---
+
+### delete_issue.py
+
+**Purpose:** Permanently delete an issue via the GitHub GraphQL `deleteIssue` mutation. Without `--confirm`, prints what would be deleted and exits safely. With `--confirm`, prints an irreversible-warning to stderr, resolves `node_id` via REST GET, then executes the mutation.
+**Reads:** GET `/repos/{owner}/{repo}/issues/{number}` for `node_id` and title.
+**Writes:** GraphQL `deleteIssue` mutation (only when `--confirm` passed); returns `list[TextContent]` — dry-run notice or deletion confirmation.
+**Called by:** `cli.py`.
+**Calls out:** `client.request()`, `graphql_client.graphql_query()`, `mcp.types`.
 
 ---
 
