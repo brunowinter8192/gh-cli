@@ -2,9 +2,11 @@
 
 ## Status Quo (IST)
 
-- 11 tools registered in `cli.py` (argparse subcommands); 9 are query/research tools, 2 (`index_issues`, `index_discussions`) are RAG-indexing commands (fetch + strip + write MDs + `workflow.py index-dir`)
-- `get_issue`, `get_issue_comments` retained as internal helpers of `index_issues.py`; no subcommand (not CLI-accessible directly)
+- 16 tools registered in `cli.py` (argparse subcommands); 9 are query/research tools, 2 (`index_issues`, `index_discussions`) are RAG-indexing commands, 5 are issue-management commands (3 write: `create_issue`, `update_issue`, `delete_issue`; 2 read: `list_issues`, `get_issue`)
+- `get_issue` exposed as CLI subcommand (owner/repo/number → title/state/body); also called internally by `index_issues.py`
+- `get_issue_comments` retained as internal-only helper of `index_issues.py`; no subcommand (not CLI-accessible directly)
 - `get_discussion` retained as internal helper of `index_discussions.py`; no subcommand (not CLI-accessible directly)
+- `comment_issue` removed from surface; `src/github/comment_issue.py` deleted
 - `search_items`, `list_commits`, `compare_commits`, `search_discussions`, `list_discussions` removed from CLI surface; module files deleted from `src/github/`
 - Query truncation: `search_repos` enforces `MAX_QUERY_WORDS=3` (GitHub Search returns 0 for long queries); `index_issues`/`index_discussions` cap at 3 keywords with 3→2→1 fallback
 - Pagination: fixed `RESULTS_PER_PAGE=20` from `client.py`, no cursor-based pagination; `list_releases` exposes page-based pagination via `--page` param (GitHub `/releases` API supports `page` natively; `per_page` clamped to 100)

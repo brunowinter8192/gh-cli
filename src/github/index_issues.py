@@ -93,7 +93,6 @@ def strip_noise(text: str) -> tuple[str, str]:
         "Author:", "Created:", "Updated:", "Branch:",
         "Commits:", "Changed Files:", "Mergeable:", "URL:", "Comments:",
     )
-    HINT_RE = re.compile(r'^\[get_issue_comments:.*\]$')
     CHECKBOX_RE = re.compile(r'^\s*-\s*\[[ xX]\]')
 
     title = ""
@@ -106,8 +105,6 @@ def strip_noise(text: str) -> tuple[str, str]:
             title_extracted = True
             continue
         if any(line.startswith(p) for p in METADATA_PREFIXES):
-            continue
-        if HINT_RE.match(line):
             continue
         if line.strip() == "### Preflight Checklist":
             continue
