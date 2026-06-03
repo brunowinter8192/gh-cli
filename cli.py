@@ -13,8 +13,7 @@ from src.github.get_repo_tree import get_repo_tree_workflow
 from src.github.get_file_content import get_file_content_workflow
 from src.github.index_issues import index_issues_workflow
 from src.github.index_discussions import index_discussions_workflow
-from src.github.list_releases import list_releases_workflow
-from src.github.get_release import get_release_workflow
+from src.github.index_releases import index_releases_workflow
 from src.github.create_issue import create_issue_workflow
 from src.github.update_issue import update_issue_workflow
 from src.github.list_issues import list_issues_workflow
@@ -69,19 +68,9 @@ def main():
     p.add_argument("--limit", type=int, default=30,
                    help="Max discussions to fetch and index (default 30)")
 
-    # ── list_releases ─────────────────────────────────────────────────────────
-    p = sub.add_parser("list_releases", help="List repository releases.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("--per-page", dest="per_page", type=int, default=10)
-    p.add_argument("--page", dest="page", type=int, default=1)
-
-    # ── get_release ───────────────────────────────────────────────────────────
-    p = sub.add_parser("get_release", help="Read release notes.")
-    p.add_argument("owner")
-    p.add_argument("repo")
-    p.add_argument("--tag", default=None,
-                   help="Release tag (e.g. 'v2.0.0') — omit for latest release")
+    # ── index_releases ────────────────────────────────────────────────────────
+    p = sub.add_parser("index_releases", help="Fetch all releases and index into RAG.")
+    p.add_argument("repo", help="Repository as owner/repo")
 
     # ── create_issue ──────────────────────────────────────────────────────────
     p = sub.add_parser("create_issue", help="Create a new issue.")
@@ -151,11 +140,8 @@ def main():
     elif args.cmd == "index_discussions":
         result = index_discussions_workflow(args.query, args.repo, args.limit)
 
-    elif args.cmd == "list_releases":
-        result = list_releases_workflow(args.owner, args.repo, args.per_page, args.page)
-
-    elif args.cmd == "get_release":
-        result = get_release_workflow(args.owner, args.repo, args.tag)
+    elif args.cmd == "index_releases":
+        result = index_releases_workflow(args.repo)
 
     elif args.cmd == "create_issue":
         labels = [l.strip() for l in args.labels.split(",")] if args.labels else None

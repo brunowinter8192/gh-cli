@@ -2,7 +2,7 @@
 
 ## Status Quo (IST)
 
-- 13 tools registered in `cli.py` (argparse subcommands); 6 are query/research tools (search_repos, search_code, get_repo_tree, get_file_content, list_releases, get_release), 2 (`index_issues`, `index_discussions`) are RAG-indexing commands, 3 are issue write commands (`create_issue`, `update_issue`, `delete_issue`), 2 are issue read commands (`list_issues`, `get_issue`)
+- 12 tools registered in `cli.py` (argparse subcommands); 4 are query/research tools (search_repos, search_code, get_repo_tree, get_file_content), 3 (`index_issues`, `index_discussions`, `index_releases`) are RAG-indexing commands, 3 are issue write commands (`create_issue`, `update_issue`, `delete_issue`), 2 are issue read commands (`list_issues`, `get_issue`)
 - `get_issue` exposed as CLI subcommand (owner/repo/number → title/state/body); also called internally by `index_issues.py`
 - `get_issue_comments` retained as internal-only helper of `index_issues.py`; no subcommand (not CLI-accessible directly)
 - `get_discussion` retained as internal helper of `index_discussions.py`; no subcommand (not CLI-accessible directly)
@@ -12,7 +12,8 @@
 - `search_items`, `list_commits`, `compare_commits`, `search_discussions`, `list_discussions` removed from CLI surface; module files deleted from `src/github/`
 - Query truncation: `search_repos`, `index_issues`, `index_discussions` all cap at 3 keywords with 3→2→1 fallback (drop from back until `total_count > 0`; `search_repos` hard-truncate removed)
 - Output: `search_repos` emits one line per repo (`full_name stars`, plain integer); `search_code` emits `full_name path` locator + full untruncated fragment(s) indented; decorative headers removed from both
-- Pagination: `search_repos` uses `SEARCH_REPOS_PER_PAGE=30` (local constant in `search_repos.py`); `search_code` uses `SEARCH_CODE_PER_PAGE=30` (local constant in `search_code.py`); shared pagination constant removed from `client.py` (no remaining users); `list_releases` exposes page-based pagination via `--page` param (GitHub `/releases` API supports `page` natively; `per_page` clamped to 100)
+- Pagination: `search_repos` uses `SEARCH_REPOS_PER_PAGE=30` (local constant in `search_repos.py`); `search_code` uses `SEARCH_CODE_PER_PAGE=30` (local constant in `search_code.py`); shared pagination constant removed from `client.py` (no remaining users)
+- `index_releases` per-repo RAG indexing: clean-before-index janitor (delete collection + rmtree doc dir); `GET /repos/{o}/{r}/releases?per_page=100` (hard 100, newest-first, no sort param); per-release MD written to `RAG_ROOT/data/documents/github_releases__{owner}__{repo}/`; collection name = dir basename = `github_releases__{owner}__{repo}`; `list_releases` and `get_release` removed
 - `get_file_content` supports `offset`/`limit` for line-range reads and `metadata_only` mode; implementation: `GET /repos/{o}/{r}/contents/{path}` + base64 decode
 - `get_repo_tree` one-level directory traversal (depth=1 always); implementation: GraphQL one-shot (`repository.object(expression)` → `Tree.entries`); metadata block (description/primaryLanguage/languages) on root call only; `--path` is the single exposed param; no depth/pattern/blob-reading
 
