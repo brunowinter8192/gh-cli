@@ -39,7 +39,7 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 ## Two Access Patterns
 
 - **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo_tree`, `get_file_content`. Direct `gh-cli` calls — read the output.
-- **The conversation & release layer → query-driven RAG indexing.** The text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_discussions`. Releases: `gh-cli index_releases <owner/repo>` → then `rag-cli search_hybrid "<feature>" github_releases__<owner>__<repo>`. A few broad vector searches replace many fine-grained tool-calls.
+- **The conversation & release layer → query-driven RAG indexing.** The text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_discussions`. Releases: `gh-cli index_releases <owner/repo>` → then `rag-cli search_hybrid "<feature>" github_releases`. A few broad vector searches replace many fine-grained tool-calls.
 
 ## Gotchas
 
@@ -172,12 +172,13 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 ```
 1. index_releases owner/repo
    → fetches the last 100 releases (newest-first), strips changelog noise, writes MDs,
-     wipes+rebuilds the per-repo collection github_releases__owner__repo (clean-before-index)
-2. rag-cli search_hybrid "<feature or slash-command>" github_releases__owner__repo
+     and WIPES + rebuilds the single github_releases collection (clean-before-index)
+2. rag-cli search_hybrid "<feature or slash-command>" github_releases
    → e.g. "dynamic workflows /workflows" → the release that introduced it + the version
 ```
-Use this to answer "since when does feature X exist / does our version have it". The
-per-repo collection guarantees no other repo's releases dilute the results.
+Use this to answer "since when does feature X exist / does our version have it".
+github_releases holds ONLY the last-indexed repo (each index wipes + refills it) — so
+always run index_releases for your target repo immediately before searching.
 
 ## Parameter Reference
 
@@ -233,7 +234,7 @@ One directory level per call (GraphQL one-shot). Root call also returns repo met
 
 ### index_releases
 
-Fetches the last 100 releases (newest-first), strips changelog noise, and indexes them into a per-repo RAG collection `github_releases__<owner>__<repo>`. Clean-before-index: each run wipes and rebuilds that repo's collection, so it is always fresh and never mixes with another repo. After indexing, search with `rag-cli search_hybrid "<feature>" github_releases__<owner>__<repo>`.
+Fetches the last 100 releases (newest-first), strips changelog noise, and indexes them into the single RAG collection `github_releases`. Clean-before-index: each run WIPES and rebuilds `github_releases` with the given repo's releases — so the collection holds only ONE repo at a time (the last indexed) and is always fresh. Always index your target repo immediately before searching: `rag-cli search_hybrid "<feature>" github_releases`.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
