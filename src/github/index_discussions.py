@@ -11,7 +11,7 @@ from src.github.get_discussion import get_discussion_workflow
 
 logger = logging.getLogger(__name__)
 
-RAG_ROOT    = Path("/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/MCP/RAG")
+RAG_ROOT    = Path("/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli")
 RAG_PYTHON  = RAG_ROOT / "venv" / "bin" / "python"
 RAG_DOC_DIR = RAG_ROOT / "data" / "documents" / "github_discussions"
 COLLECTION  = "github_discussions"
