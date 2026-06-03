@@ -14,7 +14,7 @@
 
 ## Evidenz
 
-Probe: `dev/repo_indexing/fetch_discussions_probe.py` on `gastownhall/beads` (2026-05-30). Report: `decisions/OldThemes/repo_discussion_indexing/probe_beads_2026-05-30.md`. Dataset: 23 discussions, full corpus.
+Probe on `gastownhall/beads` (2026-05-30). Report: `decisions/OldThemes/repo_discussion_indexing/probe_beads_2026-05-30.md`. Dataset: 23 discussions, full corpus.
 
 | Metric | Value |
 |---|---|

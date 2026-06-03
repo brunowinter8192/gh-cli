@@ -13,9 +13,6 @@ logs/
 *.log
 bug_fixes/
 
-# Dev tooling / probes (local only, never public)
-dev/
-
 # macOS
 .DS_Store
 
