@@ -41,12 +41,10 @@ def main():
     p.add_argument("query", help="Code search query with qualifiers (e.g. 'def workflow language:python')")
 
     # ── get_repo_tree ─────────────────────────────────────────────────────────
-    p = sub.add_parser("get_repo_tree", help="Browse repository file tree.")
+    p = sub.add_parser("get_repo_tree", help="Browse repository file tree (one level).")
     p.add_argument("owner")
     p.add_argument("repo")
-    p.add_argument("--path", default="", help="Subdirectory scope")
-    p.add_argument("--depth", type=int, default=-1, help="Tree depth (-1=unlimited)")
-    p.add_argument("--pattern", default="", help="Glob pattern for file search (e.g. '*.py')")
+    p.add_argument("--path", default="", help="Directory to list (default: repo root)")
 
     # ── get_file_content ──────────────────────────────────────────────────────
     p = sub.add_parser("get_file_content", help="Read file from GitHub repo.")
@@ -139,7 +137,7 @@ def main():
         result = search_code_workflow(args.query)
 
     elif args.cmd == "get_repo_tree":
-        result = get_repo_tree_workflow(args.owner, args.repo, args.path, args.depth, args.pattern)
+        result = get_repo_tree_workflow(args.owner, args.repo, args.path)
 
     elif args.cmd == "get_file_content":
         result = get_file_content_workflow(

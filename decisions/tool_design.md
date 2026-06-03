@@ -14,7 +14,7 @@
 - Output: `search_repos` emits one line per repo (`full_name stars`, plain integer); `search_code` emits `full_name path` locator + full untruncated fragment(s) indented; decorative headers removed from both
 - Pagination: `search_repos` uses `SEARCH_REPOS_PER_PAGE=30` (local constant in `search_repos.py`); `search_code` uses `SEARCH_CODE_PER_PAGE=30` (local constant in `search_code.py`); shared pagination constant removed from `client.py` (no remaining users); `list_releases` exposes page-based pagination via `--page` param (GitHub `/releases` API supports `page` natively; `per_page` clamped to 100)
 - `get_file_content` supports `offset`/`limit` for line-range reads and `metadata_only` mode; implementation: `GET /repos/{o}/{r}/contents/{path}` + base64 decode
-- `get_repo_tree` supports `depth` filtering and `pattern` glob matching; implementation: 3-REST chain (default-branch → SHA → `GET /git/trees?recursive=1`) returning the full recursive tree in one payload
+- `get_repo_tree` one-level directory traversal (depth=1 always); implementation: GraphQL one-shot (`repository.object(expression)` → `Tree.entries`); metadata block (description/primaryLanguage/languages) on root call only; `--path` is the single exposed param; no depth/pattern/blob-reading
 
 ## Evidenz
 
@@ -30,12 +30,7 @@ No benchmarks run. Query truncation added after observing GitHub Search returnin
 
 ## Recommendation (SOLL)
 
-**Change — `get_repo_tree` → GraphQL one-level traversal tool:**
-Replace `get_repo_tree` (3-REST recursive full-tree) with a GraphQL one-shot depth=1 directory-traversal tool. Shape: tree-only (no blob reading), depth=1 always, metadata block on root expression only, per-entry fields name/type/language/lineCount/size, single agent-exposed param (path/expression). `get_file_content` unchanged.
-
-Recursive find-by-name (`get_repo_tree --pattern`) dropped — non-need (agent traverses structurally; `search_code` with a content term covers the remainder; pure name-only search is a GitHub API gap, not a tool gap).
-
-Migration deferred: `src/` port + skill-description update for the traversal strategy are a separate green-lit step. IST remains reality until that step is complete.
+Keep — migration complete. IST now matches former SOLL. Skill-description update is a separate pending step.
 
 ## Offene Fragen
 
