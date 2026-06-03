@@ -21,7 +21,6 @@ Open question under investigation: can a set of cheaper / higher-signal calls re
 |--------|--------|-----------|
 | GitHub REST: /readme | ✅ | Returns preferred README regardless of filename; base64 content in default response |
 | GitHub REST: /languages | ✅ | Returns language→bytes map; one call for full tech-stack breakdown |
-| GitHub REST: /community/profile | ✅ | Health score + files-map (README/LICENSE/CONTRIBUTING/CoC/templates present+paths) |
 | GitHub GraphQL: TreeEntry.lineCount / .language | ✅ | Per-entry language+lineCount — not available from REST `/git/trees` |
 
 ### Hypotheses
@@ -30,7 +29,6 @@ Open question under investigation: can a set of cheaper / higher-signal calls re
 |------------|--------|----------|
 | GraphQL one-shot wins on token cost vs 3-REST chain | Unverified | lineCount+language per entry suggests higher signal density; measure next session |
 | /readme handles no-README gracefully (404) | Unverified | Test against repo without README next session |
-| /community/profile files-map replaces filename guessing | Unverified | Endpoint documented; run probe to confirm path fields populated |
 
 ## Scripts
 
@@ -44,11 +42,6 @@ Open question under investigation: can a set of cheaper / higher-signal calls re
 **`probe_languages.py`** — `GET /repos/{o}/{r}/languages`; prints language→bytes sorted by size with percentages.
 ```
 .venv/bin/python dev/repo_exploration/probe_languages.py <owner> <repo>
-```
-
-**`probe_community.py`** — `GET /repos/{o}/{r}/community/profile`; prints health%, description, files map.
-```
-.venv/bin/python dev/repo_exploration/probe_community.py <owner> <repo>
 ```
 
 **`probe_graphql_explore.py`** — GraphQL `repository{description, primaryLanguage, languages, object(expression)}` dispatched on Tree/Blob; one round-trip gives structure + language + lineCount per entry. Default expression `"HEAD:"` = root tree.
