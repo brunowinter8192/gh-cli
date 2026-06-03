@@ -10,8 +10,8 @@
 - `comment_issue` removed from surface; `src/github/comment_issue.py` deleted
 - `search_items`, `list_commits`, `compare_commits`, `search_discussions`, `list_discussions` removed from CLI surface; module files deleted from `src/github/`
 - Query truncation: `search_repos`, `index_issues`, `index_discussions` all cap at 3 keywords with 3→2→1 fallback (drop from back until `total_count > 0`; `search_repos` hard-truncate removed)
-- Output: `search_repos` emits one line per repo (`full_name stars`, plain integer); decorative headers removed
-- Pagination: `search_repos` uses `SEARCH_REPOS_PER_PAGE=30` (local constant in `search_repos.py`); all other tools use `RESULTS_PER_PAGE=20` from `client.py`; `list_releases` exposes page-based pagination via `--page` param (GitHub `/releases` API supports `page` natively; `per_page` clamped to 100)
+- Output: `search_repos` emits one line per repo (`full_name stars`, plain integer); `search_code` emits `full_name path` locator + full untruncated fragment(s) indented; decorative headers removed from both
+- Pagination: `search_repos` uses `SEARCH_REPOS_PER_PAGE=30` (local constant in `search_repos.py`); `search_code` uses `SEARCH_CODE_PER_PAGE=30` (local constant in `search_code.py`); `RESULTS_PER_PAGE` removed from `client.py` (no remaining users); `list_releases` exposes page-based pagination via `--page` param (GitHub `/releases` API supports `page` natively; `per_page` clamped to 100)
 - `get_file_content` supports `offset`/`limit` for line-range reads and `metadata_only` mode
 - `get_repo_tree` supports `depth` filtering and `pattern` glob matching
 

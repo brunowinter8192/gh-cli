@@ -17,11 +17,11 @@
 
 ## Modules
 
-### client.py (62 LOC)
+### client.py (70 LOC)
 
 **Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers, generic HTTP helper.
 **Reads:** `~/.zshrc` (last `export GH_TOKEN=` line via `_read_zshrc_token()`); `os.environ["GH_TOKEN"]`; `os.environ["GITHUB_TOKEN"]`. Resolves at module-import time.
-**Writes:** exports `GITHUB_TOKEN` (str), `GITHUB_API_BASE` (str), `RESULTS_PER_PAGE` (int); `build_headers()` returns headers dict; `request(method, path, json, params)` executes any HTTP method and returns parsed JSON.
+**Writes:** exports `GITHUB_TOKEN` (str), `GITHUB_API_BASE` (str); `build_headers()` returns headers dict; `request(method, path, json, params)` executes any HTTP method and returns parsed JSON.
 **Called by:** all 13 REST modules (12 visible subcommands + `get_issue_comments`; read modules import `build_headers`/`GITHUB_API_BASE`; write/list modules use `request()`); `graphql_client.py` (imports `GITHUB_TOKEN`).
 **Calls out:** `requests`; stdlib (`os`, `re`, `pathlib`).
 
@@ -47,11 +47,11 @@
 
 ---
 
-### search_code.py (85 LOC)
+### search_code.py (73 LOC)
 
 **Purpose:** Search code across GitHub using the Code Search API with text-match metadata.
-**Reads:** GitHub Search Code API (`/search/code`) with `text-match` accept header for code fragments.
-**Writes:** returns `list[TextContent]` — up to 20 matches with file paths and code fragments. Appends NOTE when 0 results (GitHub does not index CSV/data files).
+**Reads:** GitHub Search Code API (`/search/code`) with `text-match` accept header; `SEARCH_CODE_PER_PAGE=30` (local); up to 3 full untruncated fragments per match.
+**Writes:** returns `list[TextContent]` — one `full_name path` locator line per match, followed by full indented fragment(s); single-line note on 0 results.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`.
 

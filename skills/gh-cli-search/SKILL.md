@@ -100,6 +100,13 @@ When the task specifies a target repo (e.g., "search anthropics/claude-code"):
 - `search_code("session IPC repo:anthropics/claude-code")` — not just `search_code("session IPC")`
 - Broad queries without `repo:` return results from unrelated repos and waste turns
 
+### Query Engineering (search_code)
+
+- **Always include at least one free-text term** — a qualifier alone (e.g., `language:go`) is invalid; combine with a search term (e.g., `"http.Get language:go"`).
+- **`repo:owner/repo`** — scope to a known repo (primary use). Without it, results span all of GitHub and signal drops sharply.
+- **`language:LANG`** — filter by file language (e.g., `language:python`, `language:go`, `language:typescript`).
+- Only the **default branch** is searched. Files >384KB are excluded.
+
 ### Iterative Refinement (when no target repo is specified)
 
 **Start broad, then narrow down:**

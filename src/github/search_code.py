@@ -2,9 +2,11 @@
 import logging
 import requests
 from mcp.types import TextContent
-from src.github.client import GITHUB_API_BASE, RESULTS_PER_PAGE, build_headers
+from src.github.client import GITHUB_API_BASE, build_headers
 
 logger = logging.getLogger(__name__)
+
+SEARCH_CODE_PER_PAGE = 30
 
 
 # ORCHESTRATOR
@@ -23,51 +25,38 @@ def fetch_code_search(query: str) -> dict:
     logger.debug("Fetching from %s", url)
     params = {
         "q": query,
-        "per_page": RESULTS_PER_PAGE
+        "per_page": SEARCH_CODE_PER_PAGE
     }
     response = requests.get(url, params=params, headers=build_headers("application/vnd.github.text-match+json"))
     response.raise_for_status()
     return response.json()
 
 
-# Extract relevant fields from raw API response
+# Emit locator line (full_name path) then full fragments indented
 def format_code_results(raw_response: dict) -> str:
-    total = raw_response["total_count"]
     items = raw_response.get("items", [])
 
-    lines = []
-    lines.append(f"Found {total:,} code matches.\n")
-
     if not items:
-        lines.append("No results to display.")
-        lines.append("\nNOTE: GitHub Code Search does not index all file types. CSV, TSV, and other data files")
-        lines.append("are not searchable. Use get_file_content to read a known file path directly.")
-        return "\n".join(lines)
+        return "No results. Note: GitHub Code Search does not index CSV/data files — use get_file_content for known paths."
 
-    lines.append("Top Matches:\n")
-
-    for idx, item in enumerate(items, 1):
-        repo_info = item["repository"]
-        owner = repo_info["owner"]["login"]
-        repo_name = repo_info["name"]
-        full_name = repo_info["full_name"]
+    lines = []
+    for item in items:
+        full_name = item["repository"]["full_name"]
         path = item["path"]
-        url = item["html_url"]
+        lines.append(f"{full_name} {path}")
 
-        lines.append(f"{idx}. {full_name} - {path}")
-        lines.append(f"   URL: {url}")
-
-        if "text_matches" in item and item["text_matches"]:
-            lines.append("   Code Fragments:")
+        if item.get("text_matches"):
             text_matches = extract_text_matches(item["text_matches"])
             for match in text_matches[:3]:
                 fragment = match.get("fragment", "").strip()
                 if fragment:
-                    lines.append(f"     {fragment[:100]}...")
+                    for fline in fragment.splitlines():
+                        lines.append(f"  {fline}")
+                    lines.append("")
 
         lines.append("")
 
-    return "\n".join(lines)
+    return "\n".join(lines).rstrip()
 
 
 # Extract code fragments from text match metadata

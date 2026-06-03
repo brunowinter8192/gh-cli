@@ -6,7 +6,6 @@ import requests
 from pathlib import Path
 
 GITHUB_API_BASE = "https://api.github.com"
-RESULTS_PER_PAGE = 20
 
 logger = logging.getLogger(__name__)
 
