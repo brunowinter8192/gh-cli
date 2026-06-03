@@ -13,7 +13,7 @@ from src.github.get_issue_comments import get_issue_comments_workflow
 
 logger = logging.getLogger(__name__)
 
-RAG_ROOT    = Path("/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/MCP/RAG")
+RAG_ROOT    = Path("/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli")
 RAG_PYTHON  = RAG_ROOT / "venv" / "bin" / "python"
 RAG_DOC_DIR = RAG_ROOT / "data" / "documents" / "github_issues"
 COLLECTION  = "github_issues"
