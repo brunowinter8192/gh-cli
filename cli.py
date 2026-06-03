@@ -13,7 +13,6 @@ from src.github.get_repo_tree import get_repo_tree_workflow
 from src.github.get_file_content import get_file_content_workflow
 from src.github.index_issues import index_issues_workflow
 from src.github.index_discussions import index_discussions_workflow
-from src.github.get_repo import get_repo_workflow
 from src.github.list_releases import list_releases_workflow
 from src.github.get_release import get_release_workflow
 from src.github.create_issue import create_issue_workflow
@@ -71,11 +70,6 @@ def main():
     p.add_argument("repo", help="Repository as owner/repo")
     p.add_argument("--limit", type=int, default=30,
                    help="Max discussions to fetch and index (default 30)")
-
-    # ── get_repo ──────────────────────────────────────────────────────────────
-    p = sub.add_parser("get_repo", help="Read repository metadata.")
-    p.add_argument("owner")
-    p.add_argument("repo")
 
     # ── list_releases ─────────────────────────────────────────────────────────
     p = sub.add_parser("list_releases", help="List repository releases.")
@@ -158,9 +152,6 @@ def main():
 
     elif args.cmd == "index_discussions":
         result = index_discussions_workflow(args.query, args.repo, args.limit)
-
-    elif args.cmd == "get_repo":
-        result = get_repo_workflow(args.owner, args.repo)
 
     elif args.cmd == "list_releases":
         result = list_releases_workflow(args.owner, args.repo, args.per_page, args.page)

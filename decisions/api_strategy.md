@@ -2,7 +2,7 @@
 
 ## Status Quo (IST)
 
-- 13 modules use GitHub REST API v3 via `build_headers()` (`client.py`): 12 visible subcommands (search_repos, search_code, get_repo_tree, get_file_content, index_issues, get_repo, list_releases, get_release, create_issue, update_issue, list_issues, get_issue) + `get_issue_comments` (internal-only helper of `index_issues.py`)
+- 12 modules use GitHub REST API v3 via `build_headers()` (`client.py`): 11 visible subcommands (search_repos, search_code, get_repo_tree, get_file_content, index_issues, list_releases, get_release, create_issue, update_issue, list_issues, get_issue) + `get_issue_comments` (internal-only helper of `index_issues.py`)
 - 3 modules use GitHub GraphQL API v4 via `graphql_query()` (`graphql_client.py`):
   - `index_discussions` (`index_discussions.py`) — calls `graphql_query` directly for repo-scoped `search(type: DISCUSSION)` in `search_discussions_raw()`; delegates per-thread fetch to `get_discussion_workflow()` (also GraphQL)
   - `delete_issue` (`delete_issue.py`) — resolves `node_id` via REST GET, then executes GraphQL `deleteIssue` mutation
