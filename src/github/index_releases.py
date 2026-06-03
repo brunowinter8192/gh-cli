@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 RAG_ROOT   = Path("/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli")
 RAG_PYTHON = RAG_ROOT / "venv" / "bin" / "python"
 
+COLLECTION = "github_releases"
+
 
 # ORCHESTRATOR
 
@@ -22,8 +24,8 @@ RAG_PYTHON = RAG_ROOT / "venv" / "bin" / "python"
 def index_releases_workflow(repo: str) -> list[TextContent]:
     logger.info("index_releases repo=%s", repo)
     owner, repo_name = repo.split("/", 1)
-    collection = f"github_releases__{owner}__{repo_name}"
-    doc_dir = RAG_ROOT / "data" / "documents" / collection
+    collection = COLLECTION
+    doc_dir = RAG_ROOT / "data" / "documents" / "github_releases"
 
     janitor_clean(collection, doc_dir)
     doc_dir.mkdir(parents=True)
@@ -39,7 +41,7 @@ def index_releases_workflow(repo: str) -> list[TextContent]:
         f"Indexed {len(releases)} releases from {repo}.\n"
         f"New chunks added this run: {new_chunks}\n"
         f"Collection now: {total_mds} MDs, {total_chunks} chunks total.\n"
-        f"\nTo search: rag-cli search_hybrid \"<your feature query>\" {collection}"
+        f"\nTo search: rag-cli search_hybrid \"<your feature query>\" github_releases"
     )
     return [TextContent(type="text", text=summary)]
 

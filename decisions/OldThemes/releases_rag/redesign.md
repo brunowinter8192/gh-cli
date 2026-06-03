@@ -15,13 +15,13 @@ Use case 2 is the war-decisive concern. Two CLI tools for inspection are the wro
 
 RAG collapses this to one `search_hybrid` call that returns the relevant release(s) by semantic similarity to the feature query.
 
-## Per-Repo Collection Isolation
+## Single Fixed Collection (supersedes per-repo isolation)
 
-Collection name: `github_releases__{owner}__{repo}` (double underscore separates owner, repo, and kind; natural hyphens in repo name preserved). Per-repo collection = isolation by construction:
+**Superseded approach:** collection name `github_releases__{owner}__{repo}` (isolation via separate collections — different repos → different collection names). Rejected because: the agent had to pass the per-repo collection name explicitly, and tooling/infra benefits from a fixed, predictable collection name.
 
-- Cross-repo dilution eliminated (anthropics/claude-code releases don't contaminate a search against another repo's releases).
-- Different repos indexed independently; agent passes the explicit collection name — no ambiguity.
-- Alternative considered and rejected: single `github_releases` collection with owner/repo as metadata filter. Rejected because: (1) `rag-cli search_hybrid` has no metadata-filter param; (2) per-repo isolation is sufficient and simpler.
+**Current convention:** single fixed collection `github_releases`, fixed doc dir `RAG_ROOT/data/documents/github_releases/`, regardless of which repo is being indexed. Isolation is via **clean-before-index wipe**: the janitor deletes the collection and rmtrees the doc dir before every `index_releases` call, then refills from scratch. Only one repo's releases are present at a time. The agent always queries `github_releases` — no per-repo name to track.
+
+Alternative that was also considered and rejected: single `github_releases` collection with owner/repo as metadata filter. Rejected because `rag-cli search_hybrid` has no metadata-filter param; clean-before-index wipe is simpler and sufficient.
 
 ## Clean-Before-Index Janitor
 
