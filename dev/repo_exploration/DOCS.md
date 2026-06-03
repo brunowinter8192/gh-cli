@@ -31,8 +31,8 @@ Open question under investigation: can a set of cheaper / higher-signal calls re
 
 **`probe_client.py`** — shared auth/HTTP infrastructure (verbatim copy of src/ auth for dev/-self-containment). Not a runnable probe.
 
-**`probe_graphql_explore.py`** — GraphQL `repository{description, primaryLanguage, languages, object(expression)}` dispatched on Tree/Blob; one round-trip gives structure + language + lineCount per entry. Default expression `"HEAD:"` = root tree.
+**`probe_graphql_explore.py`** — Tree-only, depth=1. GraphQL one round-trip returns per-entry: name, type, language, lineCount, size. Repository metadata (description, primaryLanguage, languages) printed only for root expressions (path after ":" is empty, e.g. `"HEAD:"`); omitted for sub-path expressions to avoid repeated noise. If expression resolves to a Blob, prints a redirect message — does NOT read file content.
 ```
 .venv/bin/python dev/repo_exploration/probe_graphql_explore.py <owner> <repo> [expression]
-# expression examples: "HEAD:" (root), "HEAD:src/" (subtree), "HEAD:README.md" (blob)
+# expression examples: "HEAD:" (root, prints metadata), "HEAD:plugins/" (subtree, table only)
 ```
