@@ -3,11 +3,6 @@
 `/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/gh-cli/.venv/bin/python dev/repo_exploration/probe_graphql_explore.py anthropics claude-code "HEAD:plugins/"`
 
 ```
-description:     Claude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster by executing routine tasks, explaining complex code, and handling git workflows - all through natural language commands.
-primaryLanguage: Python
-languages:       Python 80%, Shell 14%, TypeScript 5%, PowerShell 1%, Dockerfile 1%
-expression:      HEAD:plugins/
-
 type: Tree
 
   name                                     type   lang               lines      size

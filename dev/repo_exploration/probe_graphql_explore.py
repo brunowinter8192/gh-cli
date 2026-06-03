@@ -1,22 +1,14 @@
 """
-Probe: GitHub GraphQL API — repository structure + metadata + content in one round-trip.
+Probe: GitHub GraphQL API — repo tree traversal in one round-trip.
 
-Query fetches:
-  - repository.description, primaryLanguage, languages (top-10 by size)
-  - repository.object(expression) dispatched on __typename:
-      Tree  → entries{name, type, path, extension, lineCount, size, language}
-      Blob  → text (UTF-8), byteSize, isBinary
-
-Default expression "HEAD:" returns root tree. Pass a path for subtrees or files:
-  HEAD:src/           → tree of src/ directory
-  HEAD:README.md      → blob (file content)
-  HEAD:src/main.py    → blob
-
-Demonstrates: one GraphQL call gives structure WITH per-entry language+lineCount that
-the REST Git Trees API (/git/trees?recursive) cannot provide.
+Tree-only, depth=1. Fetches per-entry: name, type, language, lineCount, size.
+Repository metadata (description, primaryLanguage, languages) printed only for root
+expressions (path component after ":" is empty, e.g. "HEAD:").
+If expression resolves to a Blob, prints a redirect message — does NOT read content.
 
 Usage (from project root):
   .venv/bin/python dev/repo_exploration/probe_graphql_explore.py <owner> <repo> [expression]
+  # expression examples: "HEAD:" (root), "HEAD:plugins/" (subtree)
 """
 # INFRASTRUCTURE
 import argparse
@@ -43,19 +35,12 @@ query ExploreRepo($owner: String!, $name: String!, $expression: String!) {
         entries {
           name
           type
-          path
-          extension
           lineCount
           size
           language {
             name
           }
         }
-      }
-      ... on Blob {
-        text
-        byteSize
-        isBinary
       }
     }
   }
@@ -82,21 +67,21 @@ def fetch_and_print(owner: str, repo: str, expression: str) -> str:
     repo_data = data["repository"]
     lines = []
 
-    lines.append(f"description:     {repo_data.get('description') or '(none)'}")
-    primary = (repo_data.get("primaryLanguage") or {}).get("name", "(none)")
-    lines.append(f"primaryLanguage: {primary}")
-
-    lang_edges = (repo_data.get("languages") or {}).get("edges", [])
-    if lang_edges:
-        total_bytes = sum(e["size"] for e in lang_edges)
-        lang_parts = [
-            f"{e['node']['name']} {e['size'] / total_bytes * 100:.0f}%"
-            for e in lang_edges
-        ]
-        lines.append(f"languages:       {', '.join(lang_parts)}")
-
-    lines.append(f"expression:      {expression}")
-    lines.append("")
+    is_root = expression.split(":", 1)[1] == ""
+    if is_root:
+        lines.append(f"description:     {repo_data.get('description') or '(none)'}")
+        primary = (repo_data.get("primaryLanguage") or {}).get("name", "(none)")
+        lines.append(f"primaryLanguage: {primary}")
+        lang_edges = (repo_data.get("languages") or {}).get("edges", [])
+        if lang_edges:
+            total_bytes = sum(e["size"] for e in lang_edges)
+            lang_parts = [
+                f"{e['node']['name']} {e['size'] / total_bytes * 100:.0f}%"
+                for e in lang_edges
+            ]
+            lines.append(f"languages:       {', '.join(lang_parts)}")
+        lines.append(f"expression:      {expression}")
+        lines.append("")
 
     obj = repo_data.get("object")
     if obj is None:
@@ -104,13 +89,14 @@ def fetch_and_print(owner: str, repo: str, expression: str) -> str:
         return "\n".join(lines)
 
     typename = obj.get("__typename")
+
+    if typename == "Blob":
+        lines.append(f"{expression} is a file — use get_file_content to read it")
+        return "\n".join(lines)
+
     lines.append(f"type: {typename}")
     lines.append("")
-
-    if typename == "Tree":
-        lines.append(format_tree(obj.get("entries", [])))
-    elif typename == "Blob":
-        lines.append(format_blob(obj))
+    lines.append(format_tree(obj.get("entries", [])))
 
     return "\n".join(lines)
 
@@ -132,17 +118,6 @@ def format_tree(entries: list) -> str:
             f"  {e['name']:<40} {e['type']:<6} {lang:<16} {lines_str:>7} {sz_str:>9}"
         )
     return "\n".join(rows)
-
-
-# Format blob content (first 40 lines or binary notice)
-def format_blob(obj: dict) -> str:
-    if obj.get("isBinary"):
-        return f"(binary blob, {obj.get('byteSize', '?')} bytes)"
-    text = obj.get("text") or ""
-    content_lines = text.splitlines()
-    preview = "\n".join(content_lines[:40])
-    suffix = f"\n... ({len(content_lines) - 40} more lines)" if len(content_lines) > 40 else ""
-    return f"{preview}{suffix}"
 
 
 if __name__ == "__main__":
