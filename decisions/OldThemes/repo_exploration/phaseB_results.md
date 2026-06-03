@@ -30,8 +30,24 @@
 
 **dev/ script:** `dev/repo_exploration/probe_languages.py` (deleted). Raw output archived in `dev/repo_exploration/raw_results/languages.md` (deleted).
 
-## GraphQL one-shot (probe_graphql_explore) — KEPT (future)
+## DECISION: replace get_repo_tree with GraphQL one-level traversal
 
-**What it is:** GraphQL `repository{description, primaryLanguage, languages(first:10), object(expression)}` dispatched on Tree/Blob. One round-trip returns: repo description, primary language, full language breakdown (subsumes /languages), and per-entry name/type/language/lineCount for any subtree expression.
+**Decision:** `get_repo_tree` (recursive full-tree, 3-REST chain: default-branch → SHA → `/git/trees?recursive`) is replaced by a GraphQL one-shot, depth=1 directory-traversal tool.
 
-**Status:** Retained in `dev/repo_exploration/` as reference implementation. NOT promoted to a production tool yet — promotion deferred pending: (1) token-cost comparison vs current 3-REST chain (`get_repo_tree`), (2) design decision on what a production orientation tool should expose to the user. Hypothesis that GraphQL one-shot wins on signal density remains unverified (see DOCS.md Hypotheses).
+**Rationale:** For live top-down agent exploration, recursive full-tree dump is the anti-pattern — huge token cost, mostly noise, forces consuming the whole structure to find the relevant subtree. One-level traversal — point at a path, get that directory's entries, descend by re-applying the expression — is the right interaction model. Per-entry signal (language, lineCount, size) shows where substance is and where to descend.
+
+**Tool shape:**
+- TREE-ONLY: no blob/file reading. `get_file_content` stays the reader because `Blob.text` lacks offset/limit.
+- depth=1 always.
+- Metadata block (description/primaryLanguage/languages) only on ROOT expression (path after `:` is empty); sub-path calls return tree table only (removes repeated-description noise on traversal calls).
+- Per-entry fields: name, type, language, lineCount, size.
+- Agent-exposed param: ONLY the path/expression — all else hidden in the wrapper (CLI minimalism: do not overload the agent with knobs).
+
+**Rejected knobs:**
+- `isGenerated`: heuristic linguist flag, unreliable; hiding entries risks more than the noise it removes.
+- `isTruncated` / `isBinary`: moot once blob-reading is dropped.
+- depth≥2: deferred; v1 is pure one-level — add only if v1 proves too blind.
+
+**Dropped capability — recursive find-by-name:** `get_repo_tree` pattern mode (find -name across whole tree) is dropped. `search_code` forwards qualifiers (filename:/extension:/path:) BUT GitHub code search requires ≥1 free-text CONTENT term — a language: or path: qualifier alone is rejected. Pure name-only structural find is impossible via `search_code`. Verdict: non-need for top-down exploration — the agent traverses structurally anyway and supplies a content term when it cares about content. No meaningful loss.
+
+**Evidence:** `dev/repo_exploration/probe_graphql_explore.py` (production shape), `dev/repo_exploration/raw_results/graphql_explore.md` (root call, with metadata), `dev/repo_exploration/raw_results/graphql_plugins.md` (sub-path call, tree-only). GraphQL schema: gh-cli-reference: docs_github_com_en_graphql_reference_git.
