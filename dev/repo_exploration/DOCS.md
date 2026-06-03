@@ -19,8 +19,6 @@ Open question under investigation: can a set of cheaper / higher-signal calls re
 
 | Source | Result | Relevance |
 |--------|--------|-----------|
-| GitHub REST: /readme | ✅ | Returns preferred README regardless of filename; base64 content in default response |
-| GitHub REST: /languages | ✅ | Returns language→bytes map; one call for full tech-stack breakdown |
 | GitHub GraphQL: TreeEntry.lineCount / .language | ✅ | Per-entry language+lineCount — not available from REST `/git/trees` |
 
 ### Hypotheses
@@ -28,21 +26,10 @@ Open question under investigation: can a set of cheaper / higher-signal calls re
 | Hypothesis | Status | Evidence |
 |------------|--------|----------|
 | GraphQL one-shot wins on token cost vs 3-REST chain | Unverified | lineCount+language per entry suggests higher signal density; measure next session |
-| /readme handles no-README gracefully (404) | Unverified | Test against repo without README next session |
 
 ## Scripts
 
 **`probe_client.py`** — shared auth/HTTP infrastructure (verbatim copy of src/ auth for dev/-self-containment). Not a runnable probe.
-
-**`probe_readme.py`** — `GET /repos/{o}/{r}/readme[/{dir}]`; prints name, path, size, first 40 lines.
-```
-.venv/bin/python dev/repo_exploration/probe_readme.py <owner> <repo> [dir]
-```
-
-**`probe_languages.py`** — `GET /repos/{o}/{r}/languages`; prints language→bytes sorted by size with percentages.
-```
-.venv/bin/python dev/repo_exploration/probe_languages.py <owner> <repo>
-```
 
 **`probe_graphql_explore.py`** — GraphQL `repository{description, primaryLanguage, languages, object(expression)}` dispatched on Tree/Blob; one round-trip gives structure + language + lineCount per entry. Default expression `"HEAD:"` = root tree.
 ```
