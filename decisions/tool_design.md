@@ -36,7 +36,7 @@ Keep — migration complete. IST now matches former SOLL. Skill-description upda
 ## Offene Fragen
 
 - Is 3-keyword cap optimal or too aggressive? → **Resolved for `search_repos`**: 3-word cap retained; hard-truncate replaced by 3→2→1 fallback so narrow trailing keywords no longer block results.
-- Should pagination be exposed as a tool parameter (page number)? → **Resolved for `list_releases`**: yes, page-based (`--page`). Other tools TBD.
+- Should pagination be exposed as a tool parameter (page number)? → Moot for releases: `list_releases` removed, `index_releases` uses hard-100 single call. `list_issues` still paginates internally; no `--page` param exposed.
 
 ## Quellen
 
