@@ -13,6 +13,11 @@ logs/
 *.log
 bug_fixes/
 
+# Dev: ignored by default; only committed investigation suites are tracked.
+# Pre-existing dev tooling stays local — it contains captured data with secrets (tokens).
+dev/*
+!dev/repo_exploration/
+
 # macOS
 .DS_Store
 
