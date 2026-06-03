@@ -14,13 +14,12 @@ All tools are invoked via the `gh-cli` wrapper (installed at `~/.local/bin/gh-cl
 gh-cli <cmd> [args]
 ```
 
-### Quick Reference — All 9 Tools
+### Quick Reference — All 8 Tools
 
 ```bash
 # Discovery
 gh-cli search_repos "fastapi" --sort-by stars
 gh-cli search_code "def workflow language:python repo:owner/repo"
-gh-cli get_repo anthropics claude-code
 
 # Repository Exploration
 gh-cli get_repo_tree anthropics claude-code --path src --depth 2 --pattern "*.py"
@@ -42,7 +41,7 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 
 ## Two Access Patterns
 
-- **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo`, `get_repo_tree`, `get_file_content`. Release metadata: `list_releases`, `get_release`. Direct `gh-cli` calls — read the output.
+- **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo_tree`, `get_file_content`. Release metadata: `list_releases`, `get_release`. Direct `gh-cli` calls — read the output.
 - **The conversation layer → query-driven RAG indexing.** The discussion/text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_discussions`. A few broad vector searches replace many fine-grained tool-calls. Releases stay CLI-direct (exact-artifact lookup, not fuzzy retrieval).
 
 ## Gotchas
@@ -134,13 +133,11 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 ### Deep Repository Exploration
 ```
 1. search_repos "topic:mcp server" -> Find relevant repos (use ONLY when repo unknown)
-   → If repo is already known (specified in task): skip search_repos, go directly to get_repo
-2. get_repo owner, repo -> Get repo metadata when repo is already known
-   → search_repos with repo: qualifier = WRONG. Use get_repo instead.
-3. get_repo_tree owner, repo -> Understand structure
+   → If repo is already known (specified in task): skip search_repos, go directly to step 2
+2. get_repo_tree owner, repo -> Understand structure
    → Extract key file paths for your output!
-4. get_file_content owner, repo, "README.md" -> Read docs
-5. get_file_content owner, repo, "src/main.py" -> Read implementation
+3. get_file_content owner, repo, "README.md" -> Read docs
+4. get_file_content owner, repo, "src/main.py" -> Read implementation
 ```
 
 **After get_repo_tree, identify and note for output:**
@@ -231,13 +228,6 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 | query | str | required | Search keywords (max 3; most distinctive first) |
 | repo | str | required | Repository as owner/repo |
 | --limit | int | 30 | Max discussions to fetch and index |
-
-### get_repo
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
 
 ### list_releases
 

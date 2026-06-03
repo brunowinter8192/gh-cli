@@ -2,12 +2,13 @@
 
 ## Status Quo (IST)
 
-- 14 tools registered in `cli.py` (argparse subcommands); 9 are query/research tools, 2 (`index_issues`, `index_discussions`) are RAG-indexing commands, 3 are issue write commands (`create_issue`, `update_issue`, `delete_issue`), 2 are issue read commands (`list_issues`, `get_issue`)
+- 13 tools registered in `cli.py` (argparse subcommands); 6 are query/research tools (search_repos, search_code, get_repo_tree, get_file_content, list_releases, get_release), 2 (`index_issues`, `index_discussions`) are RAG-indexing commands, 3 are issue write commands (`create_issue`, `update_issue`, `delete_issue`), 2 are issue read commands (`list_issues`, `get_issue`)
 - `get_issue` exposed as CLI subcommand (owner/repo/number → title/state/body); also called internally by `index_issues.py`
 - `get_issue_comments` retained as internal-only helper of `index_issues.py`; no subcommand (not CLI-accessible directly)
 - `get_discussion` retained as internal helper of `index_discussions.py`; no subcommand (not CLI-accessible directly)
 - `grep_file`, `grep_repo` removed from surface; files deleted from `src/github/`. Client-side grep tools with no own GitHub API endpoint; `search_code` covers the research use-case
-- `comment_issue` removed from surface; `src/github/comment_issue.py` deleted
+- `comment_issue` removed from surface (file deleted)
+- `get_repo` removed from surface (file deleted) — no use-case
 - `search_items`, `list_commits`, `compare_commits`, `search_discussions`, `list_discussions` removed from CLI surface; module files deleted from `src/github/`
 - Query truncation: `search_repos`, `index_issues`, `index_discussions` all cap at 3 keywords with 3→2→1 fallback (drop from back until `total_count > 0`; `search_repos` hard-truncate removed)
 - Output: `search_repos` emits one line per repo (`full_name stars`, plain integer); `search_code` emits `full_name path` locator + full untruncated fragment(s) indented; decorative headers removed from both

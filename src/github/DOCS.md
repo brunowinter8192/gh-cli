@@ -2,7 +2,7 @@
 
 ## Role
 
-16 tool modules (14 visible CLI subcommands: 12 REST + 2 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+15 tool modules (13 visible CLI subcommands: 11 REST + 2 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -22,7 +22,7 @@
 **Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers, generic HTTP helper.
 **Reads:** `~/.zshrc` (last `export GH_TOKEN=` line via `_read_zshrc_token()`); `os.environ["GH_TOKEN"]`; `os.environ["GITHUB_TOKEN"]`. Resolves at module-import time.
 **Writes:** exports `GITHUB_TOKEN` (str), `GITHUB_API_BASE` (str); `build_headers()` returns headers dict; `request(method, path, json, params)` executes any HTTP method and returns parsed JSON.
-**Called by:** all 13 REST modules (12 visible subcommands + `get_issue_comments`; read modules import `build_headers`/`GITHUB_API_BASE`; write/list modules use `request()`); `graphql_client.py` (imports `GITHUB_TOKEN`).
+**Called by:** all 12 REST modules (11 visible subcommands + `get_issue_comments`; read modules import `build_headers`/`GITHUB_API_BASE`; write/list modules use `request()`); `graphql_client.py` (imports `GITHUB_TOKEN`).
 **Calls out:** `requests`; stdlib (`os`, `re`, `pathlib`).
 
 ---
@@ -52,16 +52,6 @@
 **Purpose:** Search code across GitHub using the Code Search API with text-match metadata.
 **Reads:** GitHub Search Code API (`/search/code`) with `text-match` accept header; `SEARCH_CODE_PER_PAGE=30` (local); up to 3 full untruncated fragments per match.
 **Writes:** returns `list[TextContent]` — one `full_name path` locator line per match, followed by full indented fragment(s); single-line note on 0 results.
-**Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
-
----
-
-### get_repo.py (57 LOC)
-
-**Purpose:** Retrieve repository metadata including topics and license.
-**Reads:** GitHub Repos API (`/repos/{owner}/{repo}`).
-**Writes:** returns `list[TextContent]` — stars, description, language, topics, license, open issues, default branch, URL.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`.
 
