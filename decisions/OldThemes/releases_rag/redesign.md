@@ -46,3 +46,9 @@ Applied to every release body before writing the MD:
 | `by @username in #1234` / `by @username in https://...` suffix on bullet lines | PR attribution noise; the feature description precedes it |
 
 Claude Code release bodies are already clean (mostly feature bullet lists). Strip set is robustness for other repos.
+
+## Downstream dependency
+
+`index_releases_workflow()` (`index_releases.py`) is functionally blocked by a bug in `rag-cli delete`: the janitor calls `rag-cli delete --collection <name>` before re-indexing, but the current delete implementation leaves the `indexed_files` manifest intact. On the next `workflow.py index-dir` run, the indexer sees all files as already-hashed in the manifest and skips them — producing an empty collection. The wipe-and-reindex strategy only works correctly when delete also clears the manifest.
+
+See `decisions/OldThemes/delete_manifest_orphans.md` in the rag-cli project for the full investigation and fix status.

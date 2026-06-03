@@ -2,7 +2,7 @@
 
 ## Role
 
-15 tool modules (13 visible CLI subcommands: 11 REST + 2 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+14 tool modules (12 visible CLI subcommands: 9 REST + 3 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -32,7 +32,7 @@
 **Purpose:** GraphQL infrastructure — single HTTP POST wrapper for GitHub GraphQL API v4.
 **Reads:** `GITHUB_TOKEN` from `client.py`; accepts query string + variables dict from caller.
 **Writes:** returns `data` dict from response; raises on HTTP errors or GraphQL `errors` key.
-**Called by:** `get_discussion.py`, `index_discussions.py`, `delete_issue.py`.
+**Called by:** `get_discussion.py`, `index_discussions.py`, `delete_issue.py`, `get_repo_tree.py`.
 **Calls out:** `requests`.
 
 ---
@@ -57,13 +57,13 @@
 
 ---
 
-### get_repo_tree.py (164 LOC)
+### get_repo_tree.py (114 LOC)
 
-**Purpose:** Traverse repository file tree with depth limiting and glob-pattern file search.
-**Reads:** GitHub Repos API (default branch), Git Trees API (`/git/trees`), Contents API (for sub-path SHA resolution).
-**Writes:** returns `list[TextContent]` — directory/file listing (browse mode) or pattern matches (search mode). Warns when GitHub API tree is truncated (>100k entries) or output exceeds `MAX_TREE_CHARS`.
+**Purpose:** One-level directory traversal of a repository tree via GraphQL one-shot. depth=1 always; tree-only (no blob reading).
+**Reads:** GitHub GraphQL API (`repository.object(expression)` → `Tree.entries`); per-entry fields: name, type, language, lineCount, size. Metadata block (description/primaryLanguage/languages) on root expression only.
+**Writes:** returns `list[TextContent]` — metadata block (root only) + tree table; or blob-redirect message; or null-path message.
 **Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
+**Calls out:** `mcp.types`; imports `graphql_query` from `graphql_client.py`.
 
 ---
 
@@ -107,23 +107,13 @@
 
 ---
 
-### list_releases.py (66 LOC)
+### index_releases.py (136 LOC)
 
-**Purpose:** List releases in a repository with version tags and changelog previews.
-**Reads:** GitHub Releases API (`/releases`) with `per_page` (clamped to 100) and `page` params.
-**Writes:** returns `list[TextContent]` — tag, name, date, prerelease/draft flags, asset count, 300-char changelog preview.
+**Purpose:** Fetch up to 100 releases (newest-first) for a repo, write per-release MDs with noise stripped, and index into a per-repo RAG collection. Clean-before-index janitor: delete collection + rmtree doc dir before each run (idempotent).
+**Reads:** `GET /repos/{o}/{r}/releases?per_page=100`; globs doc dir for MD count; `rag-cli list_collections` for chunk total.
+**Writes:** per-release MDs to `RAG_ROOT/data/documents/github_releases__{owner}__{repo}/` as `<tag>.md`; invokes `workflow.py index-dir` via subprocess (RAG venv); returns `list[TextContent]` summary with follow-up `rag-cli search_hybrid` command.
 **Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
-
----
-
-### get_release.py (61 LOC)
-
-**Purpose:** Retrieve a single release with full release notes. Supports latest or specific tag.
-**Reads:** GitHub Releases API — `/releases/latest` (no tag) or `/releases/tags/{tag}`.
-**Writes:** returns `list[TextContent]` — tag, name, date, prerelease status, full Markdown body, assets with sizes.
-**Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
+**Calls out:** `requests`, `mcp.types`, `shutil`, `subprocess`.
 
 ---
 
