@@ -14,43 +14,40 @@ All tools are invoked via the `gh-cli` wrapper (installed at `~/.local/bin/gh-cl
 gh-cli <cmd> [args]
 ```
 
-### Quick Reference — All 8 Tools
+### Quick Reference — All 7 Tools
 
 ```bash
 # Discovery
 gh-cli search_repos "fastapi" --sort-by stars
 gh-cli search_code "def workflow language:python repo:owner/repo"
 
-# Repository Exploration
-gh-cli get_repo_tree anthropics claude-code --path src --depth 2 --pattern "*.py"
+# Repository Exploration — one level at a time (NOT recursive)
+gh-cli get_repo_tree anthropics claude-code             # root listing + repo metadata
+gh-cli get_repo_tree anthropics claude-code --path src  # descend into a subdirectory
 gh-cli get_file_content anthropics claude-code README.md
 gh-cli get_file_content anthropics claude-code src/main.py --offset 100 --limit 50
 gh-cli get_file_content anthropics claude-code src/ --metadata-only
 
-# RAG Indexing (Issues + Discussions)
+# RAG Indexing (Issues + Discussions + Releases)
 gh-cli index_issues "streaming" anthropics/claude-code --limit 30
 gh-cli index_discussions "memory" gastownhall/beads --limit 30
-
-# Releases
-gh-cli list_releases anthropics claude-code --per-page 5
-gh-cli get_release anthropics claude-code --tag v2.0.0
-gh-cli get_release anthropics claude-code  # latest release
+gh-cli index_releases anthropics/claude-code   # index last 100 releases, then RAG-search
 ```
 
 On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr and exits non-zero. Check `GH_TOKEN` env var is set.
 
 ## Two Access Patterns
 
-- **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo_tree`, `get_file_content`. Release metadata: `list_releases`, `get_release`. Direct `gh-cli` calls — read the output.
-- **The conversation layer → query-driven RAG indexing.** The discussion/text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_discussions`. A few broad vector searches replace many fine-grained tool-calls. Releases stay CLI-direct (exact-artifact lookup, not fuzzy retrieval).
+- **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo_tree`, `get_file_content`. Direct `gh-cli` calls — read the output.
+- **The conversation & release layer → query-driven RAG indexing.** The text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_discussions`. Releases: `gh-cli index_releases <owner/repo>` → then `rag-cli search_hybrid "<feature>" github_releases__<owner>__<repo>`. A few broad vector searches replace many fine-grained tool-calls.
 
 ## Gotchas
 
 - **Local paths as tool params → validation error.** `get_file_content` takes a repo-relative `path` only (e.g., `src/main.py`). Claude Code writes tool results to `/Users/.../.claude/projects/.../tool-results/...` — those are local filesystem paths. Passing one as `path`, or omitting `owner`/`repo`, fails immediately.
 
-- **Truncation warning → narrow scope, don't retry.** On any truncation warning from `get_repo_tree`: use `get_repo_tree(path="<dir>", depth=1)` to find subdirectories, then narrow the scope. Retrying the same broad scope reproduces the truncation.
+- **`get_repo_tree` is one level deep — descend, don't dump.** Each call lists exactly one directory level. To go deeper, call again with `--path <subdir>` using a directory name from the previous output. There is no recursive/full-tree mode and no truncation — you walk the tree top-down, one level per call.
 
-- **Filename pattern before content search.** `get_repo_tree(pattern="*keyword*", path="<dir>")` locates files in one call. Use that to identify the exact path, then read with `get_file_content`.
+- **Directories carry no line/size signal.** In the listing, `blob` (file) entries show `language`, `lines`, and `size`; `tree` (directory) entries show `-`. To judge what is inside a directory, descend into it with `--path`. There is no glob/name-pattern search — to find a file you either traverse to it or use `search_code` with a content term.
 
 ## Query Engineering (index_issues / index_discussions)
 
@@ -130,20 +127,22 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 
 ## Tool Chaining Workflows
 
-### Deep Repository Exploration
+### Deep Repository Exploration (top-down traversal)
 ```
 1. search_repos "topic:mcp server" -> Find relevant repos (use ONLY when repo unknown)
    → If repo is already known (specified in task): skip search_repos, go directly to step 2
-2. get_repo_tree owner, repo -> Understand structure
-   → Extract key file paths for your output!
-3. get_file_content owner, repo, "README.md" -> Read docs
-4. get_file_content owner, repo, "src/main.py" -> Read implementation
+2. get_repo_tree owner, repo -> Root listing + repo metadata (description, languages)
+   → Read the entries: blobs show language/lines/size, trees are descent points
+3. get_repo_tree owner, repo --path src -> Descend into an interesting directory
+   → Repeat --path for each level you want deeper (one level per call, never recursive)
+4. get_file_content owner, repo, "README.md" -> Read an anchor file
+5. get_file_content owner, repo, "src/main.py" -> Read implementation
 ```
 
-**After get_repo_tree, identify and note for output:**
-- Main source file (often `src/`, `lib/`, or root `*.py`)
-- Config files (`settings.py`, `config.py`, `pyproject.toml`)
-- Entry points (`main.py`, `server.py`, `__init__.py`)
+**While traversing, identify and note for output:**
+- Main source directory (often `src/`, `lib/`) — descend into it with `--path`
+- Anchor files at root (`README.md`, `pyproject.toml`, `package.json`)
+- Entry points (`main.py`, `server.py`, `__init__.py`) — the `lines` column flags the substantial files
 
 ### Issue Investigation (RAG)
 ```
@@ -169,13 +168,16 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 3. get_repo_tree owner, repo, "src/" -> Understand context
 ```
 
-### Release Lookup
+### Release Feature Search (RAG)
 ```
-1. list_releases owner repo --per-page 5  -> Find versions and changelogs
-2. list_releases owner repo --page 2      -> Releases 11-20 (page through history)
-3. get_release owner repo --tag v2.0.0    -> Read specific release notes
-4. get_release owner repo                 -> Read latest release
+1. index_releases owner/repo
+   → fetches the last 100 releases (newest-first), strips changelog noise, writes MDs,
+     wipes+rebuilds the per-repo collection github_releases__owner__repo (clean-before-index)
+2. rag-cli search_hybrid "<feature or slash-command>" github_releases__owner__repo
+   → e.g. "dynamic workflows /workflows" → the release that introduced it + the version
 ```
+Use this to answer "since when does feature X exist / does our version have it". The
+per-repo collection guarantees no other repo's releases dilute the results.
 
 ## Parameter Reference
 
@@ -194,13 +196,13 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 
 ### get_repo_tree
 
+One directory level per call (GraphQL one-shot). Root call also returns repo metadata (description, primary language, language breakdown); sub-path calls return the listing only. Files are read with `get_file_content`, not this tool.
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | owner | str | required | Repository owner |
 | repo | str | required | Repository name |
-| path | str | "" | Subdirectory scope (reduces truncation risk) |
-| depth | int | -1 | Tree depth limit (-1=unlimited, 1=direct children only) |
-| pattern | str | "" | Glob pattern for file search (e.g., "\*config\*", "\*.py") |
+| path | str | "" | Directory to list (e.g. `src`, `plugins`). Empty = repo root. One level only — descend by calling again with the next subdirectory. |
 
 ### get_file_content
 
@@ -229,22 +231,13 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 | repo | str | required | Repository as owner/repo |
 | --limit | int | 30 | Max discussions to fetch and index |
 
-### list_releases
+### index_releases
+
+Fetches the last 100 releases (newest-first), strips changelog noise, and indexes them into a per-repo RAG collection `github_releases__<owner>__<repo>`. Clean-before-index: each run wipes and rebuilds that repo's collection, so it is always fresh and never mixes with another repo. After indexing, search with `rag-cli search_hybrid "<feature>" github_releases__<owner>__<repo>`.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| per_page | int | 10 | Number of releases to return |
-| --page | int | 1 | Page number (10 per page → page 2 = releases 11–20) |
-
-### get_release
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| owner | str | required | Repository owner |
-| repo | str | required | Repository name |
-| tag | str/null | null | Release tag (e.g., "v2.0.0") — omit for latest release |
+| repo | str | required | Repository as `owner/repo` |
 
 ## Search Qualifiers
 
@@ -264,20 +257,20 @@ GitHub search supports qualifiers in query strings:
 - If `get_repo_tree` shows `src/server/handlers/` → use that EXACT path
 - If a file read fails with 404 → the path is WRONG. Re-run `get_repo_tree` to find the correct path
 - Do NOT skip intermediate directories (e.g., `src/handlers/` when actual path is `src/server/handlers/`)
-- After `get_repo_tree`, note which entries are directories (trailing `/`) vs files. NEVER pass a directory path to `get_file_content` — use `get_repo_tree` to explore directories instead.
+- After `get_repo_tree`, note the `type` column: `tree` = directory, `blob` = file. NEVER pass a directory (`tree`) path to `get_file_content` — descend into it with `get_repo_tree --path` instead.
 
 **Pre-call check (MANDATORY before EVERY `get_file_content` call):**
-1. Did this exact path appear as a FILE entry (no trailing `/`) in a previous `get_repo_tree` output?
+1. Did this exact path appear as a `blob` entry in a previous `get_repo_tree` output?
 2. If YES → proceed.
-3. If NO, or if path ends with `/` in tree output → use `get_repo_tree(path=<dir>, depth=1)` instead.
+3. If NO, or if the entry is a `tree` (directory) → use `get_repo_tree --path <dir>` to list it instead.
 This check must be done every time, even for paths that "look like files".
 
 ## Known Limitations
 
-**get_repo_tree — truncation on large repos:**
-- GitHub Git Trees API truncates at ~100k entries
-- Tool warns when `truncated=true` in API response
-- **Workaround:** Use `path` parameter to narrow scope
+**get_repo_tree — one level per call (by design):**
+- Lists a single directory level; no recursive/full-tree dump and no truncation
+- Directory (`tree`) entries carry no line/size signal — descend with `--path` to see inside
+- To locate a file by name you cannot glob — traverse to it, or use `search_code` with a content term
 
 **search_code — does not index CSV/data files:**
 - GitHub Code Search skips `type: data` files (CSV, TSV, etc. per GitHub Linguist)
@@ -288,7 +281,7 @@ This check must be done every time, even for paths that "look like files".
 
 When ANY search (search_code, search_repos, RAG) returns 0 / "No matches", do NOT conclude "it isn't there" from a single tool. Escalate:
 
-1. `search_code` empty → `get_repo_tree(pattern="*<keyword>*", path="<dir>")` to locate the file by NAME, then `get_file_content` on the exact path.
+1. `search_code` empty → traverse with `get_repo_tree` (root, then `--path` into the likely directory) to find the file structurally, then `get_file_content` on the exact path. Note: `search_code` needs a free-text content term — a name/extension qualifier alone is rejected, so it cannot enumerate files by name.
 2. Still empty → vary the term itself: synonym, shorter substring, different casing. Do NOT re-run the identical term in the identical tool (guessing).
 
 Rule: only **two different tools** both returning nothing counts as evidence of absence. One tool's silence is not — it's a prompt to switch tools, not to give up.
