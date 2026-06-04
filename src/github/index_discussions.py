@@ -150,15 +150,15 @@ def build_discussion_md(disc_num: int, title: str, body_text: str) -> str:
     return f"{header}\n\n{body_text}\n"
 
 
-# Run workflow.py index-dir (incremental); return new chunk count from stdout
+# Run rag-cli index (incremental); return new chunk count from stdout
 def run_index() -> int:
+    rag_cli = Path.home() / ".local" / "bin" / "rag-cli"
     result = subprocess.run(
-        [str(RAG_PYTHON), "workflow.py", "index-dir",
-         "--input", "data/documents/github_discussions"],
-        capture_output=True, text=True, cwd=str(RAG_ROOT),
+        [str(rag_cli), "index", "--collection", COLLECTION],
+        capture_output=True, text=True,
     )
     if result.returncode != 0:
-        logger.warning("index_discussions: workflow.py non-zero exit: %s", result.stderr[:300])
+        logger.warning("index_discussions: rag-cli index non-zero exit: %s", result.stderr[:300])
     return parse_chunk_count(result.stdout)
 
 

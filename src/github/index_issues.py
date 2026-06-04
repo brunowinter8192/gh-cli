@@ -152,15 +152,15 @@ def build_issue_md(issue_num: int, title: str, issue_text: str, comments_text: s
     return f"{header}\n\n{issue_text}\n\n{comments_text}\n"
 
 
-# Run workflow.py index-dir (incremental); return new chunk count from stdout
+# Run rag-cli index (incremental); return new chunk count from stdout
 def run_index() -> int:
+    rag_cli = Path.home() / ".local" / "bin" / "rag-cli"
     result = subprocess.run(
-        [str(RAG_PYTHON), "workflow.py", "index-dir",
-         "--input", "data/documents/github_issues"],
-        capture_output=True, text=True, cwd=str(RAG_ROOT),
+        [str(rag_cli), "index", "--collection", COLLECTION],
+        capture_output=True, text=True,
     )
     if result.returncode != 0:
-        logger.warning("index_issues: workflow.py non-zero exit: %s", result.stderr[:300])
+        logger.warning("index_issues: rag-cli index non-zero exit: %s", result.stderr[:300])
     return parse_chunk_count(result.stdout)
 
 

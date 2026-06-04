@@ -103,15 +103,15 @@ def sanitize_filename(tag: str) -> str:
     return re.sub(r'[/\\:*?"<>|]', "-", tag).strip("- ")
 
 
-# Run workflow.py index-dir; return new chunk count from stdout
+# Run rag-cli index (incremental); return new chunk count from stdout
 def run_index(collection: str) -> int:
+    rag_cli = Path.home() / ".local" / "bin" / "rag-cli"
     result = subprocess.run(
-        [str(RAG_PYTHON), "workflow.py", "index-dir",
-         "--input", f"data/documents/{collection}"],
-        capture_output=True, text=True, cwd=str(RAG_ROOT),
+        [str(rag_cli), "index", "--collection", collection],
+        capture_output=True, text=True,
     )
     if result.returncode != 0:
-        logger.warning("index_releases: workflow.py non-zero exit: %s", result.stderr[:300])
+        logger.warning("index_releases: rag-cli index non-zero exit: %s", result.stderr[:300])
     return parse_chunk_count(result.stdout)
 
 
