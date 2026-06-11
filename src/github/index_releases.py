@@ -13,7 +13,6 @@ from src.github.client import GITHUB_API_BASE, build_headers
 logger = logging.getLogger(__name__)
 
 RAG_ROOT   = Path("/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli")
-RAG_PYTHON = RAG_ROOT / "venv" / "bin" / "python"
 
 COLLECTION = "github_releases"
 
@@ -115,7 +114,7 @@ def run_index(collection: str) -> int:
     return parse_chunk_count(result.stdout)
 
 
-# Parse new chunk count from workflow.py index-dir stdout
+# Parse new chunk count from rag-cli index stdout
 def parse_chunk_count(stdout: str) -> int:
     m = re.search(r"Done: \d+ files indexed \((\d+) chunks\)", stdout)
     return int(m.group(1)) if m else 0
