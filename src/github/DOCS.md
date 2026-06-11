@@ -107,21 +107,21 @@
 
 ---
 
-### index_issues.py (186 LOC)
+### index_issues.py (192 LOC)
 
 **Purpose:** Fetch GitHub issues matching a query, strip noise, write per-issue MDs, and index into the `github_issues` RAG collection. Keyword-fallback loop (3→2→1) ensures a non-empty result set.
 **Reads:** GitHub Search Issues API + `get_issue_workflow` + `get_issue_comments_workflow` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
-**Writes:** per-issue MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; returns `list[TextContent]` summary.
+**Writes:** per-issue MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`.
 
 ---
 
-### index_releases.py (137 LOC)
+### index_releases.py (151 LOC)
 
 **Purpose:** Fetch up to 100 releases (newest-first) for a repo, write per-release MDs with noise stripped, and index into a per-repo RAG collection. Clean-before-index janitor: delete collection + rmtree doc dir before each run (idempotent).
 **Reads:** `GET /repos/{o}/{r}/releases?per_page=100`; globs doc dir for MD count; `rag-cli list_collections` for chunk total.
-**Writes:** per-release MDs to `RAG_ROOT/data/documents/github_releases/` as `<tag>.md` (fixed collection, not per-repo path); invokes `rag-cli index` via subprocess; returns `list[TextContent]` summary with follow-up `rag-cli search_hybrid` command.
+**Writes:** per-release MDs to `RAG_ROOT/data/documents/github_releases/` as `<tag>.md` (fixed collection, not per-repo path); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit from either `delete` (janitor) or `index` — raise is before rmtree so old state stays intact on busy; returns `list[TextContent]` summary with follow-up `rag-cli search_hybrid` command.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`, `shutil`, `subprocess`.
 
@@ -177,10 +177,10 @@
 
 ---
 
-### index_discussions.py (184 LOC)
+### index_discussions.py (190 LOC)
 
 **Purpose:** Fetch GitHub discussions matching a query, strip noise, redact tokens, write per-discussion MDs, and index into the `github_discussions` RAG collection. Keyword-fallback loop (3→2→1); Accepted-Answer dedup removes in-list `[ANSWER]` copy while keeping `### Accepted Answer` block.
 **Reads:** GitHub GraphQL Search API (repo-scoped `search(type:DISCUSSION)`) + `get_discussion_workflow()` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
-**Writes:** per-discussion MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; returns `list[TextContent]` summary.
+**Writes:** per-discussion MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
 **Calls out:** `mcp.types`; imports from `graphql_client.py`, `get_discussion.py`.
