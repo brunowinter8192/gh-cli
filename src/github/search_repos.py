@@ -4,6 +4,7 @@ import requests
 from typing import Literal
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
+from src.github.repo_counts import fetch_repo_counts, format_count_line
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,10 @@ def search_repos_workflow(
             break
     if raw_response["total_count"] == 0:
         return [TextContent(type="text", text=f"No repositories found for '{keywords[0]}'.")]
-    return [TextContent(type="text", text=format_repo_results(raw_response))]
+    items = raw_response.get("items", [])
+    repos = [tuple(r["full_name"].split("/", 1)) for r in items]
+    counts = fetch_repo_counts(repos)
+    return [TextContent(type="text", text=format_repo_results(items, counts))]
 
 
 # FUNCTIONS
@@ -37,25 +41,19 @@ def search_repos_workflow(
 def fetch_repositories(query: str, sort_by: str) -> dict:
     url = f"{GITHUB_API_BASE}/search/repositories"
     logger.debug("Fetching from %s", url)
-
-    params = {
-        "q": query,
-        "per_page": SEARCH_REPOS_PER_PAGE,
-        "order": "desc"
-    }
-
+    params = {"q": query, "per_page": SEARCH_REPOS_PER_PAGE, "order": "desc"}
     if sort_by != "best_match":
         params["sort"] = sort_by
-
     response = requests.get(url, params=params, headers=build_headers())
     response.raise_for_status()
     return response.json()
 
 
-# Emit one line per repo: full_name stars
-def format_repo_results(raw_response: dict) -> str:
-    items = raw_response.get("items", [])
+# Emit one line per repo: full_name · ⭐stars · issues:N · discussions:M
+def format_repo_results(items: list, counts: dict) -> str:
     lines = []
     for repo in items:
-        lines.append(f"{repo['full_name']} {repo['stargazers_count']}")
+        full_name = repo["full_name"]
+        stars = repo["stargazers_count"]
+        lines.append(format_count_line(full_name, stars, counts.get(full_name)))
     return "\n".join(lines)

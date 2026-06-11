@@ -22,7 +22,7 @@
 **Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers, generic HTTP helper.
 **Reads:** `~/.zshrc` (last `export GH_TOKEN=` line via `_read_zshrc_token()`); `os.environ["GH_TOKEN"]`; `os.environ["GITHUB_TOKEN"]`. Resolves at module-import time.
 **Writes:** exports `GITHUB_TOKEN` (str), `GITHUB_API_BASE` (str); `build_headers()` returns headers dict; `request(method, path, json, params)` executes any HTTP method and returns parsed JSON.
-**Called by:** all 12 REST modules (11 visible subcommands + `get_issue_comments`; read modules import `build_headers`/`GITHUB_API_BASE`; write/list modules use `request()`); `graphql_client.py` (imports `GITHUB_TOKEN`).
+**Called by:** all 12 REST modules (11 visible subcommands + `get_issue_comments`; read modules import `build_headers`/`GITHUB_API_BASE`; write/list modules use `request()`); `graphql_client.py` (imports `GITHUB_TOKEN`); `repo_counts.py` (imports `GITHUB_TOKEN` transitively via `graphql_client.py`).
 **Calls out:** `requests`; stdlib (`os`, `re`, `pathlib`).
 
 ---
@@ -32,28 +32,38 @@
 **Purpose:** GraphQL infrastructure — single HTTP POST wrapper for GitHub GraphQL API v4.
 **Reads:** `GITHUB_TOKEN` from `client.py`; accepts query string + variables dict from caller.
 **Writes:** returns `data` dict from response; raises on HTTP errors or GraphQL `errors` key.
-**Called by:** `get_discussion.py`, `index_discussions.py`, `delete_issue.py`, `get_repo_tree.py`.
+**Called by:** `repo_counts.py`, `get_discussion.py`, `index_discussions.py`, `delete_issue.py`, `get_repo_tree.py`.
 **Calls out:** `requests`.
 
 ---
 
-### search_repos.py (61 LOC)
+### repo_counts.py (51 LOC)
 
-**Purpose:** Search GitHub repositories by keyword using the Search Repositories API.
-**Reads:** GitHub Search API (`/search/repositories`); `SEARCH_REPOS_PER_PAGE=30` (local); 3→2→1 keyword fallback (drops trailing keywords until `total_count > 0`).
-**Writes:** returns `list[TextContent]` — one line per repo: `full_name stars` (plain integer); up to 30 results.
-**Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
+**Purpose:** Shared GraphQL enrichment helper — fetches star/issue/discussion counts for a list of repos in one batched aliased query.
+**Reads:** GitHub GraphQL API via `graphql_query()` — `stargazerCount`, `issues{totalCount}`, `discussions{totalCount}`, `hasIssuesEnabled`, `hasDiscussionsEnabled` per repo; all repos in one HTTP call via field aliases (`r0`, `r1`, …).
+**Writes:** `fetch_repo_counts(repos)` returns `{full_name: counts_dict | None}` (None when repo is deleted/renamed between search and enrichment); `format_count_line(full_name, stars, counts)` returns formatted string `"owner/repo · ⭐N · issues:N · discussions:M"` with `(off)` suffix when feature disabled.
+**Called by:** `search_repos.py`, `search_code.py`.
+**Calls out:** imports `graphql_query` from `graphql_client.py`.
 
 ---
 
-### search_code.py (73 LOC)
+### search_repos.py (59 LOC)
 
-**Purpose:** Search code across GitHub using the Code Search API with text-match metadata.
-**Reads:** GitHub Search Code API (`/search/code`) with `text-match` accept header; `SEARCH_CODE_PER_PAGE=30` (local); up to 3 full untruncated fragments per match.
-**Writes:** returns `list[TextContent]` — one `full_name path` locator line per match, followed by full indented fragment(s); single-line note on 0 results.
+**Purpose:** Search GitHub repositories by keyword using the Search Repositories API; enrich results with per-repo issue/discussion counts.
+**Reads:** GitHub Search API (`/search/repositories`); `SEARCH_REPOS_PER_PAGE=30` (local); 3→2→1 keyword fallback (drops trailing keywords until `total_count > 0`). Stars from REST `stargazers_count`. Issue/discussion counts + enabled flags from `fetch_repo_counts()` (single batched GraphQL call).
+**Writes:** returns `list[TextContent]` — one enriched line per repo: `full_name · ⭐stars · issues:N · discussions:M`; up to 30 results.
 **Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`.
+**Calls out:** `requests`, `mcp.types`; imports from `repo_counts.py`.
+
+---
+
+### search_code.py (85 LOC)
+
+**Purpose:** Search code across GitHub using the Code Search API with text-match metadata; prepends per-repo issue/discussion summary.
+**Reads:** GitHub Search Code API (`/search/code`) with `text-match` accept header; `SEARCH_CODE_PER_PAGE=30` (local); up to 3 full untruncated fragments per match. Stars + issue/discussion counts from `fetch_repo_counts()` (single batched GraphQL call on unique repos; REST /search/code returns only a minimal repo stub without star count).
+**Writes:** returns `list[TextContent]` — `## Repos (N unique)` summary block (one enriched line per unique repo) followed by per-hit `full_name path` + fragment(s); single-line note on 0 results.
+**Called by:** `cli.py`.
+**Calls out:** `requests`, `mcp.types`; imports from `repo_counts.py`.
 
 ---
 
