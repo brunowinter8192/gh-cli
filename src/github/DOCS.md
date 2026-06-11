@@ -27,7 +27,7 @@
 
 ---
 
-### graphql_client.py (29 LOC)
+### graphql_client.py (30 LOC)
 
 **Purpose:** GraphQL infrastructure — single HTTP POST wrapper for GitHub GraphQL API v4.
 **Reads:** `GITHUB_TOKEN` from `client.py`; accepts query string + variables dict from caller.
