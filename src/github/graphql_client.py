@@ -25,5 +25,6 @@ def graphql_query(query: str, variables: dict) -> dict:
     response.raise_for_status()
     data = response.json()
     if "errors" in data:
-        raise Exception(f"GraphQL Error: {data['errors']}")
+        errors = data["errors"]
+        raise Exception("GraphQL Error: " + "; ".join(e.get("message", str(e)) for e in errors))
     return data["data"]
