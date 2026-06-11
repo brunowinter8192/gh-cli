@@ -27,7 +27,7 @@ CLI tool delivering 14 GitHub commands: 9 read-only research commands (search, b
 3. Workflow calls fetch function — REST via `requests` + `build_headers()` / GraphQL via `graphql_query()`
 4. Format function transforms raw API JSON to human-readable text
 5. Workflow returns `list[TextContent]`
-6. `cli.py` prints `result[0].text` to stdout
+6. `cli.py` prints `result[0].text` to stdout; on any `Exception` → `Error: {str(e)}` to stderr + exit 1; `BrokenPipeError` → devnull dup2 + exit 0 (pipe-to-head stays clean)
 
 ## Shared State
 
@@ -39,7 +39,7 @@ CLI tool delivering 14 GitHub commands: 9 read-only research commands (search, b
 
 | File | LOC | Why at root |
 |------|-----|-------------|
-| `cli.py` | 199 | Entry point — argparse dispatch for all 14 tools |
+| `cli.py` | 182 | Entry point — argparse dispatch for all 14 tools; central error handler (BrokenPipeError + Exception) |
 | `requirements.txt` | 2 | Dependencies: `mcp` (TextContent type), `requests` |
 
 ## Subdir DOCS
