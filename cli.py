@@ -119,55 +119,63 @@ def main():
     # ── Dispatch ──────────────────────────────────────────────────────────────
     args = parser.parse_args()
 
-    if args.cmd == "search_repos":
-        result = search_repos_workflow(args.query, args.sort_by)
+    try:
+        if args.cmd == "search_repos":
+            result = search_repos_workflow(args.query, args.sort_by)
 
-    elif args.cmd == "search_code":
-        result = search_code_workflow(args.query)
+        elif args.cmd == "search_code":
+            result = search_code_workflow(args.query)
 
-    elif args.cmd == "get_repo_tree":
-        result = get_repo_tree_workflow(args.owner, args.repo, args.path)
+        elif args.cmd == "get_repo_tree":
+            result = get_repo_tree_workflow(args.owner, args.repo, args.path)
 
-    elif args.cmd == "get_file_content":
-        result = get_file_content_workflow(
-            args.owner, args.repo, args.path,
-            args.metadata_only, args.offset, args.limit
-        )
+        elif args.cmd == "get_file_content":
+            result = get_file_content_workflow(
+                args.owner, args.repo, args.path,
+                args.metadata_only, args.offset, args.limit
+            )
 
-    elif args.cmd == "index_issues":
-        result = index_issues_workflow(args.query, args.repo, args.limit)
+        elif args.cmd == "index_issues":
+            result = index_issues_workflow(args.query, args.repo, args.limit)
 
-    elif args.cmd == "index_discussions":
-        result = index_discussions_workflow(args.query, args.repo, args.limit)
+        elif args.cmd == "index_discussions":
+            result = index_discussions_workflow(args.query, args.repo, args.limit)
 
-    elif args.cmd == "index_releases":
-        result = index_releases_workflow(args.repo)
+        elif args.cmd == "index_releases":
+            result = index_releases_workflow(args.repo)
 
-    elif args.cmd == "create_issue":
-        labels = [l.strip() for l in args.labels.split(",")] if args.labels else None
-        assignees = [a.strip() for a in args.assignees.split(",")] if args.assignees else None
-        result = create_issue_workflow(args.owner, args.repo, args.title, args.body, labels, assignees)
+        elif args.cmd == "create_issue":
+            labels = [l.strip() for l in args.labels.split(",")] if args.labels else None
+            assignees = [a.strip() for a in args.assignees.split(",")] if args.assignees else None
+            result = create_issue_workflow(args.owner, args.repo, args.title, args.body, labels, assignees)
 
-    elif args.cmd == "update_issue":
-        labels = [l.strip() for l in args.labels.split(",")] if args.labels else None
-        result = update_issue_workflow(
-            args.owner, args.repo, args.number,
-            args.title, args.body, labels, args.state, args.state_reason
-        )
+        elif args.cmd == "update_issue":
+            labels = [l.strip() for l in args.labels.split(",")] if args.labels else None
+            result = update_issue_workflow(
+                args.owner, args.repo, args.number,
+                args.title, args.body, labels, args.state, args.state_reason
+            )
 
-    elif args.cmd == "list_issues":
-        result = list_issues_workflow(args.owner, args.repo, args.state, args.labels, args.limit)
+        elif args.cmd == "list_issues":
+            result = list_issues_workflow(args.owner, args.repo, args.state, args.labels, args.limit)
 
-    elif args.cmd == "get_issue":
-        result = get_issue_workflow(args.owner, args.repo, args.number)
+        elif args.cmd == "get_issue":
+            result = get_issue_workflow(args.owner, args.repo, args.number)
 
-    elif args.cmd == "delete_issue":
-        result = delete_issue_workflow(args.owner, args.repo, args.number, args.confirm)
+        elif args.cmd == "delete_issue":
+            result = delete_issue_workflow(args.owner, args.repo, args.number, args.confirm)
 
-    else:
-        parser.error(f"Unknown command: {args.cmd}")
+        else:
+            parser.error(f"Unknown command: {args.cmd}")
 
-    print(result[0].text)
+        print(result[0].text)
+
+    except BrokenPipeError:
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(0)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
