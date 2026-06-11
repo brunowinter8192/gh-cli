@@ -12,7 +12,6 @@ from src.github.get_discussion import get_discussion_workflow
 logger = logging.getLogger(__name__)
 
 RAG_ROOT    = Path("/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli")
-RAG_PYTHON  = RAG_ROOT / "venv" / "bin" / "python"
 RAG_DOC_DIR = RAG_ROOT / "data" / "documents" / "github_discussions"
 COLLECTION  = "github_discussions"
 DEFAULT_LIMIT = 30
@@ -162,7 +161,7 @@ def run_index() -> int:
     return parse_chunk_count(result.stdout)
 
 
-# Parse new chunk count from workflow.py index-dir stdout
+# Parse new chunk count from rag-cli index stdout
 def parse_chunk_count(stdout: str) -> int:
     m = re.search(r"Done: \d+ files indexed \((\d+) chunks\)", stdout)
     return int(m.group(1)) if m else 0

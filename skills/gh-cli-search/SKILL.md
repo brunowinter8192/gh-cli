@@ -53,7 +53,7 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 
 - **MAX 3 keywords** (mandatory) — the wrapper hard-caps at 3; extra words are silently dropped before the search call.
 - **Most distinctive keyword first** — the fallback loop drops from the back (3→2→1 keywords). If the 3-keyword query returns 0 results, it retries with 2, then 1. A nonsense or overly-narrow last keyword won't block the run; an overly-narrow *first* keyword will error.
-- **Indexing runs in the BACKGROUND — never poll for completion.** `index_issues` / `index_discussions` dispatch the fetch+embed job and return immediately with a background task ID. On completion you are NOTIFIED automatically. Do NOT `tail` the task output file, do NOT re-check status, do NOT loop/sleep waiting. Fire the index command, then either do other work or go idle — run the `rag-cli search_hybrid` step only AFTER the completion notification arrives. Polling the index output is a rule violation (wasted tool calls + context).
+- **Indexing is SYNCHRONOUS — the command blocks until done.** `index_issues` / `index_discussions` fetch, strip, write MDs, and run `rag-cli index` in-process; they return the summary directly when finished. Run `rag-cli search_hybrid` immediately after — no waiting, no polling, no notification needed.
 - **After indexing, search via RAG:**
   ```
   gh-cli index_issues "streaming" anthropics/claude-code --limit 30

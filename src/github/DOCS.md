@@ -121,7 +121,7 @@
 
 **Purpose:** Fetch up to 100 releases (newest-first) for a repo, write per-release MDs with noise stripped, and index into a per-repo RAG collection. Clean-before-index janitor: delete collection + rmtree doc dir before each run (idempotent).
 **Reads:** `GET /repos/{o}/{r}/releases?per_page=100`; globs doc dir for MD count; `rag-cli list_collections` for chunk total.
-**Writes:** per-release MDs to `RAG_ROOT/data/documents/github_releases__{owner}__{repo}/` as `<tag>.md`; invokes `workflow.py index-dir` via subprocess (RAG venv); returns `list[TextContent]` summary with follow-up `rag-cli search_hybrid` command.
+**Writes:** per-release MDs to `RAG_ROOT/data/documents/github_releases/` as `<tag>.md` (fixed collection, not per-repo path); invokes `rag-cli index` via subprocess; returns `list[TextContent]` summary with follow-up `rag-cli search_hybrid` command.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`, `shutil`, `subprocess`.
 
