@@ -1,6 +1,5 @@
 # INFRASTRUCTURE
 import logging
-from typing import Literal
 from mcp.types import TextContent
 from src.github.graphql_client import graphql_query
 
@@ -55,12 +54,11 @@ def get_discussion_workflow(
     owner: str,
     repo: str,
     number: int,
-    comment_limit: int = 50,
-    comment_sort: Literal["upvotes", "chronological"] = "upvotes"
+    comment_limit: int = 100
 ) -> list[TextContent]:
     logger.info("get_discussion owner=%s repo=%s number=%s", owner, repo, number)
     raw_data = fetch_discussion(owner, repo, number, comment_limit)
-    formatted = format_discussion(raw_data, comment_limit, comment_sort)
+    formatted = format_discussion(raw_data, comment_limit)
     return [TextContent(type="text", text=formatted)]
 
 
@@ -78,15 +76,8 @@ def fetch_discussion(owner: str, repo: str, number: int, comment_limit: int) -> 
     return graphql_query(DISCUSSION_QUERY, variables)
 
 
-# Sort comments by upvotes or keep chronological
-def sort_comments(comments: list, sort_by: str, limit: int) -> list:
-    if sort_by == "upvotes":
-        comments = sorted(comments, key=lambda c: c.get("upvoteCount", 0), reverse=True)
-    return comments[:limit]
-
-
 # Format discussion for display
-def format_discussion(data: dict, comment_limit: int, comment_sort: str) -> str:
+def format_discussion(data: dict, comment_limit: int) -> str:
     d = data["repository"]["discussion"]
     if not d:
         return "Discussion not found."
@@ -117,13 +108,11 @@ def format_discussion(data: dict, comment_limit: int, comment_sort: str) -> str:
 
     comments_data = d.get("comments") or {}
     total_comments = comments_data.get("totalCount", 0)
-    comments = comments_data.get("nodes") or []
-    sorted_comments = sort_comments(comments, comment_sort, comment_limit)
+    comments = (comments_data.get("nodes") or [])[:comment_limit]
 
-    sort_label = "by upvotes" if comment_sort == "upvotes" else "chronological"
-    lines.append(f"### Comments ({total_comments} total, showing {len(sorted_comments)} {sort_label})\n")
+    lines.append(f"### Comments ({total_comments} total, showing {len(comments)})\n")
 
-    for c in sorted_comments:
+    for c in comments:
         c_author = (c.get("author") or {}).get("login", "unknown")
         is_answer = " [ANSWER]" if c.get("isAnswer") else ""
         lines.append(f"**@{c_author}** ({c.get('createdAt', '')[:10]}) - {c.get('upvoteCount', 0)} upvotes{is_answer}")

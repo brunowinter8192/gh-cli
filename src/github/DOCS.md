@@ -167,11 +167,11 @@
 
 ---
 
-### get_discussion.py (139 LOC)
+### get_discussion.py (128 LOC)
 
-**Purpose:** Retrieve a full discussion with comments, accepted answer, and configurable comment sort. Internal-only fetch helper for `index_discussions.py`.
-**Reads:** GitHub GraphQL API via `graphql_query()` — discussion by number with body, answer, comments, and nested replies.
-**Writes:** returns `list[TextContent]` — title, category, author, upvotes, body, accepted answer section, sorted/limited comments with `[ANSWER]` tag.
+**Purpose:** Retrieve a full discussion with comments and accepted answer in natural chronological order. Internal-only fetch helper for `index_discussions.py`.
+**Reads:** GitHub GraphQL API via `graphql_query()` — discussion by number with body, answer, comments (chronological, up to 100), and nested replies.
+**Writes:** returns `list[TextContent]` — title, category, author, upvotes, body, accepted answer section, comments with `[ANSWER]` tag; `comment_limit` default 100 (API per-page max); no re-sorting.
 **Called by:** `index_discussions.py` (imports `get_discussion_workflow`). Internal-only helper — no CLI subcommand.
 **Calls out:** `mcp.types`; imports from `graphql_client.py`.
 
