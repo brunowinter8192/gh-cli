@@ -159,7 +159,13 @@ def run_index() -> int:
         capture_output=True, text=True,
     )
     if result.returncode != 0:
-        logger.warning("index_issues: rag-cli index non-zero exit: %s", result.stderr[:300])
+        stderr = result.stderr.strip()
+        busy = any(w in stderr.lower() for w in ("busy", "locked", "in use"))
+        reason = "RAG server busy or DB locked" if busy else f"rag-cli index failed (exit {result.returncode})"
+        raise RuntimeError(
+            f"{reason} — MDs are staged, run manually when server is free: "
+            f"rag-cli index --collection {COLLECTION}\nDetails: {stderr[:300]}"
+        )
     return parse_chunk_count(result.stdout)
 
 

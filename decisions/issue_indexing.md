@@ -5,7 +5,7 @@
 - Query: hard-capped to 3 keywords (`query.split()[:3]`); 0-result fallback drops last keyword 3→2→1, then errors; empty/whitespace query → guard error.
 - Search: `search_raw()` → `GET /search/issues?q="<kw> repo:<repo> is:issue"`, `per_page=min(limit,100)`, relevance order; returns top-`limit` issue numbers.
 - Fetch: in-process `get_issue_workflow` + `get_issue_comments_workflow`; `strip_noise` + `strip_comments_noise`; per-issue MD `<repo_basename>__<num>.md` → `RAG/data/documents/github_issues/` (overwrite, no fetch-skip).
-- Index: subprocess `RAG/venv/bin/python workflow.py index-dir --input data/documents/github_issues` (cwd=RAG_ROOT, synchronous). Dedup by index-dir's `indexed_files` content-hash (skip unchanged, re-index changed).
+- Index: `rag-cli index --collection github_issues` via subprocess (synchronous). Dedup by content-hash (skip unchanged, re-index changed). Failure (non-zero exit) raises `RuntimeError` — busy/locked detected via stderr keywords, message includes manual recovery command (`rag-cli index --collection github_issues`); never silent.
 - `DEFAULT_LIMIT = 30`. No sleeps. Auth via `build_headers` header (no token in artifacts).
 - Retrieval of indexed issues: `rag-cli search_hybrid "<terms>" github_issues`.
 
