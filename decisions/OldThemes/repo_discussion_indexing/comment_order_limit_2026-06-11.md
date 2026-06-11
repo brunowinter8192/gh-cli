@@ -25,6 +25,8 @@ Supersedes the upvote-resort behavior in `get_discussion.py` (the internal fetch
 - Old behavior fetched the first-50-chronological window, THEN upvote-sorted that window — so a high-upvote comment at position >50 was never seen. Raising 50→100 = the API per-page max without pagination → full coverage for all but very large threads.
 - Threads >100 comments still truncate. Pagination (`after` cursor) deferred — not worth it without a concrete repo where it bites. The upvote-info per comment is still shown (`{upvoteCount} upvotes`), just not used to reorder.
 
-## Pre-existing robustness gap observed (NOT this scope)
+## Pre-existing robustness gap observed → addressed same session
 
-`index_discussions` / `index_issues` do not retry/wait on RAG lock contention: when the rag DB was busy (a concurrent `list_documents` on `searxng_crypto`), the index step exited non-zero and the tool reported `New chunks added: 0` / `0 chunks total` while the per-thread MDs were already written to disk. Recovered by re-running `rag-cli index --collection github_discussions` (24 files → 96 chunks). Pre-existing pattern, not introduced here — candidate for a future lock-retry in the index step.
+`index_discussions` / `index_issues` silently swallowed RAG lock contention: when the rag DB was busy (a concurrent `list_documents` on `searxng_crypto`), the index step exited non-zero and the tool reported `New chunks added: 0` / `0 chunks total` while the per-thread MDs were already written to disk. Recovered by re-running `rag-cli index --collection github_discussions` (24 files → 96 chunks).
+
+**Resolution (2026-06-11):** loud error, NOT a retry — see `decisions/OldThemes/index_failure_surfacing_2026-06-11.md`. The index step now raises `RuntimeError` on any non-zero `rag-cli index` exit. Retry/backoff was explicitly rejected (user direction): rag-cli is always available, manual re-index when free is trivial; the only unacceptable behavior is silent-fail-and-index-nothing.
