@@ -8,7 +8,7 @@
 - Strip: `strip_discussion_noise()` extracts title from `## ` line; drops metadata block (`**Category:**`, `**Author:**`, `**Created:**`, `**Upvotes:**`, `**Status:**`); deduplicates `[ANSWER]`-tagged comment by dropping the in-list copy and keeping the `### Accepted Answer` section.
 - Redaction: `redact_tokens()` applied to final MD string — patterns `ghp_[A-Za-z0-9]+` and `github_pat_[A-Za-z0-9_]+` → `[REDACTED]`.
 - Output: per-thread MD `<repo_basename>__<num>.md` → `RAG/data/documents/github_discussions/` (overwrite).
-- Index: subprocess `RAG/venv/bin/python workflow.py index-dir --input data/documents/github_discussions` (cwd=RAG_ROOT, synchronous). Dedup by index-dir content-hash (skip unchanged, re-index changed).
+- Index: `rag-cli index --collection github_discussions` via subprocess (synchronous). Dedup by content-hash (skip unchanged, re-index changed). Failure (non-zero exit) raises `RuntimeError` — busy/locked detected via stderr keywords, message includes manual recovery command (`rag-cli index --collection github_discussions`); never silent.
 - `DEFAULT_LIMIT = 30`. Auth via `graphql_query()` (`graphql_client.py`) → `build_headers()` (no token in artifacts).
 - `get_discussion_workflow()` signature: `(owner, repo, number, comment_limit=100)` — `comment_sort` removed; comments rendered in natural chronological order (GitHub GraphQL `comments(first:N)` returns creation-order); `comments(first: $commentLimit)` cap is `min(comment_limit, 100)` (API per-page max).
 - Retrieval of indexed discussions: `rag-cli search_hybrid "<terms>" github_discussions`.

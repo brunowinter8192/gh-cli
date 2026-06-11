@@ -47,13 +47,21 @@ def index_releases_workflow(repo: str) -> list[TextContent]:
 
 # FUNCTIONS
 
-# Delete RAG collection and doc dir before re-indexing (idempotent)
+# Delete RAG collection and doc dir before re-indexing; raise before rmtree on failure so old state stays intact
 def janitor_clean(collection: str, doc_dir: Path) -> None:
     rag_cli = Path.home() / ".local" / "bin" / "rag-cli"
-    subprocess.run(
+    result = subprocess.run(
         [str(rag_cli), "delete", "--collection", collection],
-        capture_output=True, cwd=str(RAG_ROOT),
+        capture_output=True, text=True, cwd=str(RAG_ROOT),
     )
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        busy = any(w in stderr.lower() for w in ("busy", "locked", "in use"))
+        reason = "RAG server busy or DB locked" if busy else f"rag-cli delete failed (exit {result.returncode})"
+        raise RuntimeError(
+            f"{reason} — cannot wipe collection '{collection}' before re-index. "
+            f"Details: {stderr[:300]}"
+        )
     shutil.rmtree(doc_dir, ignore_errors=True)
 
 
@@ -110,7 +118,13 @@ def run_index(collection: str) -> int:
         capture_output=True, text=True,
     )
     if result.returncode != 0:
-        logger.warning("index_releases: rag-cli index non-zero exit: %s", result.stderr[:300])
+        stderr = result.stderr.strip()
+        busy = any(w in stderr.lower() for w in ("busy", "locked", "in use"))
+        reason = "RAG server busy or DB locked" if busy else f"rag-cli index failed (exit {result.returncode})"
+        raise RuntimeError(
+            f"{reason} — MDs are staged, run manually when server is free: "
+            f"rag-cli index --collection {collection}\nDetails: {stderr[:300]}"
+        )
     return parse_chunk_count(result.stdout)
 
 
