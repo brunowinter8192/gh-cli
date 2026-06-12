@@ -39,7 +39,7 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 ## Two Access Patterns
 
 - **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo_tree`, `get_file_content`. Direct `gh-cli` calls — read the output.
-- **The conversation & release layer → query-driven RAG indexing.** The text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_discussions`. Releases: `gh-cli index_releases <owner/repo>` → then `rag-cli search_hybrid "<feature>" github_releases`. A few broad vector searches replace many fine-grained tool-calls.
+- **The conversation & release layer → query-driven RAG indexing.** The text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_discussions`. Releases: `gh-cli index_releases <owner/repo>` → then `rag-cli search_hybrid "<feature>" github_releases`.
 
 ## Gotchas
 
@@ -297,10 +297,10 @@ Task type determines stop criteria — identify which type you have before start
 - Anti-pattern: making exploratory calls after finding the answer
 
 **Research / exploratory task** ("best library for X", "known issues with Y", "how do people solve Z"):
-- Minimum 3 distinct queries before stopping — alternatives matter
+- Minimum 3 distinct queries before stopping
 - Stop when 3-5 high-quality results found that together give a complete picture
 - Stop after 3 queries with diminishing returns
-- Do NOT stop at first match — one result is not a comparison, it's a starting point
+- Do NOT stop at first match
 - After finding 3+ repos: switch to READING (READMEs, key files) — no more searching
 
 **Both types:**
