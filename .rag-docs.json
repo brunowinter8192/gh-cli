@@ -1,10 +1,7 @@
 {
   "collection": "gh-cli-docs",
   "include": [
-    "DOCS.md",
-    "src/*/DOCS.md",
-    "decisions/*.md",
-    "decisions/OldThemes/*.md",
-    "decisions/OldThemes/**/*.md"
+    "**/DOCS.md",
+    "decisions/**/*.md"
   ]
 }
