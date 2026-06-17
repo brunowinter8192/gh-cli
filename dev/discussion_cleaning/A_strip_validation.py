@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 # Validate strip_discussion_noise() on the 78-MD corpus. Read-only — never writes source files.
-# Logic is a direct copy of src/github/index_discussions.py strip_discussion_noise() and its
-# helpers (_bare, _is_badge_line). Update this copy whenever the src/ function changes.
-# Usage: ./venv/bin/python dev/discussion_cleaning/A_strip_validation.py [--source-dir PATH]
+# Intentional verbatim copy of src/github/discussion_cleaning.py strip_noise() (+ _bare,
+# _is_badge_line, constants). dev/ may not import src/ (hook: block_dev_imports_src) —
+# intentional duplication, not drift. Update if the source changes.
+# strip_discussion_noise() is kept as a thin local wrapper (full version in index_discussions.py
+# which pulls mcp — not importable in dev/).
+# Usage: python3 dev/discussion_cleaning/A_strip_validation.py [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -19,15 +22,24 @@ DEFAULT_SOURCE_DIR = Path(
 REPORT_DIR = Path(__file__).parent / "A_strip_validation_reports"
 THRESHOLD = 1500
 
-# --- copied from src/github/index_discussions.py (keep in sync) ---
+# --- verbatim copy of src/github/discussion_cleaning.py (keep in sync) ---
 FOOTER_LOOKAHEAD = 20
 _BADGE_DOMAINS = frozenset([
     'shields.io/badge', 'camo.githubusercontent.com',
     'app.dosu.dev/response-feedback', 'go.dosu.dev',
 ])
+_FOOTER_TEXT_PHRASES = (
+    'To reply, just mention',
+    'Docs are dead. Just use',
+    'Share context across your team and agents. Try',
+)
 GH_IMG_RE = re.compile(
     r'<img\s+width="\d+"\s+height="\d+"\s+alt="[^"]*"\s+'
     r'src="https://github\.com/user-attachments/assets/[a-f0-9-]+"[^>]*/?>',
+    re.IGNORECASE,
+)
+MD_IMG_RE = re.compile(
+    r'!\[[^\]]*\]\([^)]*\.(?:png|jpe?g|gif|svg|webp)(?:\?[^)]*)?\)',
     re.IGNORECASE,
 )
 ISSUE_HEADING_RE = re.compile(
@@ -78,6 +90,19 @@ def _is_badge_line(line: str) -> bool:
     return has_badge and has_dosu
 
 
+def _is_dosu_footer_text_line(line: str) -> bool:
+    stripped = re.sub(r'^[\s>_*]+', '', line).strip()
+    has_dosu_ref = 'Dosu' in line or '@dosu' in line
+    for phrase in _FOOTER_TEXT_PHRASES:
+        if stripped.startswith(phrase) and has_dosu_ref:
+            return True
+    if '回复时只需提及' in line and '@dosu' in line:
+        return True
+    if '已经过时' in line and ('Dosu' in line or 'dosu.dev' in line):
+        return True
+    return False
+
+
 def strip_noise(text: str) -> str:
     lines = text.splitlines()
     i = 0
@@ -111,9 +136,13 @@ def strip_noise(text: str) -> str:
         if _is_badge_line(line):
             i += 1
             continue
-        line = re.sub(r'<!--\s*Answer\s*-->', '', line)
+        if _is_dosu_footer_text_line(line):
+            i += 1
+            continue
+        line = re.sub(r'<!--\s*(?:Answer|Greeting)\s*-->', '', line)
         line = re.sub(GH_IMG_RE, '', line)
         line = re.sub(r'!\[Uploading[^\]]*\]\(\)', '', line)
+        line = re.sub(MD_IMG_RE, '', line)
         line = re.sub(r'\S{1000,}', '', line)
         out.append(line)
         i += 1

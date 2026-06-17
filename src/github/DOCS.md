@@ -177,10 +177,20 @@
 
 ---
 
-### index_discussions.py (273 LOC)
+### discussion_cleaning.py (118 LOC)
 
-**Purpose:** Fetch GitHub discussions matching a query, strip noise, redact tokens, write per-discussion MDs, and index into the `github_discussions` RAG collection. Keyword-fallback loop (3→2→1). Two public strip functions: `strip_noise(text) -> str` — noise-only pass, safe on raw or already-built MDs (DOSU_FOOTER block, DOSU_GREETING 2-line, ISSUE_TEMPLATE_CHECKLIST block, standalone badge-line, DOSU_ANSWER_MARKER inline, GH_SCREENSHOT_IMG inline, FAILED_UPLOAD inline, 1000-char no-space net); `strip_discussion_noise(text) -> (str, title)` — calls `strip_noise()` then applies format logic (title extraction, metadata drop, `[ANSWER]` dedup) on raw `get_discussion` output. Private helpers `_bare()` and `_is_badge_line()` support badge detection.
+**Purpose:** Pure noise-strip module — no mcp dependency, importable from dev/ probes via sys.path (see dev/ copies). Exports `strip_noise(text) -> str`: 11 sub-categories — DOSU_FOOTER block, DOSU_GREETING 2-line standalone, ISSUE_TEMPLATE_CHECKLIST block, STANDALONE_BADGE_LINE, DOSU_FOOTER_TEXT (blockquoted/email-rendered prose: `'To reply, just mention'` / `'Docs are dead.'` / `'Share context…'` + dosu ref; Chinese: `回复时只需提及` / `已经过时`), DOSU_ANSWER_MARKER inline sub, DOSU_GREETING_INLINE sub (`<!-- Answer|Greeting -->` unified), GH_SCREENSHOT_IMG (`<img … user-attachments …>`), FAILED_UPLOAD (`![Uploading…]()`), MD_IMG by extension (`![alt](url.png|jpg|gif|svg|webp)` via `MD_IMG_RE`), NO_SPACE_NET (`\S{1000,}` last). Private helpers `_bare()`, `_is_badge_line()`, `_is_dosu_footer_text_line()` and constants (`FOOTER_LOOKAHEAD`, `_BADGE_DOMAINS`, `_FOOTER_TEXT_PHRASES`, `GH_IMG_RE`, `MD_IMG_RE`, `ISSUE_HEADING_RE`). Safe on raw `get_discussion` output and already-built MDs (does not touch `## ` headings, attribution headers, or metadata lines).
+**Reads:** nothing — pure text transform.
+**Writes:** returns cleaned string (never mutates argument).
+**Called by:** `index_discussions.py` (imports `strip_noise`). Dev copies: `dev/discussion_cleaning/reclean_existing_mds.py`, `dev/discussion_cleaning/A_strip_validation.py` (verbatim inline copies — hook `block_dev_imports_src` prevents direct import).
+**Calls out:** stdlib only (`re`).
+
+---
+
+### index_discussions.py (190 LOC)
+
+**Purpose:** Fetch GitHub discussions matching a query, strip noise, redact tokens, write per-discussion MDs, and index into the `github_discussions` RAG collection. Keyword-fallback loop (3→2→1). `strip_discussion_noise(text) -> (str, title)` — calls imported `strip_noise()` then applies format logic (title extraction, metadata drop, `[ANSWER]` dedup) on raw `get_discussion` output.
 **Reads:** GitHub GraphQL Search API (repo-scoped `search(type:DISCUSSION)`) + `get_discussion_workflow()` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
 **Writes:** per-discussion MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
-**Calls out:** `mcp.types`; imports from `graphql_client.py`, `get_discussion.py`.
+**Calls out:** `mcp.types`; imports from `discussion_cleaning.py`, `graphql_client.py`, `get_discussion.py`.
