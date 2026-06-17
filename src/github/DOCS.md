@@ -177,9 +177,9 @@
 
 ---
 
-### discussion_cleaning.py (88 LOC)
+### discussion_cleaning.py (118 LOC)
 
-**Purpose:** Pure noise-strip module — no mcp dependency, importable from dev/ probes via sys.path (see dev/ copies). Exports `strip_noise(text) -> str`: removes DOSU_FOOTER blocks, DOSU_GREETING 2-line, ISSUE_TEMPLATE_CHECKLIST blocks, standalone badge lines, `<!-- Answer -->` markers, `<img … user-attachments …>` screenshot tags, `![Uploading…]()` failed uploads, and any no-space run ≥ 1000 chars. Private helpers `_bare()` and `_is_badge_line()` and their constants (`FOOTER_LOOKAHEAD`, `_BADGE_DOMAINS`, `GH_IMG_RE`, `ISSUE_HEADING_RE`) live here. Safe on both raw `get_discussion` output and already-built MDs (does not touch `## ` headings, comment attribution headers, or metadata lines).
+**Purpose:** Pure noise-strip module — no mcp dependency, importable from dev/ probes via sys.path (see dev/ copies). Exports `strip_noise(text) -> str`: 11 sub-categories — DOSU_FOOTER block, DOSU_GREETING 2-line standalone, ISSUE_TEMPLATE_CHECKLIST block, STANDALONE_BADGE_LINE, DOSU_FOOTER_TEXT (blockquoted/email-rendered prose: `'To reply, just mention'` / `'Docs are dead.'` / `'Share context…'` + dosu ref; Chinese: `回复时只需提及` / `已经过时`), DOSU_ANSWER_MARKER inline sub, DOSU_GREETING_INLINE sub (`<!-- Answer|Greeting -->` unified), GH_SCREENSHOT_IMG (`<img … user-attachments …>`), FAILED_UPLOAD (`![Uploading…]()`), MD_IMG by extension (`![alt](url.png|jpg|gif|svg|webp)` via `MD_IMG_RE`), NO_SPACE_NET (`\S{1000,}` last). Private helpers `_bare()`, `_is_badge_line()`, `_is_dosu_footer_text_line()` and constants (`FOOTER_LOOKAHEAD`, `_BADGE_DOMAINS`, `_FOOTER_TEXT_PHRASES`, `GH_IMG_RE`, `MD_IMG_RE`, `ISSUE_HEADING_RE`). Safe on raw `get_discussion` output and already-built MDs (does not touch `## ` headings, attribution headers, or metadata lines).
 **Reads:** nothing — pure text transform.
 **Writes:** returns cleaned string (never mutates argument).
 **Called by:** `index_discussions.py` (imports `strip_noise`). Dev copies: `dev/discussion_cleaning/reclean_existing_mds.py`, `dev/discussion_cleaning/A_strip_validation.py` (verbatim inline copies — hook `block_dev_imports_src` prevents direct import).

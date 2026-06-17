@@ -168,10 +168,10 @@ def measure_all(md_files: list) -> list[dict]:
     for fp in md_files:
         before = fp.read_text(errors='replace')
         after = strip_noise(before)
-        # Preserve original trailing newline: strip_noise uses "\n".join(splitlines()) which
-        # drops the final \n. Re-add it so files only differing by trailing \n are not rewritten.
+        # Preserve original trailing whitespace form for writes (don't introduce whitespace diffs).
         if before.endswith('\n') and not after.endswith('\n'):
             after += '\n'
+        # Changed only when content differs beyond trailing whitespace (ignore \n vs \n\n endings).
         results.append({
             "filename": fp.name,
             "filepath": fp,
@@ -182,7 +182,7 @@ def measure_all(md_files: list) -> list[dict]:
             "before_h2": count_h2_headings(before),
             "after_h2": count_h2_headings(after),
             "chars_removed": len(before) - len(after),
-            "changed": before != after,
+            "changed": after.rstrip() != before.rstrip(),
         })
     return results
 
