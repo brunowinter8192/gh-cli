@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Re-clean existing issue MDs using strip_generic_noise() — image/data-URI/no-space pass only.
 # The existing MDs were already built with strip_noise+strip_comments_noise (format logic done);
-# this pass applies only the generic strips (GH_IMG, MD_DATA_URI, DATA_URI, FAILED_UPLOAD, MD_IMG,
-# \S{1000,} net) which are additive and safe on already-formatted MDs.
+# this pass applies only the generic strips (IMG, MD_IMG, DATA_URI, \S{1000,} net) which are
+# additive and safe on already-formatted MDs.
 # Intentional verbatim copy of src/github/text_cleaning.py strip_generic_noise() (+ regexes).
 # dev/ may not import src/ (hook: block_dev_imports_src) — intentional duplication, not drift.
 # Update if the source changes. Source of truth: src/github/text_cleaning.py
@@ -26,19 +26,8 @@ REPORT_DIR = Path(__file__).parent / "reclean_reports"
 NO_SPACE_LIMIT = 1000
 
 # --- verbatim copy of src/github/text_cleaning.py (keep in sync) ---
-GH_IMG_RE = re.compile(
-    r'<img\s+width="\d+"\s+height="\d+"\s+alt="[^"]*"\s+'
-    r'src="https://github\.com/user-attachments/assets/[a-f0-9-]+"[^>]*/?>',
-    re.IGNORECASE,
-)
-MD_IMG_RE = re.compile(
-    r'!\[[^\]]*\]\([^)]*\.(?:png|jpe?g|gif|svg|webp)(?:\?[^)]*)?\)',
-    re.IGNORECASE,
-)
-MD_DATA_URI_RE = re.compile(
-    r'!\[[^\]]*\]\(data:image/[^;]+;base64,[A-Za-z0-9+/=]+\)',
-    re.IGNORECASE,
-)
+IMG_RE = re.compile(r'<img\b[^>]*>', re.IGNORECASE)
+MD_IMG_RE = re.compile(r'!\[[^\]]*\]\([^)]+\)', re.IGNORECASE)
 DATA_URI_RE = re.compile(
     r'data:image/[^;]+;base64,[A-Za-z0-9+/=]+',
     re.IGNORECASE,
@@ -46,11 +35,10 @@ DATA_URI_RE = re.compile(
 
 
 def _strip_line(line: str) -> str:
-    line = re.sub(GH_IMG_RE, '', line)
-    line = re.sub(MD_DATA_URI_RE, '', line)
+    line = re.sub(IMG_RE, '', line)
+    line = re.sub(MD_IMG_RE, '', line)
     line = re.sub(DATA_URI_RE, '', line)
     line = re.sub(r'!\[Uploading[^\]]*\]\(\)', '', line)
-    line = re.sub(MD_IMG_RE, '', line)
     line = re.sub(r'\S{1000,}', '', line)
     return line
 

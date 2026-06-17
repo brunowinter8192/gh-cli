@@ -179,7 +179,7 @@
 
 ### text_cleaning.py (42 LOC)
 
-**Purpose:** Generic text noise-strip primitives shared across issue and discussion cleaning. No mcp dependency. Exports `strip_generic_noise(text) -> str` (full-text entry point) and `_strip_line(line) -> str` (per-line helper). Also exports regexes: `GH_IMG_RE` (GitHub user-attachment `<img>` tags), `MD_IMG_RE` (markdown images by extension), `MD_DATA_URI_RE` (markdown images with base64 data-URI src), `DATA_URI_RE` (bare base64 data-URIs). Strip order: GH_IMG → MD_DATA_URI → DATA_URI → FAILED_UPLOAD → MD_IMG → `\S{1000,}` no-space net.
+**Purpose:** Generic text noise-strip primitives shared across issue and discussion cleaning. No mcp dependency. Exports `strip_generic_noise(text) -> str` (full-text entry point) and `_strip_line(line) -> str` (per-line helper). Also exports regexes: `IMG_RE` (any HTML `<img\b[^>]*>` tag), `MD_IMG_RE` (any markdown image with non-empty URL `!\[[^\]]*\]\([^)]+\)` — non-empty URL required to avoid matching literal `![]()` code examples in prose), `DATA_URI_RE` (bare base64 data-URIs not inside markdown syntax). Strip order: IMG → MD_IMG → DATA_URI → FAILED_UPLOAD (`!\[Uploading...\]\(\)` empty-URL form, explicit since not subsumed by MD_IMG_RE) → `\S{1000,}` no-space net.
 **Reads:** nothing — pure text transform.
 **Writes:** returns cleaned string (never mutates argument).
 **Called by:** `discussion_cleaning.py` (imports `strip_generic_noise`); `index_issues.py` (imports `strip_generic_noise`, applied additively to body + comments after issue-specific strips).
