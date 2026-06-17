@@ -78,22 +78,10 @@ def _is_badge_line(line: str) -> bool:
     return has_badge and has_dosu
 
 
-def strip_discussion_noise(text: str) -> tuple[str, str]:
-    METADATA_PREFIXES = (
-        "**Category:**", "**Author:**", "**Created:**", "**Upvotes:**", "**Status:**",
-    )
-    ANSWER_COMMENT_HDR_RE = re.compile(
-        r'^\*\*@\S+\*\* \(\d{4}-\d{2}-\d{2}\) - \d+ upvotes \[ANSWER\]$'
-    )
-    COMMENT_HDR_RE = re.compile(
-        r'^\*\*@\S+\*\* \(\d{4}-\d{2}-\d{2}\) - \d+ upvotes'
-    )
-    title = ""
-    title_extracted = False
-    in_answer_comment = False
-    out = []
+def strip_noise(text: str) -> str:
     lines = text.splitlines()
     i = 0
+    out = []
     while i < len(lines):
         line = lines[i]
         bare = _bare(line)
@@ -123,30 +111,45 @@ def strip_discussion_noise(text: str) -> tuple[str, str]:
         if _is_badge_line(line):
             i += 1
             continue
-        if ANSWER_COMMENT_HDR_RE.match(line):
-            in_answer_comment = True
-            i += 1
-            continue
-        if in_answer_comment:
-            if COMMENT_HDR_RE.match(line) or line.startswith("### "):
-                in_answer_comment = False
-                out.append(line)
-            i += 1
-            continue
-        if not title_extracted and line.startswith("## "):
-            title = line[3:].strip()
-            title_extracted = True
-            i += 1
-            continue
-        if any(line.startswith(p) for p in METADATA_PREFIXES):
-            i += 1
-            continue
         line = re.sub(r'<!--\s*Answer\s*-->', '', line)
         line = re.sub(GH_IMG_RE, '', line)
         line = re.sub(r'!\[Uploading[^\]]*\]\(\)', '', line)
         line = re.sub(r'\S{1000,}', '', line)
         out.append(line)
         i += 1
+    return "\n".join(out)
+
+
+def strip_discussion_noise(text: str) -> tuple[str, str]:
+    METADATA_PREFIXES = (
+        "**Category:**", "**Author:**", "**Created:**", "**Upvotes:**", "**Status:**",
+    )
+    ANSWER_COMMENT_HDR_RE = re.compile(
+        r'^\*\*@\S+\*\* \(\d{4}-\d{2}-\d{2}\) - \d+ upvotes \[ANSWER\]$'
+    )
+    COMMENT_HDR_RE = re.compile(
+        r'^\*\*@\S+\*\* \(\d{4}-\d{2}-\d{2}\) - \d+ upvotes'
+    )
+    title = ""
+    title_extracted = False
+    in_answer_comment = False
+    out = []
+    for line in strip_noise(text).split('\n'):
+        if ANSWER_COMMENT_HDR_RE.match(line):
+            in_answer_comment = True
+            continue
+        if in_answer_comment:
+            if COMMENT_HDR_RE.match(line) or line.startswith("### "):
+                in_answer_comment = False
+                out.append(line)
+            continue
+        if not title_extracted and line.startswith("## "):
+            title = line[3:].strip()
+            title_extracted = True
+            continue
+        if any(line.startswith(p) for p in METADATA_PREFIXES):
+            continue
+        out.append(line)
     return "\n".join(out), title
 
 

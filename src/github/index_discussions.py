@@ -118,7 +118,64 @@ def _is_badge_line(line: str) -> bool:
     return has_badge and has_dosu
 
 
-# Strip indexing noise from formatted discussion text; return (filtered_text, extracted_title)
+# Strip bot-generated noise from text; safe on raw get_discussion output or pre-built MDs
+def strip_noise(text: str) -> str:
+    lines = text.splitlines()
+    i = 0
+    out = []
+    while i < len(lines):
+        line = lines[i]
+        bare = _bare(line)
+
+        # DOSU_FOOTER: strip <!-- Dosu Comment Footer --> ... badge line (incl.)
+        if bare == '<!-- Dosu Comment Footer -->':
+            badge_idx = next(
+                (j for j in range(i + 1, min(i + FOOTER_LOOKAHEAD, len(lines)))
+                 if _is_badge_line(lines[j])), None
+            )
+            if badge_idx is not None:
+                block = lines[i:badge_idx + 1]
+                if not any(re.search(r'^\s*>\s*\*\*@', l) for l in block):
+                    i = badge_idx + 1
+                    continue
+
+        # DOSU_GREETING: strip <!-- Greeting --> + next non-blank line
+        if bare == '<!-- Greeting -->':
+            greet_idx = next(
+                (j for j in range(i + 1, min(i + 5, len(lines))) if lines[j].strip()), None
+            )
+            if greet_idx is not None:
+                i = greet_idx + 1
+                continue
+
+        # ISSUE_TEMPLATE_CHECKLIST: strip heading + consecutive checkbox/blank lines
+        if ISSUE_HEADING_RE.match(line.strip()):
+            j = i + 1
+            while j < len(lines) and (lines[j].strip().startswith('- [') or not lines[j].strip()):
+                j += 1
+            i = j
+            continue
+
+        # STANDALONE BADGE LINE: markerless/blockquoted/orphaned dosu badges
+        if _is_badge_line(line):
+            i += 1
+            continue
+
+        # Inline subs: DOSU_ANSWER_MARKER, GH_SCREENSHOT_IMG, FAILED_UPLOAD
+        line = re.sub(r'<!--\s*Answer\s*-->', '', line)
+        line = re.sub(GH_IMG_RE, '', line)
+        line = re.sub(r'!\[Uploading[^\]]*\]\(\)', '', line)
+
+        # No-space safety net: remove any run of >= 1000 non-whitespace chars
+        line = re.sub(r'\S{1000,}', '', line)
+
+        out.append(line)
+        i += 1
+
+    return "\n".join(out)
+
+
+# Strip raw get_discussion output: noise pass then title/metadata/[ANSWER] format pass
 def strip_discussion_noise(text: str) -> tuple[str, str]:
     METADATA_PREFIXES = (
         "**Category:**", "**Author:**", "**Created:**", "**Upvotes:**", "**Status:**",
@@ -135,82 +192,29 @@ def strip_discussion_noise(text: str) -> tuple[str, str]:
     in_answer_comment = False
     out = []
 
-    lines = text.splitlines()
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        bare = _bare(line)
-
-        # (1) DOSU_FOOTER: strip <!-- Dosu Comment Footer --> ... badge line (incl.)
-        if bare == '<!-- Dosu Comment Footer -->':
-            badge_idx = next(
-                (j for j in range(i + 1, min(i + FOOTER_LOOKAHEAD, len(lines)))
-                 if _is_badge_line(lines[j])), None
-            )
-            if badge_idx is not None:
-                block = lines[i:badge_idx + 1]
-                if not any(re.search(r'^\s*>\s*\*\*@', l) for l in block):
-                    i = badge_idx + 1
-                    continue
-
-        # (2) DOSU_GREETING: strip <!-- Greeting --> + next non-blank line
-        if bare == '<!-- Greeting -->':
-            greet_idx = next(
-                (j for j in range(i + 1, min(i + 5, len(lines))) if lines[j].strip()), None
-            )
-            if greet_idx is not None:
-                i = greet_idx + 1
-                continue
-
-        # (3) ISSUE_TEMPLATE_CHECKLIST: strip heading + consecutive checkbox/blank lines
-        if ISSUE_HEADING_RE.match(line.strip()):
-            j = i + 1
-            while j < len(lines) and (lines[j].strip().startswith('- [') or not lines[j].strip()):
-                j += 1
-            i = j
-            continue
-
-        # (4) STANDALONE BADGE LINE: markerless/blockquoted/orphaned dosu badges
-        #     (_is_badge_line already _bare()s the > prefix; catches quoted footer copies)
-        if _is_badge_line(line):
-            i += 1
-            continue
-
-        # (5) [ANSWER] comment dedup (existing behavior, unchanged)
+    # split('\n') not splitlines() — preserves trailing '' from strip_noise output
+    for line in strip_noise(text).split('\n'):
+        # [ANSWER] comment dedup
         if ANSWER_COMMENT_HDR_RE.match(line):
             in_answer_comment = True
-            i += 1
             continue
         if in_answer_comment:
             if COMMENT_HDR_RE.match(line) or line.startswith("### "):
                 in_answer_comment = False
                 out.append(line)
-            i += 1
             continue
 
-        # (6) Title extraction: get_discussion emits "## title", promote to H1 via build_discussion_md
+        # Title extraction: get_discussion emits "## title", promote to H1 via build_discussion_md
         if not title_extracted and line.startswith("## "):
             title = line[3:].strip()
             title_extracted = True
-            i += 1
             continue
 
-        # (7) Metadata block drop
+        # Metadata block drop
         if any(line.startswith(p) for p in METADATA_PREFIXES):
-            i += 1
             continue
-
-        # (8) Inline subs: DOSU_ANSWER_MARKER, GH_SCREENSHOT_IMG, FAILED_UPLOAD
-        line = re.sub(r'<!--\s*Answer\s*-->', '', line)
-        line = re.sub(GH_IMG_RE, '', line)
-        line = re.sub(r'!\[Uploading[^\]]*\]\(\)', '', line)
-
-        # (9) No-space safety net: remove any run of >= 1000 non-whitespace chars
-        #     (URL blobs, base64, camo-proxied badge markup — never natural language)
-        line = re.sub(r'\S{1000,}', '', line)
 
         out.append(line)
-        i += 1
 
     return "\n".join(out), title
 
