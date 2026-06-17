@@ -1,6 +1,9 @@
 # INFRASTRUCTURE
 import re
 
+# From text_cleaning.py: generic image/no-space strips (GH_IMG, MD_IMG, data-URI, failed-upload)
+from src.github.text_cleaning import strip_generic_noise
+
 FOOTER_LOOKAHEAD = 20
 _BADGE_DOMAINS = frozenset([
     'shields.io/badge', 'camo.githubusercontent.com',
@@ -10,15 +13,6 @@ _FOOTER_TEXT_PHRASES = (
     'To reply, just mention',
     'Docs are dead. Just use',
     'Share context across your team and agents. Try',
-)
-GH_IMG_RE = re.compile(
-    r'<img\s+width="\d+"\s+height="\d+"\s+alt="[^"]*"\s+'
-    r'src="https://github\.com/user-attachments/assets/[a-f0-9-]+"[^>]*/?>',
-    re.IGNORECASE,
-)
-MD_IMG_RE = re.compile(
-    r'!\[[^\]]*\]\([^)]*\.(?:png|jpe?g|gif|svg|webp)(?:\?[^)]*)?\)',
-    re.IGNORECASE,
 )
 ISSUE_HEADING_RE = re.compile(
     r'^### (?:🔎 Search before asking|🤖 Consult the online AI assistant)'
@@ -117,15 +111,9 @@ def strip_noise(text: str) -> str:
             i += 1
             continue
 
-        # Inline subs: DOSU_ANSWER_MARKER, DOSU_GREETING_INLINE, GH_SCREENSHOT_IMG,
-        #              FAILED_UPLOAD, MD_IMG
+        # Inline subs: DOSU_ANSWER_MARKER, DOSU_GREETING_INLINE; then generic noise via text_cleaning
         line = re.sub(r'<!--\s*(?:Answer|Greeting)\s*-->', '', line)
-        line = re.sub(GH_IMG_RE, '', line)
-        line = re.sub(r'!\[Uploading[^\]]*\]\(\)', '', line)
-        line = re.sub(MD_IMG_RE, '', line)
-
-        # No-space safety net: remove any run of >= 1000 non-whitespace chars
-        line = re.sub(r'\S{1000,}', '', line)
+        line = strip_generic_noise(line)
 
         out.append(line)
         i += 1

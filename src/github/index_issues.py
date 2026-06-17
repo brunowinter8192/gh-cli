@@ -10,6 +10,8 @@ from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
 from src.github.get_issue import get_issue_workflow
 from src.github.get_issue_comments import get_issue_comments_workflow
+# From text_cleaning.py: generic image/data-URI/no-space strips (additive, after issue-specific strips)
+from src.github.text_cleaning import strip_generic_noise
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +49,10 @@ def index_issues_workflow(query: str, repo: str, limit: int = DEFAULT_LIMIT) -> 
     for num in numbers:
         issue_text = get_issue_workflow(owner, repo_name, num)[0].text
         clean, title = strip_noise(issue_text)
+        clean = strip_generic_noise(clean)
         comments_text = get_issue_comments_workflow(owner, repo_name, num)[0].text
         clean_comments = strip_comments_noise(comments_text)
+        clean_comments = strip_generic_noise(clean_comments)
         md = build_issue_md(num, title, clean, clean_comments)
         (RAG_DOC_DIR / f"{repo_basename}__{num}.md").write_text(md, encoding="utf-8")
         mds_written += 1
