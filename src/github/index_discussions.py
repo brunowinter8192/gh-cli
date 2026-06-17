@@ -170,7 +170,13 @@ def strip_discussion_noise(text: str) -> tuple[str, str]:
             i = j
             continue
 
-        # (4) [ANSWER] comment dedup (existing behavior, unchanged)
+        # (4) STANDALONE BADGE LINE: markerless/blockquoted/orphaned dosu badges
+        #     (_is_badge_line already _bare()s the > prefix; catches quoted footer copies)
+        if _is_badge_line(line):
+            i += 1
+            continue
+
+        # (5) [ANSWER] comment dedup (existing behavior, unchanged)
         if ANSWER_COMMENT_HDR_RE.match(line):
             in_answer_comment = True
             i += 1
@@ -182,22 +188,26 @@ def strip_discussion_noise(text: str) -> tuple[str, str]:
             i += 1
             continue
 
-        # (5) Title extraction: get_discussion emits "## title", promote to H1 via build_discussion_md
+        # (6) Title extraction: get_discussion emits "## title", promote to H1 via build_discussion_md
         if not title_extracted and line.startswith("## "):
             title = line[3:].strip()
             title_extracted = True
             i += 1
             continue
 
-        # (6) Metadata block drop
+        # (7) Metadata block drop
         if any(line.startswith(p) for p in METADATA_PREFIXES):
             i += 1
             continue
 
-        # (7) Inline subs: DOSU_ANSWER_MARKER, GH_SCREENSHOT_IMG, FAILED_UPLOAD
+        # (8) Inline subs: DOSU_ANSWER_MARKER, GH_SCREENSHOT_IMG, FAILED_UPLOAD
         line = re.sub(r'<!--\s*Answer\s*-->', '', line)
         line = re.sub(GH_IMG_RE, '', line)
         line = re.sub(r'!\[Uploading[^\]]*\]\(\)', '', line)
+
+        # (9) No-space safety net: remove any run of >= 1000 non-whitespace chars
+        #     (URL blobs, base64, camo-proxied badge markup — never natural language)
+        line = re.sub(r'\S{1000,}', '', line)
 
         out.append(line)
         i += 1

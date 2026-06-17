@@ -120,6 +120,9 @@ def strip_discussion_noise(text: str) -> tuple[str, str]:
                 j += 1
             i = j
             continue
+        if _is_badge_line(line):
+            i += 1
+            continue
         if ANSWER_COMMENT_HDR_RE.match(line):
             in_answer_comment = True
             i += 1
@@ -141,6 +144,7 @@ def strip_discussion_noise(text: str) -> tuple[str, str]:
         line = re.sub(r'<!--\s*Answer\s*-->', '', line)
         line = re.sub(GH_IMG_RE, '', line)
         line = re.sub(r'!\[Uploading[^\]]*\]\(\)', '', line)
+        line = re.sub(r'\S{1000,}', '', line)
         out.append(line)
         i += 1
     return "\n".join(out), title

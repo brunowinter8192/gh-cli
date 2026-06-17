@@ -177,9 +177,9 @@
 
 ---
 
-### index_discussions.py (259 LOC)
+### index_discussions.py (269 LOC)
 
-**Purpose:** Fetch GitHub discussions matching a query, strip noise, redact tokens, write per-discussion MDs, and index into the `github_discussions` RAG collection. Keyword-fallback loop (3→2→1); `strip_discussion_noise()` handles: title extraction, metadata block drop, `[ANSWER]` comment dedup, and 6 noise classes (DOSU_FOOTER block, DOSU_GREETING 2-line, DOSU_ANSWER_MARKER inline, GH_SCREENSHOT_IMG inline, FAILED_UPLOAD inline, ISSUE_TEMPLATE_CHECKLIST block). Private helpers `_bare()` and `_is_badge_line()` support footer/badge detection.
+**Purpose:** Fetch GitHub discussions matching a query, strip noise, redact tokens, write per-discussion MDs, and index into the `github_discussions` RAG collection. Keyword-fallback loop (3→2→1); `strip_discussion_noise()` handles: title extraction, metadata block drop, `[ANSWER]` comment dedup, 6 audited noise classes (DOSU_FOOTER block, DOSU_GREETING 2-line, ISSUE_TEMPLATE_CHECKLIST block, DOSU_ANSWER_MARKER inline, GH_SCREENSHOT_IMG inline, FAILED_UPLOAD inline), standalone badge-line strip (`_is_badge_line()` catches markerless/blockquoted badges), and a 1000-char no-space safety net. Private helpers `_bare()` and `_is_badge_line()` support badge detection.
 **Reads:** GitHub GraphQL Search API (repo-scoped `search(type:DISCUSSION)`) + `get_discussion_workflow()` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
 **Writes:** per-discussion MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
