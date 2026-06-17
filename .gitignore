@@ -17,6 +17,7 @@ bug_fixes/
 # Pre-existing dev tooling stays local — it contains captured data with secrets (tokens).
 dev/*
 !dev/repo_exploration/
+!dev/discussion_cleaning/
 
 # macOS
 .DS_Store
