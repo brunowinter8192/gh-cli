@@ -6,9 +6,18 @@ _BADGE_DOMAINS = frozenset([
     'shields.io/badge', 'camo.githubusercontent.com',
     'app.dosu.dev/response-feedback', 'go.dosu.dev',
 ])
+_FOOTER_TEXT_PHRASES = (
+    'To reply, just mention',
+    'Docs are dead. Just use',
+    'Share context across your team and agents. Try',
+)
 GH_IMG_RE = re.compile(
     r'<img\s+width="\d+"\s+height="\d+"\s+alt="[^"]*"\s+'
     r'src="https://github\.com/user-attachments/assets/[a-f0-9-]+"[^>]*/?>',
+    re.IGNORECASE,
+)
+MD_IMG_RE = re.compile(
+    r'!\[[^\]]*\]\([^)]*\.(?:png|jpe?g|gif|svg|webp)(?:\?[^)]*)?\)',
     re.IGNORECASE,
 )
 ISSUE_HEADING_RE = re.compile(
@@ -29,6 +38,20 @@ def _is_badge_line(line: str) -> bool:
     has_badge = '[![' in c or c.startswith('<sup>How did I do?')
     has_dosu = any(x in c for x in _BADGE_DOMAINS)
     return has_badge and has_dosu
+
+
+# True if line is a dosu footer text line (blockquoted/email-rendered — no marker, no badge)
+def _is_dosu_footer_text_line(line: str) -> bool:
+    stripped = re.sub(r'^[\s>_*]+', '', line).strip()
+    has_dosu_ref = '@dosu' in line or 'dosu.dev' in line
+    for phrase in _FOOTER_TEXT_PHRASES:
+        if stripped.startswith(phrase) and has_dosu_ref:
+            return True
+    if '回复时只需提及' in line and '@dosu' in line:
+        return True
+    if '已经过时' in line and ('Dosu' in line or 'dosu.dev' in line):
+        return True
+    return False
 
 
 # Strip bot-generated noise from text; safe on raw get_discussion output or pre-built MDs
@@ -74,10 +97,17 @@ def strip_noise(text: str) -> str:
             i += 1
             continue
 
-        # Inline subs: DOSU_ANSWER_MARKER, GH_SCREENSHOT_IMG, FAILED_UPLOAD
-        line = re.sub(r'<!--\s*Answer\s*-->', '', line)
+        # DOSU_FOOTER_TEXT: blockquoted/email-rendered footer prose (no marker, no badge)
+        if _is_dosu_footer_text_line(line):
+            i += 1
+            continue
+
+        # Inline subs: DOSU_ANSWER_MARKER, DOSU_GREETING_INLINE, GH_SCREENSHOT_IMG,
+        #              FAILED_UPLOAD, MD_IMG
+        line = re.sub(r'<!--\s*(?:Answer|Greeting)\s*-->', '', line)
         line = re.sub(GH_IMG_RE, '', line)
         line = re.sub(r'!\[Uploading[^\]]*\]\(\)', '', line)
+        line = re.sub(MD_IMG_RE, '', line)
 
         # No-space safety net: remove any run of >= 1000 non-whitespace chars
         line = re.sub(r'\S{1000,}', '', line)

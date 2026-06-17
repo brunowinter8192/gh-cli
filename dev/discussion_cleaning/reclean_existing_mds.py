@@ -31,9 +31,18 @@ _BADGE_DOMAINS = frozenset([
     'shields.io/badge', 'camo.githubusercontent.com',
     'app.dosu.dev/response-feedback', 'go.dosu.dev',
 ])
+_FOOTER_TEXT_PHRASES = (
+    'To reply, just mention',
+    'Docs are dead. Just use',
+    'Share context across your team and agents. Try',
+)
 GH_IMG_RE = re.compile(
     r'<img\s+width="\d+"\s+height="\d+"\s+alt="[^"]*"\s+'
     r'src="https://github\.com/user-attachments/assets/[a-f0-9-]+"[^>]*/?>',
+    re.IGNORECASE,
+)
+MD_IMG_RE = re.compile(
+    r'!\[[^\]]*\]\([^)]*\.(?:png|jpe?g|gif|svg|webp)(?:\?[^)]*)?\)',
     re.IGNORECASE,
 )
 ISSUE_HEADING_RE = re.compile(
@@ -86,6 +95,19 @@ def _is_badge_line(line: str) -> bool:
     return has_badge and has_dosu
 
 
+def _is_dosu_footer_text_line(line: str) -> bool:
+    stripped = re.sub(r'^[\s>_*]+', '', line).strip()
+    has_dosu_ref = '@dosu' in line or 'dosu.dev' in line
+    for phrase in _FOOTER_TEXT_PHRASES:
+        if stripped.startswith(phrase) and has_dosu_ref:
+            return True
+    if '回复时只需提及' in line and '@dosu' in line:
+        return True
+    if '已经过时' in line and ('Dosu' in line or 'dosu.dev' in line):
+        return True
+    return False
+
+
 def strip_noise(text: str) -> str:
     lines = text.splitlines()
     i = 0
@@ -119,9 +141,13 @@ def strip_noise(text: str) -> str:
         if _is_badge_line(line):
             i += 1
             continue
-        line = re.sub(r'<!--\s*Answer\s*-->', '', line)
+        if _is_dosu_footer_text_line(line):
+            i += 1
+            continue
+        line = re.sub(r'<!--\s*(?:Answer|Greeting)\s*-->', '', line)
         line = re.sub(GH_IMG_RE, '', line)
         line = re.sub(r'!\[Uploading[^\]]*\]\(\)', '', line)
+        line = re.sub(MD_IMG_RE, '', line)
         line = re.sub(r'\S{1000,}', '', line)
         out.append(line)
         i += 1
