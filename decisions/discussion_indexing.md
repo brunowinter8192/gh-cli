@@ -5,7 +5,7 @@
 - Query: hard-capped to 3 keywords (`query.split()[:3]`); 0-result fallback drops last keyword 3→2→1, then errors; empty/whitespace query → guard error.
 - Search: `search_discussions_raw()` → GraphQL `search(query: "<kw> repo:<repo>", type: DISCUSSION, first: limit)`; returns `(discussionCount, numbers[:limit])`. `repo:` injection confirmed working (probe: `memory repo:gastownhall/beads` returned all 23 beads discussions).
 - Fetch: in-process `get_discussion_workflow(owner, repo, num)` — one GraphQL call per thread (body + comments in natural chronological API order + accepted answer). `comment_limit=100` (API per-page max); no comment re-sorting.
-- Strip: `strip_discussion_noise()` extracts title from `## ` line; drops metadata block (`**Category:**`, `**Author:**`, `**Created:**`, `**Upvotes:**`, `**Status:**`); deduplicates `[ANSWER]`-tagged comment by dropping the in-list copy and keeping the `### Accepted Answer` section. Also strips 6 noise classes and applies 2 safety passes: (1) `DOSU_FOOTER` — `<!-- Dosu Comment Footer -->` through first badge line within 20 lines (hard invariant: no threaded-reply `^\s*>\s*\*\*@` in block); (2) `DOSU_GREETING` — `<!-- Greeting -->` + next non-blank line; (3) `ISSUE_TEMPLATE_CHECKLIST` — `### 🔎 Search before asking` and `### 🤖 Consult the online AI assistant` headings + their `- [x]` checkbox lines; (4) STANDALONE BADGE LINE — any line where `_is_badge_line()` is True (catches markerless/blockquoted/orphaned dosu badges without a preceding footer marker); (5–7) inline subs: `DOSU_ANSWER_MARKER` (`<!-- Answer -->` tag only), `GH_SCREENSHOT_IMG` (`<img … github.com/user-attachments/assets/…>` tags entirely), `FAILED_UPLOAD` (`![Uploading …]()` empty-URL markers); (8) NO-SPACE SAFETY NET — `re.sub(r'\S{1000,}', '', line)` removes any contiguous non-whitespace run ≥ 1000 chars (URL blobs, base64, camo-proxied badge markup). Hard invariant: no kept line contains a `\S{1000,}` run.
+- Strip: `strip_noise()` (in `src/github/discussion_cleaning.py`, imported by `index_discussions.py`) — pure noise pass, mcp-free; strips 6 noise classes + 2 safety passes: (1) `DOSU_FOOTER` — `<!-- Dosu Comment Footer -->` through first badge line within 20 lines (hard invariant: no threaded-reply `^\s*>\s*\*\*@` in block); (2) `DOSU_GREETING` — `<!-- Greeting -->` + next non-blank line; (3) `ISSUE_TEMPLATE_CHECKLIST` — `### 🔎 Search before asking` and `### 🤖 Consult the online AI assistant` headings + their `- [x]` checkbox lines; (4) STANDALONE BADGE LINE — any line where `_is_badge_line()` is True (catches markerless/blockquoted/orphaned dosu badges without a preceding footer marker); (5–7) inline subs: `DOSU_ANSWER_MARKER` (`<!-- Answer -->` tag only), `GH_SCREENSHOT_IMG` (`<img … github.com/user-attachments/assets/…>` tags entirely), `FAILED_UPLOAD` (`![Uploading …]()` empty-URL markers); (8) NO-SPACE SAFETY NET — `re.sub(r'\S{1000,}', '', line)` removes any contiguous non-whitespace run ≥ 1000 chars. Hard invariant: no kept line contains a `\S{1000,}` run. `strip_discussion_noise()` (in `index_discussions.py`) — calls `strip_noise()` then applies format logic: title extraction (`## ` line → H1 via `build_discussion_md`), metadata drop (`**Category:**` etc.), `[ANSWER]` dedup (drops in-list copy, keeps `### Accepted Answer` section).
 - Redaction: `redact_tokens()` applied to final MD string — patterns `ghp_[A-Za-z0-9]+` and `github_pat_[A-Za-z0-9_]+` → `[REDACTED]`.
 - Output: per-thread MD `<repo_basename>__<num>.md` → `RAG/data/documents/github_discussions/` (overwrite).
 - Index: `rag-cli index --collection github_discussions` via subprocess (synchronous). Dedup by content-hash (skip unchanged, re-index changed). Failure (non-zero exit) raises `RuntimeError` — busy/locked detected via stderr keywords, message includes manual recovery command (`rag-cli index --collection github_discussions`); never silent.
@@ -48,7 +48,7 @@ Root cause of 15/78 indexing failures: DOSU_FOOTER blocks contain base64-encoded
 
 **Strip validation v1 (2026-06-17, 6-class only):** `dev/discussion_cleaning/A_strip_validation_reports/validation_20260617_203934.md` — 39/40 files cleared; 1 residual (`MinerU__4820.md`, 6,299 chars): blockquoted camo badge 25 lines after marker, no marker at its local position.
 
-**Strip validation v2 (2026-06-17, +badge-line strip +no-space net):** `dev/discussion_cleaning/A_strip_validation.py` · report: `dev/discussion_cleaning/A_strip_validation_reports/validation_20260617_205746.md` · dataset: 78 MDs (in-memory, read-only).
+**Strip validation v2 (2026-06-17, +badge-line strip +no-space net):** `dev/discussion_cleaning/A_strip_validation.py` · report: `dev/discussion_cleaning/A_strip_validation_reports/validation_20260617_205746.md` · dataset: 78 MDs (in-memory, read-only). Note: this validation runs `strip_discussion_noise()` (noise + format pass combined); the reclean script below runs `strip_noise()` only (noise pass only — preserves headings/metadata already dropped from built MDs).
 
 | Metric | Before | After |
 |---|---|---|
@@ -58,6 +58,16 @@ Root cause of 15/78 indexing failures: DOSU_FOOTER blocks contain base64-encoded
 | Files changed | — | 78 / 78 |
 
 Content preservation (4 spot-check files): all comment attribution headers, threaded replies, and content section headings preserved at identical counts before/after.
+
+**Reclean apply (2026-06-17):** `dev/discussion_cleaning/reclean_existing_mds.py --apply` · report: `dev/discussion_cleaning/reclean_reports/reclean_apply_20260617_213527.md` · dataset: 78 existing MDs (written before strip_noise existed). Backup: `github_discussions_backup_20260617_213527`.
+
+| Metric | Value |
+|---|---|
+| Files changed (noise removed) | 44 / 78 |
+| Files unchanged (no noise) | 34 / 78 |
+| Total chars removed | 430,020 |
+| Corpus peak no-space run after | 457 ✅ |
+| `## ` heading count identical per file | ✅ PASS |
 
 ## Recommendation (SOLL)
 - **N=30 (Keep)** — mirrors `index_issues`; covers full beads corpus (23 < 30); appropriate cap for larger repos.
