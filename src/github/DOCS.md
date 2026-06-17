@@ -177,7 +177,7 @@
 
 ---
 
-### text_cleaning.py (42 LOC)
+### text_cleaning.py (30 LOC)
 
 **Purpose:** Generic text noise-strip primitives shared across issue and discussion cleaning. No mcp dependency. Exports `strip_generic_noise(text) -> str` (full-text entry point) and `_strip_line(line) -> str` (per-line helper). Also exports regexes: `IMG_RE` (any HTML `<img\b[^>]*>` tag), `MD_IMG_RE` (any markdown image with non-empty URL `!\[[^\]]*\]\([^)]+\)` — non-empty URL required to avoid matching literal `![]()` code examples in prose), `DATA_URI_RE` (bare base64 data-URIs not inside markdown syntax). Strip order: IMG → MD_IMG → DATA_URI → FAILED_UPLOAD (`!\[Uploading...\]\(\)` empty-URL form, explicit since not subsumed by MD_IMG_RE) → `\S{1000,}` no-space net.
 **Reads:** nothing — pure text transform.
