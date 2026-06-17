@@ -97,7 +97,7 @@ def _is_badge_line(line: str) -> bool:
 
 def _is_dosu_footer_text_line(line: str) -> bool:
     stripped = re.sub(r'^[\s>_*]+', '', line).strip()
-    has_dosu_ref = '@dosu' in line or 'dosu.dev' in line
+    has_dosu_ref = 'Dosu' in line or '@dosu' in line
     for phrase in _FOOTER_TEXT_PHRASES:
         if stripped.startswith(phrase) and has_dosu_ref:
             return True
