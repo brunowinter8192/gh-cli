@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 # Validate strip_discussion_noise() on the 78-MD corpus. Read-only — never writes source files.
-# Logic is a direct copy of src/github/index_discussions.py strip_discussion_noise() and its
-# helpers (_bare, _is_badge_line). Update this copy whenever the src/ function changes.
-# Usage: ./venv/bin/python dev/discussion_cleaning/A_strip_validation.py [--source-dir PATH]
+# Intentional verbatim copy of src/github/discussion_cleaning.py strip_noise() (+ _bare,
+# _is_badge_line, constants). dev/ may not import src/ (hook: block_dev_imports_src) —
+# intentional duplication, not drift. Update if the source changes.
+# strip_discussion_noise() is kept as a thin local wrapper (full version in index_discussions.py
+# which pulls mcp — not importable in dev/).
+# Usage: python3 dev/discussion_cleaning/A_strip_validation.py [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -19,7 +22,7 @@ DEFAULT_SOURCE_DIR = Path(
 REPORT_DIR = Path(__file__).parent / "A_strip_validation_reports"
 THRESHOLD = 1500
 
-# --- copied from src/github/index_discussions.py (keep in sync) ---
+# --- verbatim copy of src/github/discussion_cleaning.py (keep in sync) ---
 FOOTER_LOOKAHEAD = 20
 _BADGE_DOMAINS = frozenset([
     'shields.io/badge', 'camo.githubusercontent.com',

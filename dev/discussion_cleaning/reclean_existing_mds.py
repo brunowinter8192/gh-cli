@@ -3,8 +3,11 @@
 # strip_noise does NOT touch ## headings, metadata lines, or comment attribution headers;
 # it only removes dosu footers/greetings, img tags, failed uploads, checklist blocks, badge lines,
 # and caps no-space runs >= 1000 chars.
+# Intentional verbatim copy of src/github/discussion_cleaning.py strip_noise() (+ _bare,
+# _is_badge_line, constants). dev/ may not import src/ (hook: block_dev_imports_src) —
+# intentional duplication, not drift. Update if the source changes.
 # Dry-run by default (no writes). Use --apply to overwrite files (creates timestamped backup first).
-# Usage: ./venv/bin/python dev/discussion_cleaning/reclean_existing_mds.py [--apply] [--source-dir PATH]
+# Usage: python3 dev/discussion_cleaning/reclean_existing_mds.py [--apply] [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -22,7 +25,7 @@ DEFAULT_SOURCE_DIR = Path(
 REPORT_DIR = Path(__file__).parent / "reclean_reports"
 NO_SPACE_LIMIT = 1000
 
-# --- strip_noise and helpers: copied from src/github/index_discussions.py (keep in sync) ---
+# --- verbatim copy of src/github/discussion_cleaning.py (keep in sync) ---
 FOOTER_LOOKAHEAD = 20
 _BADGE_DOMAINS = frozenset([
     'shields.io/badge', 'camo.githubusercontent.com',
@@ -139,6 +142,10 @@ def measure_all(md_files: list) -> list[dict]:
     for fp in md_files:
         before = fp.read_text(errors='replace')
         after = strip_noise(before)
+        # Preserve original trailing newline: strip_noise uses "\n".join(splitlines()) which
+        # drops the final \n. Re-add it so files only differing by trailing \n are not rewritten.
+        if before.endswith('\n') and not after.endswith('\n'):
+            after += '\n'
         results.append({
             "filename": fp.name,
             "filepath": fp,
