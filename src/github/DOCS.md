@@ -107,13 +107,13 @@
 
 ---
 
-### index_issues.py (192 LOC)
+### index_issues.py (196 LOC)
 
 **Purpose:** Fetch GitHub issues matching a query, strip noise, write per-issue MDs, and index into the `github_issues` RAG collection. Keyword-fallback loop (3→2→1) ensures a non-empty result set.
 **Reads:** GitHub Search Issues API + `get_issue_workflow` + `get_issue_comments_workflow` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
 **Writes:** per-issue MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`.
+**Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`, `text_cleaning.py` (`strip_generic_noise` applied additively after `strip_noise`/`strip_comments_noise`).
 
 ---
 
@@ -182,7 +182,7 @@
 **Purpose:** Generic text noise-strip primitives shared across issue and discussion cleaning. No mcp dependency. Exports `strip_generic_noise(text) -> str` (full-text entry point) and `_strip_line(line) -> str` (per-line helper). Also exports regexes: `GH_IMG_RE` (GitHub user-attachment `<img>` tags), `MD_IMG_RE` (markdown images by extension), `MD_DATA_URI_RE` (markdown images with base64 data-URI src), `DATA_URI_RE` (bare base64 data-URIs). Strip order: GH_IMG → MD_DATA_URI → DATA_URI → FAILED_UPLOAD → MD_IMG → `\S{1000,}` no-space net.
 **Reads:** nothing — pure text transform.
 **Writes:** returns cleaned string (never mutates argument).
-**Called by:** `discussion_cleaning.py` (imports `strip_generic_noise`). Stage 2: `index_issues.py` will import `strip_generic_noise` for issue body/comment cleaning.
+**Called by:** `discussion_cleaning.py` (imports `strip_generic_noise`); `index_issues.py` (imports `strip_generic_noise`, applied additively to body + comments after issue-specific strips).
 **Calls out:** stdlib only (`re`).
 
 ---
