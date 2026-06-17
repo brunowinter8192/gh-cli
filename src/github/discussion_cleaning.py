@@ -40,6 +40,16 @@ def _is_badge_line(line: str) -> bool:
     return has_badge and has_dosu
 
 
+# True if line is a markerless dosu greeting (email-rendered, no <!-- Greeting --> marker)
+def _is_dosu_markerless_greeting(line: str) -> bool:
+    stripped = re.sub(r'^[\s>_*]+', '', line.replace('&nbsp;', ' ')).strip()
+    if not (stripped.startswith('Hi @') or stripped.startswith('你好@') or stripped.startswith('你好 @')):
+        return False
+    if 'Dosu' not in line:
+        return False
+    return ('helping' in line and 'team' in line) or ('帮助' in line and '团队' in line)
+
+
 # True if line is a dosu footer text line (blockquoted/email-rendered — no marker, no badge)
 def _is_dosu_footer_text_line(line: str) -> bool:
     stripped = re.sub(r'^[\s>_*]+', '', line).strip()
@@ -99,6 +109,11 @@ def strip_noise(text: str) -> str:
 
         # DOSU_FOOTER_TEXT: blockquoted/email-rendered footer prose (no marker, no badge)
         if _is_dosu_footer_text_line(line):
+            i += 1
+            continue
+
+        # DOSU_MARKERLESS_GREETING: email-rendered greeting line (no <!-- Greeting --> marker)
+        if _is_dosu_markerless_greeting(line):
             i += 1
             continue
 

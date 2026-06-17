@@ -90,6 +90,15 @@ def _is_badge_line(line: str) -> bool:
     return has_badge and has_dosu
 
 
+def _is_dosu_markerless_greeting(line: str) -> bool:
+    stripped = re.sub(r'^[\s>_*]+', '', line.replace('&nbsp;', ' ')).strip()
+    if not (stripped.startswith('Hi @') or stripped.startswith('你好@') or stripped.startswith('你好 @')):
+        return False
+    if 'Dosu' not in line:
+        return False
+    return ('helping' in line and 'team' in line) or ('帮助' in line and '团队' in line)
+
+
 def _is_dosu_footer_text_line(line: str) -> bool:
     stripped = re.sub(r'^[\s>_*]+', '', line).strip()
     has_dosu_ref = 'Dosu' in line or '@dosu' in line
@@ -137,6 +146,9 @@ def strip_noise(text: str) -> str:
             i += 1
             continue
         if _is_dosu_footer_text_line(line):
+            i += 1
+            continue
+        if _is_dosu_markerless_greeting(line):
             i += 1
             continue
         line = re.sub(r'<!--\s*(?:Answer|Greeting)\s*-->', '', line)
