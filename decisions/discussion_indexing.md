@@ -5,7 +5,7 @@
 - Query: hard-capped to 3 keywords (`query.split()[:3]`); 0-result fallback drops last keyword 3→2→1, then errors; empty/whitespace query → guard error.
 - Search: `search_discussions_raw()` → GraphQL `search(query: "<kw> repo:<repo>", type: DISCUSSION, first: limit)`; returns `(discussionCount, numbers[:limit])`. `repo:` injection confirmed working (probe: `memory repo:gastownhall/beads` returned all 23 beads discussions).
 - Fetch: in-process `get_discussion_workflow(owner, repo, num)` — one GraphQL call per thread (body + comments in natural chronological API order + accepted answer). `comment_limit=100` (API per-page max); no comment re-sorting.
-- Strip: `strip_discussion_noise()` extracts title from `## ` line; drops metadata block (`**Category:**`, `**Author:**`, `**Created:**`, `**Upvotes:**`, `**Status:**`); deduplicates `[ANSWER]`-tagged comment by dropping the in-list copy and keeping the `### Accepted Answer` section.
+- Strip: `strip_discussion_noise()` extracts title from `## ` line; drops metadata block (`**Category:**`, `**Author:**`, `**Created:**`, `**Upvotes:**`, `**Status:**`); deduplicates `[ANSWER]`-tagged comment by dropping the in-list copy and keeping the `### Accepted Answer` section. Also strips 6 noise classes and applies 2 safety passes: (1) `DOSU_FOOTER` — `<!-- Dosu Comment Footer -->` through first badge line within 20 lines (hard invariant: no threaded-reply `^\s*>\s*\*\*@` in block); (2) `DOSU_GREETING` — `<!-- Greeting -->` + next non-blank line; (3) `ISSUE_TEMPLATE_CHECKLIST` — `### 🔎 Search before asking` and `### 🤖 Consult the online AI assistant` headings + their `- [x]` checkbox lines; (4) STANDALONE BADGE LINE — any line where `_is_badge_line()` is True (catches markerless/blockquoted/orphaned dosu badges without a preceding footer marker); (5–7) inline subs: `DOSU_ANSWER_MARKER` (`<!-- Answer -->` tag only), `GH_SCREENSHOT_IMG` (`<img … github.com/user-attachments/assets/…>` tags entirely), `FAILED_UPLOAD` (`![Uploading …]()` empty-URL markers); (8) NO-SPACE SAFETY NET — `re.sub(r'\S{1000,}', '', line)` removes any contiguous non-whitespace run ≥ 1000 chars (URL blobs, base64, camo-proxied badge markup). Hard invariant: no kept line contains a `\S{1000,}` run.
 - Redaction: `redact_tokens()` applied to final MD string — patterns `ghp_[A-Za-z0-9]+` and `github_pat_[A-Za-z0-9_]+` → `[REDACTED]`.
 - Output: per-thread MD `<repo_basename>__<num>.md` → `RAG/data/documents/github_discussions/` (overwrite).
 - Index: `rag-cli index --collection github_discussions` via subprocess (synchronous). Dedup by content-hash (skip unchanged, re-index changed). Failure (non-zero exit) raises `RuntimeError` — busy/locked detected via stderr keywords, message includes manual recovery command (`rag-cli index --collection github_discussions`); never silent.
@@ -33,10 +33,37 @@ Strip is much smaller than issues (~30–40%) — discussion format is mostly bo
 
 Separate `github_discussions` collection (not merged into `github_issues`): confirmed. Discussion and issue content serve different query types; separate collections allow targeted retrieval.
 
+**Noise audit (2026-06-17):** `dev/discussion_cleaning/audit_discussion_noise.py` · report: `dev/discussion_cleaning/audit_reports/audit_20260617.md` · dataset: 78 MDs, `data/documents/github_discussions/`, opendatalab/MinerU + gastownhall/beads repos.
+
+| Noise class | Files hit | Hits | Chars | Risk hits | Verdict |
+|---|---|---|---|---|---|
+| DOSU_FOOTER | 41 / 78 | 99 | 413,707 | 0 | SAFE TO STRIP |
+| DOSU_GREETING | 17 / 78 | 17 | 1,813 | 0 | SAFE TO STRIP |
+| DOSU_ANSWER_MARKER | 41 / 78 | 99 | 1,485 | 0 | SAFE TO STRIP |
+| GH_SCREENSHOT_IMG | 13 / 78 | 15 | 2,066 | 0 | stripped (user decision) |
+| FAILED_UPLOAD | 1 / 78 | 1 | 25 | 0 | SAFE TO STRIP |
+| ISSUE_TEMPLATE_CHECKLIST | 3 / 78 | 6 | 1,836 | 0 | SAFE TO STRIP |
+
+Root cause of 15/78 indexing failures: DOSU_FOOTER blocks contain base64-encoded SVG badge links (up to 6,299 chars without a space), which the char-based chunker emits as a single oversized chunk → embedding server HTTP 400 abort.
+
+**Strip validation v1 (2026-06-17, 6-class only):** `dev/discussion_cleaning/A_strip_validation_reports/validation_20260617_203934.md` — 39/40 files cleared; 1 residual (`MinerU__4820.md`, 6,299 chars): blockquoted camo badge 25 lines after marker, no marker at its local position.
+
+**Strip validation v2 (2026-06-17, +badge-line strip +no-space net):** `dev/discussion_cleaning/A_strip_validation.py` · report: `dev/discussion_cleaning/A_strip_validation_reports/validation_20260617_205746.md` · dataset: 78 MDs (in-memory, read-only).
+
+| Metric | Before | After |
+|---|---|---|
+| Corpus peak no-space run (chars) | 6,299 | 457 |
+| Files with run > 1,500 chars | 40 | 0 ✅ |
+| Total chars removed | — | 430,624 |
+| Files changed | — | 78 / 78 |
+
+Content preservation (4 spot-check files): all comment attribution headers, threaded replies, and content section headings preserved at identical counts before/after.
+
 ## Recommendation (SOLL)
 - **N=30 (Keep)** — mirrors `index_issues`; covers full beads corpus (23 < 30); appropriate cap for larger repos.
 - **Query max-3 + fallback 3→2→1 (Keep)** — mirrors `index_issues`; GraphQL `search(type:DISCUSSION)` honors same qualifiers.
 - **Dedup via index-dir content-hash (Keep)** — no wrapper-side fetch-skip; always overwrite → catches updated discussions.
+- **Noise strip (Keep)** — 6 audited classes + standalone badge-line strip + 1000-char no-space safety net; validation v2 shows 40/40 files drop below 1,500-char threshold (430,624 chars removed, corpus peak 6,299 → 457). Content preservation: all spot-check counts identical before/after.
 
 ## Offene Fragen
 - Freshness / re-index cadence / purge policy for `github_discussions` (undefined, same open question as `github_issues`).
