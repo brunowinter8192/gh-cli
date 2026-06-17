@@ -2,7 +2,7 @@
 
 ## Role
 
-14 tool modules (12 visible CLI subcommands: 9 REST + 3 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 2 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+14 tool modules (12 visible CLI subcommands: 9 REST + 3 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 3 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -177,13 +177,23 @@
 
 ---
 
-### discussion_cleaning.py (133 LOC)
+### text_cleaning.py (42 LOC)
 
-**Purpose:** Pure noise-strip module — no mcp dependency, importable from dev/ probes via sys.path (see dev/ copies). Exports `strip_noise(text) -> str`: 12 sub-categories — DOSU_FOOTER block, DOSU_GREETING 2-line standalone, ISSUE_TEMPLATE_CHECKLIST block, STANDALONE_BADGE_LINE, DOSU_FOOTER_TEXT (blockquoted/email-rendered prose: `'To reply, just mention'` / `'Docs are dead.'` / `'Share context…'` + dosu ref; Chinese: `回复时只需提及` / `已经过时`), DOSU_MARKERLESS_GREETING (`_is_dosu_markerless_greeting()`: after `^[\s>_*]+` + `&nbsp;→space` strip, line starts with `Hi @` / `你好@` / `你好 @` AND contains `Dosu` AND contains `helping`+`team` or `帮助`+`团队`; user-quoted attribution blocks preserved), DOSU_ANSWER_MARKER inline sub, DOSU_GREETING_INLINE sub (`<!-- Answer|Greeting -->` unified), GH_SCREENSHOT_IMG (`<img … user-attachments …>`), FAILED_UPLOAD (`![Uploading…]()`), MD_IMG by extension (`![alt](url.png|jpg|gif|svg|webp)` via `MD_IMG_RE`), NO_SPACE_NET (`\S{1000,}` last). Private helpers `_bare()`, `_is_badge_line()`, `_is_dosu_footer_text_line()`, `_is_dosu_markerless_greeting()` and constants (`FOOTER_LOOKAHEAD`, `_BADGE_DOMAINS`, `_FOOTER_TEXT_PHRASES`, `GH_IMG_RE`, `MD_IMG_RE`, `ISSUE_HEADING_RE`). Safe on raw `get_discussion` output and already-built MDs (does not touch `## ` headings, attribution headers, or metadata lines).
+**Purpose:** Generic text noise-strip primitives shared across issue and discussion cleaning. No mcp dependency. Exports `strip_generic_noise(text) -> str` (full-text entry point) and `_strip_line(line) -> str` (per-line helper). Also exports regexes: `GH_IMG_RE` (GitHub user-attachment `<img>` tags), `MD_IMG_RE` (markdown images by extension), `MD_DATA_URI_RE` (markdown images with base64 data-URI src), `DATA_URI_RE` (bare base64 data-URIs). Strip order: GH_IMG → MD_DATA_URI → DATA_URI → FAILED_UPLOAD → MD_IMG → `\S{1000,}` no-space net.
+**Reads:** nothing — pure text transform.
+**Writes:** returns cleaned string (never mutates argument).
+**Called by:** `discussion_cleaning.py` (imports `strip_generic_noise`). Stage 2: `index_issues.py` will import `strip_generic_noise` for issue body/comment cleaning.
+**Calls out:** stdlib only (`re`).
+
+---
+
+### discussion_cleaning.py (121 LOC)
+
+**Purpose:** Dosu-specific noise-strip module — no mcp dependency. Exports `strip_noise(text) -> str`: 12 sub-categories — DOSU_FOOTER block, DOSU_GREETING 2-line standalone, ISSUE_TEMPLATE_CHECKLIST block, STANDALONE_BADGE_LINE, DOSU_FOOTER_TEXT (blockquoted/email-rendered prose: `'To reply, just mention'` / `'Docs are dead.'` / `'Share context…'` + dosu ref; Chinese: `回复时只需提及` / `已经过时`), DOSU_MARKERLESS_GREETING (`_is_dosu_markerless_greeting()`: after `^[\s>_*]+` + `&nbsp;→space` strip, line starts with `Hi @` / `你好@` / `你好 @` AND contains `Dosu` AND contains `helping`+`team` or `帮助`+`团队`; user-quoted attribution blocks preserved), DOSU_ANSWER_MARKER inline sub, DOSU_GREETING_INLINE sub (`<!-- Answer|Greeting -->` unified); generic image+no-space strips delegated to `strip_generic_noise()` from `text_cleaning.py`. Private helpers `_bare()`, `_is_badge_line()`, `_is_dosu_footer_text_line()`, `_is_dosu_markerless_greeting()` and constants (`FOOTER_LOOKAHEAD`, `_BADGE_DOMAINS`, `_FOOTER_TEXT_PHRASES`, `ISSUE_HEADING_RE`). Safe on raw `get_discussion` output and already-built MDs (does not touch `## ` headings, attribution headers, or metadata lines).
 **Reads:** nothing — pure text transform.
 **Writes:** returns cleaned string (never mutates argument).
 **Called by:** `index_discussions.py` (imports `strip_noise`). Dev copies: `dev/discussion_cleaning/reclean_existing_mds.py`, `dev/discussion_cleaning/A_strip_validation.py` (verbatim inline copies — hook `block_dev_imports_src` prevents direct import).
-**Calls out:** stdlib only (`re`).
+**Calls out:** stdlib only (`re`); imports `strip_generic_noise` from `text_cleaning.py`.
 
 ---
 
