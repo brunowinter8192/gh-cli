@@ -36,6 +36,10 @@ gh-cli index_releases anthropics/claude-code   # index last 100 releases, then R
 
 On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr and exits non-zero. Check `GH_TOKEN` env var is set.
 
+### Execution discipline — all 7 tools run STANDALONE (hook-enforced)
+
+Every one of the 7 tools must be its OWN Bash call, or chained only with other gh-cli search/research calls. NEVER pipe a call through `grep`/`head`/`tail`/`sed`/`awk`/`wc` (or any filter) and NEVER chain it with a non-search command — the `block_gh_cli_chained` hook rejects that (exit 2). The output goes WHOLE into context: reconstructing a file from grep fragments costs more context than reading the full result. To narrow, use the tool's OWN args — `get_file_content --offset/--limit/--metadata-only`, `get_repo_tree --path`, and search qualifiers (`repo:`, `language:`, `path:`) — never a downstream filter. A redirect to a file (`gh-cli … > /tmp/x`) is allowed (it is not a chain). The issue-management commands (`list_issues`, `get_issue`, `create_issue`, `update_issue`, `delete_issue`) are exempt.
+
 ## Two Access Patterns
 
 - **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo_tree`, `get_file_content`. Direct `gh-cli` calls — read the output.
