@@ -52,7 +52,6 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 ## Query Engineering (index_issues / index_discussions)
 
 **Execution (task-level):**
-- **Run STANDALONE** — `index_issues` / `index_discussions` is its own Bash call. Never chain to other commands (`;` `&&` `||` `|` or newline to echo, grep, ls, rag-cli, watchdog dumps, etc.). Only multiple `index_*` calls may be combined in one Bash. Hook-enforced.
 - **≥2 passes per problem** — one concrete (exact symptom: error string / signal code) plus one broader (component / feature / area). Both accumulate into the same collection; further angles optional, the broad pass is mandatory.
 - **Index before search** — run `rag-cli search_hybrid` on `github_issues` / `github_discussions` only after indexing in this session. Index first, then search.
 
@@ -151,7 +150,7 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 - Entry points (`main.py`, `server.py`, `__init__.py`) — the `lines` column flags the substantial files
 
 ### Issue Investigation (RAG)
-Standalone — own Bash call, not chained (hook-enforced). ≥2 passes, then one search.
+≥2 passes, then one search.
 ```
 1. index_issues "<concrete: exact error string / signal>" owner/repo [--limit 30]
 2. index_issues "<broader: component / feature / area>" owner/repo [--limit 30]
@@ -160,7 +159,7 @@ Standalone — own Bash call, not chained (hook-enforced). ≥2 passes, then one
 ```
 
 ### Discussion Research (RAG)
-Standalone — own Bash call, not chained (hook-enforced). ≥2 passes, then one search.
+≥2 passes, then one search.
 ```
 1. index_discussions "<concrete: exact topic / symptom>" owner/repo [--limit 30]
 2. index_discussions "<broader: component / feature / area>" owner/repo [--limit 30]
