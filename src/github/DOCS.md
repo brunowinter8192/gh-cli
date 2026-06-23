@@ -77,11 +77,11 @@
 
 ---
 
-### get_file_content.py (104 LOC)
+### get_file_content.py (168 LOC)
 
-**Purpose:** Retrieve and decode file content from a repository with optional line range and metadata-only mode.
-**Reads:** GitHub Contents API (`/contents/{path}`). Decodes base64 content.
-**Writes:** returns `list[TextContent]` — file metadata + content (or metadata only); directory entry counts when path is a directory.
+**Purpose:** Retrieve file content from a repository with optional line range and metadata-only mode. Handles three size tiers transparently: ≤1 MB (base64 inline), 1–100 MB (stream to `/tmp`), >100 MB (error).
+**Reads:** GitHub Contents API (`/contents/{path}`). Tier dispatch on `size` field: ≤1 MB decodes base64 inline (offset/limit apply); 1–100 MB streams `download_url` to `/tmp/gh-cli_{owner}_{repo}_{path}` via chunked `requests` download (timeout=30 s), returns `/tmp` path for local reading; >100 MB returns an explicit error (GitHub API hard limit).
+**Writes:** returns `list[TextContent]` — file metadata + content or /tmp path or error; directory entry counts when path is a directory.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`.
 
