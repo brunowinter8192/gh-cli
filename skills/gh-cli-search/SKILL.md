@@ -1,6 +1,6 @@
 ---
 name: gh-cli-search
-description: "GitHub remote research via gh-cli. Use when the user asks to find repos/projects ('finde repos für X', 'was gibt es zu Y'), read remote files ('lies das README von Z'), search code patterns ('zeig mir wie X in Y implementiert ist'), index and search issues or discussions ('index issues von X', 'index discussions von Y', 'bekannte issues in Z für RAG'), look up releases on GitHub, or check how recently a repo was pushed to to judge how current/trustworthy it is ('wie aktuell ist repo X', 'wann wurde Y zuletzt gepusht', 'ist Z noch maintained'). Do NOT use for: editing local files, running local git commands, searching local code (use Grep/Glob instead), or operations on the user's own GitHub account."
+description: "GitHub remote research via gh-cli. Use when the user asks to find repos/projects ('finde repos für X', 'was gibt es zu Y'), read remote files ('lies das README von Z'), search code patterns ('zeig mir wie X in Y implementiert ist'), index and search issues or discussions ('index issues von X', 'index discussions von Y', 'bekannte issues in Z für RAG'), look up releases on GitHub, check how recently a repo was pushed to to judge how current/trustworthy it is ('wie aktuell ist repo X', 'wann wurde Y zuletzt gepusht', 'ist Z noch maintained'), or download specific repo file(s) to a local directory as a throwaway worker reference ('lade datei X aus repo Y runter', 'download file Z to disk for the worker'). Do NOT use for: editing local files, running local git commands, searching local code (use Grep/Glob instead), or operations on the user's own GitHub account."
 allowed-tools: Bash
 ---
 
@@ -30,6 +30,9 @@ gh-cli get_file_content anthropics claude-code src/ --metadata-only
 
 # Repository Freshness — how recently a repo was pushed to (judge how current/trustworthy it is)
 gh-cli repo_freshness anthropics claude-code   # pushed_at + "pushed N days ago" + updated_at/created_at
+
+# Download file(s) to disk — throwaway worker reference (no clone, no RAG index)
+gh-cli download_files anthropics claude-code README.md src/main.py --dest <worker-worktree-dir>
 
 # RAG Indexing (Issues + Discussions + Releases)
 gh-cli index_issues "streaming" anthropics/claude-code --limit 30
@@ -258,6 +261,17 @@ Runs on a single repo (one REST call). Prints `pushed_at` (last commit push to a
 |-----------|------|---------|-------------|
 | owner | str | required | Repository owner |
 | repo | str | required | Repository name |
+
+### download_files
+
+Writes one or more specific repo files to a local directory on disk — no clone, no RAG indexing. Use case (orchestrator → worker): download external reference file(s) into a worker's worktree so the worker can READ them; the files are NOT committed/merged, so they vanish with the worktree. Each file is written flat as `<dest>/<basename>`; `<dest>` is created if missing. Output is a per-path report: written paths (with bytes) and failed paths (directory / 404 / >100 MB) listed separately — one bad path does not abort the others.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| owner | str | required | Repository owner |
+| repo | str | required | Repository name |
+| paths | str (1+) | required | One or more repo file paths to download |
+| --dest | str | "." | Local destination directory (created if missing) |
 
 ## Search Qualifiers
 
