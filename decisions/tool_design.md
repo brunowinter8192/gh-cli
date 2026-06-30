@@ -2,7 +2,7 @@
 
 ## Status Quo (IST)
 
-- 13 tools registered in `cli.py` (argparse subcommands); 8 are research/query tools (search_repos, search_code, get_repo_tree, get_file_content, repo_freshness, index_issues, index_discussions, index_releases), 5 are issue-management commands (create_issue, update_issue, delete_issue, list_issues, get_issue)
+- 14 tools registered in `cli.py` (argparse subcommands); 9 are research/query tools (search_repos, search_code, get_repo_tree, get_file_content, repo_freshness, download_files, index_issues, index_discussions, index_releases), 5 are issue-management commands (create_issue, update_issue, delete_issue, list_issues, get_issue)
 - `get_issue` exposed as CLI subcommand (owner/repo/number → title/state/body); also called internally by `index_issues.py`
 - `get_issue_comments` retained as internal-only helper of `index_issues.py`; no subcommand (not CLI-accessible directly)
 - `get_discussion` retained as internal helper of `index_discussions.py`; no subcommand (not CLI-accessible directly)
