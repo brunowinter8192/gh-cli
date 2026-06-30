@@ -2,7 +2,7 @@
 
 ## Role
 
-15 tool modules (13 visible CLI subcommands: 10 REST + 3 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 3 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+16 tool modules (14 visible CLI subcommands: 11 REST + 3 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 3 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -94,6 +94,16 @@
 **Writes:** returns `list[TextContent]` — title, state, author, dates, labels, comment count, body.
 **Called by:** `cli.py` (direct CLI subcommand: `gh-cli get_issue owner repo number`); `index_issues.py` (imports `get_issue_workflow` for RAG fetch).
 **Calls out:** `requests`, `mcp.types`.
+
+---
+
+### download_files.py (73 LOC)
+
+**Purpose:** Download one or more specific repo files to a local directory — binary-safe, per-path failure isolation (one failure does not abort remaining paths). Flat write: `<dest>/<basename(path)>`.
+**Reads:** GitHub Contents API via imported `fetch_file_content()` from `get_file_content.py` — returns dict (file) or list (directory); streams raw bytes via imported `_stream_download(download_url, dest_path)`; validates against imported `_SIZE_API_MAX` (100 MB limit). Failure cases: directory response, `download_url` is None (submodule/symlink), size > 100 MB, HTTP error (404 etc.).
+**Writes:** binary files to `<dest>/<basename>` (os.makedirs exist_ok=True before loop); returns `list[TextContent]` — per-path Written (path → dest_path, bytes) and Failed (path → reason) report.
+**Called by:** `cli.py` (direct CLI subcommand: `gh-cli download_files owner repo path [path ...] --dest <dir>`).
+**Calls out:** `mcp.types`; imports `fetch_file_content`, `_stream_download`, `_SIZE_API_MAX` from `get_file_content.py`; stdlib `os`.
 
 ---
 
