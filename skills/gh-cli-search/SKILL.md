@@ -1,6 +1,6 @@
 ---
 name: gh-cli-search
-description: "GitHub remote research via gh-cli. Use when the user asks to find repos/projects ('finde repos für X', 'was gibt es zu Y'), read remote files ('lies das README von Z'), search code patterns ('zeig mir wie X in Y implementiert ist'), index and search issues or discussions ('index issues von X', 'index discussions von Y', 'bekannte issues in Z für RAG'), or look up releases on GitHub. Do NOT use for: editing local files, running local git commands, searching local code (use Grep/Glob instead), or operations on the user's own GitHub account."
+description: "GitHub remote research via gh-cli. Use when the user asks to find repos/projects ('finde repos für X', 'was gibt es zu Y'), read remote files ('lies das README von Z'), search code patterns ('zeig mir wie X in Y implementiert ist'), index and search issues or discussions ('index issues von X', 'index discussions von Y', 'bekannte issues in Z für RAG'), look up releases on GitHub, or check how recently a repo was pushed to to judge how current/trustworthy it is ('wie aktuell ist repo X', 'wann wurde Y zuletzt gepusht', 'ist Z noch maintained'). Do NOT use for: editing local files, running local git commands, searching local code (use Grep/Glob instead), or operations on the user's own GitHub account."
 allowed-tools: Bash
 ---
 
@@ -27,6 +27,9 @@ gh-cli get_repo_tree anthropics claude-code --path src  # descend into a subdire
 gh-cli get_file_content anthropics claude-code README.md
 gh-cli get_file_content anthropics claude-code src/main.py --offset 100 --limit 50
 gh-cli get_file_content anthropics claude-code src/ --metadata-only
+
+# Repository Freshness — how recently a repo was pushed to (judge how current/trustworthy it is)
+gh-cli repo_freshness anthropics claude-code   # pushed_at + "pushed N days ago" + updated_at/created_at
 
 # RAG Indexing (Issues + Discussions + Releases)
 gh-cli index_issues "streaming" anthropics/claude-code --limit 30
@@ -246,6 +249,15 @@ Fetches the last 100 releases (newest-first), strips changelog noise, and indexe
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | repo | str | required | Repository as `owner/repo` |
+
+### repo_freshness
+
+Runs on a single repo (one REST call). Prints `pushed_at` (last commit push to any branch) with a relative age `(pushed N days ago)` computed from the current UTC time, plus `updated_at` and `created_at`. Use to judge how current a repo is and how much to trust it on shifting foundations (API behavior, framework conventions). `pushed_at` is the core signal; a large day-count = stale.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| owner | str | required | Repository owner |
+| repo | str | required | Repository name |
 
 ## Search Qualifiers
 
