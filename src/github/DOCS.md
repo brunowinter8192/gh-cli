@@ -2,7 +2,7 @@
 
 ## Role
 
-14 tool modules (12 visible CLI subcommands: 9 REST + 3 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 3 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+15 tool modules (13 visible CLI subcommands: 10 REST + 3 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 3 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -94,6 +94,16 @@
 **Writes:** returns `list[TextContent]` — title, state, author, dates, labels, comment count, body.
 **Called by:** `cli.py` (direct CLI subcommand: `gh-cli get_issue owner repo number`); `index_issues.py` (imports `get_issue_workflow` for RAG fetch).
 **Calls out:** `requests`, `mcp.types`.
+
+---
+
+### repo_freshness.py (44 LOC)
+
+**Purpose:** Fetch repo metadata and report push freshness — `pushed_at` (last branch push), relative age in whole days, `updated_at`, `created_at`.
+**Reads:** GitHub REST API (`GET /repos/{owner}/{repo}`) — fields `full_name`, `pushed_at`, `updated_at`, `created_at`.
+**Writes:** returns `list[TextContent]` — `full_name`, pushed timestamp + `(pushed N day(s) ago)` relative age, updated timestamp, created timestamp.
+**Called by:** `cli.py` (direct CLI subcommand: `gh-cli repo_freshness owner repo`).
+**Calls out:** `requests`, `mcp.types`; stdlib `datetime`.
 
 ---
 
