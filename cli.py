@@ -19,6 +19,7 @@ from src.github.update_issue import update_issue_workflow
 from src.github.list_issues import list_issues_workflow
 from src.github.get_issue import get_issue_workflow
 from src.github.delete_issue import delete_issue_workflow
+from src.github.repo_freshness import repo_freshness_workflow
 
 
 def main():
@@ -116,6 +117,11 @@ def main():
     p.add_argument("--confirm", action="store_true", default=False,
                    help="Required: actually perform the deletion (irreversible)")
 
+    # ── repo_freshness ────────────────────────────────────────────────────────
+    p = sub.add_parser("repo_freshness", help="Show how recently a repo was pushed to.")
+    p.add_argument("owner")
+    p.add_argument("repo")
+
     # ── Dispatch ──────────────────────────────────────────────────────────────
     args = parser.parse_args()
 
@@ -164,6 +170,9 @@ def main():
 
         elif args.cmd == "delete_issue":
             result = delete_issue_workflow(args.owner, args.repo, args.number, args.confirm)
+
+        elif args.cmd == "repo_freshness":
+            result = repo_freshness_workflow(args.owner, args.repo)
 
         else:
             parser.error(f"Unknown command: {args.cmd}")
