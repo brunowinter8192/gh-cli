@@ -2,7 +2,7 @@
 
 ## Role
 
-16 tool modules (14 visible CLI subcommands: 11 REST + 3 GraphQL; 1 internal REST helper; 1 internal GraphQL helper) plus 3 infrastructure modules. Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+21 modules: 16 tool modules (14 visible CLI subcommands: 11 REST + 3 GraphQL; 1 internal REST helper `get_issue_comments`; 1 internal GraphQL helper `get_discussion`), 2 cleaning/utility modules (`text_cleaning`, `discussion_cleaning`), and 3 infrastructure modules (`client`, `graphql_client`, `repo_counts`). Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
