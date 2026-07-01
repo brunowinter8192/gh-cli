@@ -7,8 +7,11 @@ from pathlib import Path
 import requests
 from mcp.types import TextContent
 
+# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
+# From get_issue.py: fetch and format a single GitHub issue
 from src.github.get_issue import get_issue_workflow
+# From get_issue_comments.py: fetch and format comments for a single issue
 from src.github.get_issue_comments import get_issue_comments_workflow
 # From text_cleaning.py: generic image/data-URI/no-space strips (additive, after issue-specific strips)
 from src.github.text_cleaning import strip_generic_noise

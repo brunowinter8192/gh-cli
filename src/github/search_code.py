@@ -2,7 +2,9 @@
 import logging
 import requests
 from mcp.types import TextContent
+# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
+# From repo_counts.py: batch-fetch star/issue/discussion counts, format per-repo summary line
 from src.github.repo_counts import fetch_repo_counts, format_count_line
 
 logger = logging.getLogger(__name__)

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import requests
 from mcp.types import TextContent
 
+# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
 
 logger = logging.getLogger(__name__)

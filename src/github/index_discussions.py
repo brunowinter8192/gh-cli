@@ -6,8 +6,11 @@ from pathlib import Path
 
 from mcp.types import TextContent
 
+# From discussion_cleaning.py: strip dosu-bot footers/greetings, template checklists, badges from discussion text
 from src.github.discussion_cleaning import strip_noise
+# From graphql_client.py: execute GraphQL query against GitHub API
 from src.github.graphql_client import graphql_query
+# From get_discussion.py: fetch and format a single GitHub discussion with comments
 from src.github.get_discussion import get_discussion_workflow
 
 logger = logging.getLogger(__name__)

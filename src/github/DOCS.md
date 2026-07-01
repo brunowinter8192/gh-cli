@@ -27,7 +27,7 @@
 
 ---
 
-### graphql_client.py (30 LOC)
+### graphql_client.py (31 LOC)
 
 **Purpose:** GraphQL infrastructure — single HTTP POST wrapper for GitHub GraphQL API v4.
 **Reads:** `GITHUB_TOKEN` from `client.py`; accepts query string + variables dict from caller.
@@ -37,7 +37,7 @@
 
 ---
 
-### repo_counts.py (51 LOC)
+### repo_counts.py (52 LOC)
 
 **Purpose:** Shared GraphQL enrichment helper — fetches star/issue/discussion counts for a list of repos in one batched aliased query.
 **Reads:** GitHub GraphQL API via `graphql_query()` — `stargazerCount`, `issues{totalCount}`, `discussions{totalCount}`, `hasIssuesEnabled`, `hasDiscussionsEnabled` per repo; all repos in one HTTP call via field aliases (`r0`, `r1`, …).
@@ -47,7 +47,7 @@
 
 ---
 
-### search_repos.py (59 LOC)
+### search_repos.py (61 LOC)
 
 **Purpose:** Search GitHub repositories by keyword using the Search Repositories API; enrich results with per-repo issue/discussion counts.
 **Reads:** GitHub Search API (`/search/repositories`); `SEARCH_REPOS_PER_PAGE=30` (local); 3→2→1 keyword fallback (drops trailing keywords until `total_count > 0`). Stars from REST `stargazers_count`. Issue/discussion counts + enabled flags from `fetch_repo_counts()` (single batched GraphQL call).
@@ -57,7 +57,7 @@
 
 ---
 
-### search_code.py (85 LOC)
+### search_code.py (87 LOC)
 
 **Purpose:** Search code across GitHub using the Code Search API with text-match metadata; prepends per-repo issue/discussion summary.
 **Reads:** GitHub Search Code API (`/search/code`) with `text-match` accept header; `SEARCH_CODE_PER_PAGE=30` (local); up to 3 full untruncated fragments per match. Stars + issue/discussion counts from `fetch_repo_counts()` (single batched GraphQL call on unique repos; REST /search/code returns only a minimal repo stub without star count).
@@ -67,7 +67,7 @@
 
 ---
 
-### get_repo_tree.py (114 LOC)
+### get_repo_tree.py (115 LOC)
 
 **Purpose:** One-level directory traversal of a repository tree via GraphQL one-shot. depth=1 always; tree-only (no blob reading).
 **Reads:** GitHub GraphQL API (`repository.object(expression)` → `Tree.entries`); per-entry fields: name, type, language, lineCount, size. Metadata block (description/primaryLanguage/languages) on root expression only.
@@ -77,7 +77,7 @@
 
 ---
 
-### get_file_content.py (168 LOC)
+### get_file_content.py (171 LOC)
 
 **Purpose:** Retrieve file content from a repository with optional line range and metadata-only mode. Handles three size tiers transparently: ≤1 MB (base64 inline), 1–100 MB (stream to `/tmp`), >100 MB (error).
 **Reads:** GitHub Contents API (`/contents/{path}`). Tier dispatch on `size` field: ≤1 MB decodes base64 inline (offset/limit apply); 1–100 MB streams `download_url` to `/tmp/gh-cli_{owner}_{repo}_{path}` via chunked `requests` download (timeout=30 s), returns `/tmp` path for local reading; >100 MB returns an explicit error (GitHub API hard limit).
@@ -87,7 +87,7 @@
 
 ---
 
-### get_issue.py (50 LOC)
+### get_issue.py (51 LOC)
 
 **Purpose:** Retrieve full issue details including body.
 **Reads:** GitHub Issues API (`/issues/{number}`).
@@ -97,7 +97,7 @@
 
 ---
 
-### download_files.py (73 LOC)
+### download_files.py (74 LOC)
 
 **Purpose:** Download one or more specific repo files to a local directory — binary-safe, per-path failure isolation (one failure does not abort remaining paths). Flat write: `<dest>/<basename(path)>`.
 **Reads:** GitHub Contents API via imported `fetch_file_content()` from `get_file_content.py` — returns dict (file) or list (directory); streams raw bytes via imported `_stream_download(download_url, dest_path)`; validates against imported `_SIZE_API_MAX` (100 MB limit). Failure cases: directory response, `download_url` is None (submodule/symlink), size > 100 MB, HTTP error (404 etc.).
@@ -107,7 +107,7 @@
 
 ---
 
-### repo_freshness.py (44 LOC)
+### repo_freshness.py (45 LOC)
 
 **Purpose:** Fetch repo metadata and report push freshness — `pushed_at` (last branch push), relative age in whole days, `updated_at`, `created_at`.
 **Reads:** GitHub REST API (`GET /repos/{owner}/{repo}`) — fields `full_name`, `pushed_at`, `updated_at`, `created_at`.
@@ -117,7 +117,7 @@
 
 ---
 
-### get_issue_comments.py (51 LOC)
+### get_issue_comments.py (52 LOC)
 
 **Purpose:** Retrieve all comments on a GitHub issue.
 **Reads:** GitHub Issue Comments API (`/issues/{number}/comments`).
@@ -127,7 +127,7 @@
 
 ---
 
-### index_issues.py (196 LOC)
+### index_issues.py (199 LOC)
 
 **Purpose:** Fetch GitHub issues matching a query, strip noise, write per-issue MDs, and index into the `github_issues` RAG collection. Keyword-fallback loop (3→2→1) ensures a non-empty result set.
 **Reads:** GitHub Search Issues API + `get_issue_workflow` + `get_issue_comments_workflow` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
@@ -137,7 +137,7 @@
 
 ---
 
-### index_releases.py (151 LOC)
+### index_releases.py (152 LOC)
 
 **Purpose:** Fetch up to 100 releases (newest-first) for a repo, write per-release MDs with noise stripped, and index into the fixed `github_releases` RAG collection. Clean-before-index janitor: delete collection + rmtree doc dir before each run (idempotent).
 **Reads:** `GET /repos/{o}/{r}/releases?per_page=100`; globs doc dir for MD count; `rag-cli list_collections` for chunk total.
@@ -147,7 +147,7 @@
 
 ---
 
-### create_issue.py (45 LOC)
+### create_issue.py (46 LOC)
 
 **Purpose:** Create a new issue in a repository.
 **Reads:** nothing beyond auth.
@@ -157,7 +157,7 @@
 
 ---
 
-### update_issue.py (56 LOC)
+### update_issue.py (57 LOC)
 
 **Purpose:** Update an existing issue's title, body, labels, or state (close / reopen).
 **Reads:** nothing beyond auth.
@@ -167,7 +167,7 @@
 
 ---
 
-### list_issues.py (64 LOC)
+### list_issues.py (65 LOC)
 
 **Purpose:** List repository issues with state filter (default: open). Filters out pull-request entries returned by the REST endpoint.
 **Reads:** GET `/repos/{owner}/{repo}/issues` — paginates until `limit` real issues collected.
@@ -177,7 +177,7 @@
 
 ---
 
-### delete_issue.py (47 LOC)
+### delete_issue.py (49 LOC)
 
 **Purpose:** Permanently delete an issue via the GitHub GraphQL `deleteIssue` mutation. Without `--confirm`, prints what would be deleted and exits safely. With `--confirm`, prints an irreversible-warning to stderr, resolves `node_id` via REST GET, then executes the mutation.
 **Reads:** GET `/repos/{owner}/{repo}/issues/{number}` for `node_id` and title.
@@ -187,7 +187,7 @@
 
 ---
 
-### get_discussion.py (128 LOC)
+### get_discussion.py (129 LOC)
 
 **Purpose:** Retrieve a full discussion with comments and accepted answer in natural chronological order. Internal-only fetch helper for `index_discussions.py`.
 **Reads:** GitHub GraphQL API via `graphql_query()` — discussion by number with body, answer, comments (chronological, up to 100), and nested replies.
@@ -217,7 +217,7 @@
 
 ---
 
-### index_discussions.py (190 LOC)
+### index_discussions.py (193 LOC)
 
 **Purpose:** Fetch GitHub discussions matching a query, strip noise, redact tokens, write per-discussion MDs, and index into the `github_discussions` RAG collection. Keyword-fallback loop (3→2→1). `strip_discussion_noise(text) -> (str, title)` — calls imported `strip_noise()` then applies format logic (title extraction, metadata drop, `[ANSWER]` dedup) on raw `get_discussion` output.
 **Reads:** GitHub GraphQL Search API (repo-scoped `search(type:DISCUSSION)`) + `get_discussion_workflow()` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
