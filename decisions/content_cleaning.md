@@ -12,7 +12,7 @@ Noise-stripping shared across the RAG-indexing pipelines (`index_discussions`, `
 ## Evidenz
 
 - Trigger: `rag-cli index github_discussions` aborted — a 2405-token chunk exceeded the 2048 embed context (HTTP 400); root = dosu-bot shields.io/camo badge runs (2000–6299 chars, no spaces) the char-recursive chunker cannot split. Every text-phrase strip gated by corpus-grep (phrase never in user prose) + dual anchor (exact phrase + dosu/brand token). Deliberate non-strips: email-quote headers (发件人/主题) where the header IS the question, user-quoted greetings, `![]()` syntax examples in code spans. → `decisions/OldThemes/content_cleaning/buildout_2026-06-17.md`.
-- Results: discussions 63/78 → 78/78 indexed (15 silent embed-400 failures eliminated), peak no-space run 6299 → 457, ~431k chars removed; issues peak 3137 → 784, 18/103 files re-cleaned. Content integrity verified (SHA256 byte-identity over 78-file corpus, citation links + `##` headings + Q/A intact, 0 content lost). → `dev/discussion_cleaning/` (`audit_discussion_noise.py`, `A_strip_validation.py`, `reclean_existing_mds.py` + reports), `dev/issue_cleaning/reclean_issues.py`.
+- Results: discussions 63/78 → 78/78 indexed (15 silent embed-400 failures eliminated), peak no-space run 6299 → 457, ~431k chars removed; issues peak 3137 → 784, 18/103 files re-cleaned. Content integrity verified (SHA256 byte-identity over 78-file corpus, citation links + `##` headings + Q/A intact, 0 content lost). → `dev/content_cleaning/` (`01_audit_discussion_noise.py`, `02_strip_validation.py`, `03_reclean_discussions.py`, `04_reclean_issues.py` + reports in `md/`).
 
 ## Offene Fragen
 

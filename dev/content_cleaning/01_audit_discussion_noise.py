@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Audit noise classes in GitHub discussion MDs. Read-only — never modifies source files.
-# Usage: python3 dev/discussion_cleaning/audit_discussion_noise.py [--source-dir PATH]
+# Usage: python3 dev/content_cleaning/01_audit_discussion_noise.py [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -14,7 +14,7 @@ DEFAULT_SOURCE_DIR = Path(
     "/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli/"
     "data/documents/github_discussions"
 )
-REPORT_DIR = Path(__file__).parent / "audit_reports"
+REPORT_DIR = Path(__file__).parent / "md"
 FOOTER_LOOKAHEAD = 20
 SAMPLE_N = 5
 CONTEXT_N = 2
@@ -70,7 +70,7 @@ def audit_discussion_noise_workflow(source_dir: Path) -> None:
         audit_issue_template(md_files),
     ]
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    report_path = REPORT_DIR / f"audit_{datetime.now().strftime('%Y%m%d')}.md"
+    report_path = REPORT_DIR / f"01_audit_{datetime.now().strftime('%Y%m%d')}.md"
     write_report(report_path, classes, len(md_files))
     print(report_path)
 

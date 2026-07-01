@@ -14,7 +14,7 @@ CLI tool delivering 14 GitHub commands: 9 research commands (search, browse, rep
 
 | Subdir | Role | LOC | Modules |
 |--------|------|-----|---------|
-| `src/github/` | Tool + infrastructure modules | ~1823 | 20 |
+| `src/github/` | Tool + infrastructure modules | ~1823 | 21 |
 | `skills/gh-cli-search/` | CC skill config + Bash usage docs | — | 1 |
 | `decisions/` | Pipeline decision records + OldThemes history | — | — |
 | `dev/` | Dev suites per area (cleaning, indexing, exploration, usage extraction) + legacy endpoint tests | — | — |
@@ -44,4 +44,4 @@ CLI tool delivering 14 GitHub commands: 9 research commands (search, browse, rep
 
 ## Subdir DOCS
 
-- [src/github/DOCS.md](src/github/DOCS.md) — Module map for 16 tool modules + 2 infrastructure modules
+- [src/github/DOCS.md](src/github/DOCS.md) — Module map for 16 tool modules + 2 cleaning/utility modules + 3 infrastructure modules (21 total)
