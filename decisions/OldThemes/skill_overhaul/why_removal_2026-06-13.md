@@ -4,7 +4,7 @@ Principle reaffirmed: a skill states WHAT + HOW (tools, parameters, landmines, p
 
 ## Audit result
 
-`skills/gh-cli-search/SKILL.md` (309 lines) was already largely why-free after the two prior slimming passes (580 → 457 → 345 → 309). Big design rationales had been externalized to `decisions/OldThemes/` (e.g. `search_code_compaction.md`, `releases_rag/redesign.md`). Only three pure-rationale fragments remained.
+`skills/gh-cli-search/SKILL.md` (309 lines) was already largely why-free after the two prior slimming passes (580 → 457 → 345 → 309). Big design rationales had been externalized to `decisions/OldThemes/` (e.g. `search_code_compaction.md`, `release_indexing/redesign.md`). Only three pure-rationale fragments remained.
 
 ## Cuts
 

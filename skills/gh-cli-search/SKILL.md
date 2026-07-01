@@ -14,7 +14,7 @@ All tools are invoked via the `gh-cli` wrapper (installed at `~/.local/bin/gh-cl
 gh-cli <cmd> [args]
 ```
 
-### Quick Reference — All 7 Tools
+### Quick Reference — All 9 Research Tools
 
 ```bash
 # Discovery

@@ -35,6 +35,8 @@ CODE
 # SKILL: from "SKILL.md" (skills/github-search/SKILL.md), not a code symbol.
 SKILL
 README
+# LICENSE: from "LICENSE.md" / the community/profile license field, not a code symbol.
+LICENSE
 
 # --- Naming-convention suffixes (pattern tokens, not literal symbols) ---
 # _workflow: the tool-orchestrator naming convention. Real functions are

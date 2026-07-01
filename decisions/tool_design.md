@@ -29,10 +29,6 @@ No benchmarks run. Query truncation added after observing GitHub Search returnin
 
 **search_code content-term constraint** (confirmed via probe runs): `search_code` forwards qualifiers (filename:/extension:/path:/language:) but GitHub code search requires ≥1 free-text content term — a qualifier-only query is rejected. Pure name-only structural find (equivalent to `find -name`) is not achievable via `search_code`. Scope: default branch only, files <384KB, rate-limited to 10 req/min.
 
-## Recommendation (SOLL)
-
-Keep — migration complete. IST now matches former SOLL. Skill-description update is a separate pending step.
-
 ## Offene Fragen
 
 - Is 3-keyword cap optimal or too aggressive? → **Resolved for `search_repos`**: 3-word cap retained; hard-truncate replaced by 3→2→1 fallback so narrow trailing keywords no longer block results.

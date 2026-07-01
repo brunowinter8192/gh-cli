@@ -139,7 +139,7 @@
 
 ### index_releases.py (151 LOC)
 
-**Purpose:** Fetch up to 100 releases (newest-first) for a repo, write per-release MDs with noise stripped, and index into a per-repo RAG collection. Clean-before-index janitor: delete collection + rmtree doc dir before each run (idempotent).
+**Purpose:** Fetch up to 100 releases (newest-first) for a repo, write per-release MDs with noise stripped, and index into the fixed `github_releases` RAG collection. Clean-before-index janitor: delete collection + rmtree doc dir before each run (idempotent).
 **Reads:** `GET /repos/{o}/{r}/releases?per_page=100`; globs doc dir for MD count; `rag-cli list_collections` for chunk total.
 **Writes:** per-release MDs to `RAG_ROOT/data/documents/github_releases/` as `<tag>.md` (fixed collection, not per-repo path); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit from either `delete` (janitor) or `index` — raise is before rmtree so old state stays intact on busy; returns `list[TextContent]` summary with follow-up `rag-cli search_hybrid` command.
 **Called by:** `cli.py`.
@@ -147,7 +147,7 @@
 
 ---
 
-### create_issue.py
+### create_issue.py (45 LOC)
 
 **Purpose:** Create a new issue in a repository.
 **Reads:** nothing beyond auth.
@@ -157,7 +157,7 @@
 
 ---
 
-### update_issue.py
+### update_issue.py (56 LOC)
 
 **Purpose:** Update an existing issue's title, body, labels, or state (close / reopen).
 **Reads:** nothing beyond auth.
@@ -167,7 +167,7 @@
 
 ---
 
-### list_issues.py
+### list_issues.py (64 LOC)
 
 **Purpose:** List repository issues with state filter (default: open). Filters out pull-request entries returned by the REST endpoint.
 **Reads:** GET `/repos/{owner}/{repo}/issues` — paginates until `limit` real issues collected.
@@ -177,7 +177,7 @@
 
 ---
 
-### delete_issue.py
+### delete_issue.py (47 LOC)
 
 **Purpose:** Permanently delete an issue via the GitHub GraphQL `deleteIssue` mutation. Without `--confirm`, prints what would be deleted and exits safely. With `--confirm`, prints an irreversible-warning to stderr, resolves `node_id` via REST GET, then executes the mutation.
 **Reads:** GET `/repos/{owner}/{repo}/issues/{number}` for `node_id` and title.

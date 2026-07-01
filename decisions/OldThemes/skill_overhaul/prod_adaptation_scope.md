@@ -1,60 +1,60 @@
-# SKILL.md Prod-Adaptation — Scope für Etappe B
+# SKILL.md Prod Adaptation — Scope for Stage B
 
-Rewrite-Plan: SKILL.md 18-Tool-Stand → 11-Tool-Prod-Stand (2026-05-30).
-Referenz-Wahrheit: `cli.py` (11 Subcommands), `src/github/DOCS.md`.
+Rewrite plan: SKILL.md 18-tool state → 11-tool prod state (2026-05-30).
+Reference truth: `cli.py` (11 subcommands), `src/github/DOCS.md`.
 
 ---
 
-## 1. Staleness-Audit (Zeilen-Refs gegen aktuelle SKILL.md, 657 Zeilen)
+## 1. Staleness audit (line refs against the current SKILL.md, 657 lines)
 
-### 1.1 Falsche Tool-Zahl / Dead-Tool-Referenzen
+### 1.1 Wrong tool count / dead-tool references
 
-| Zeile(n) | Problem | Fix |
+| Line(s) | Problem | Fix |
 |---|---|---|
-| Z.15 | `"Quick Reference — All 18 Tools"` | → `"All 11 Tools"` |
-| Z.34 | `gh-cli search_items ...` | entfernen (Tool gelöscht) |
-| Z.35–36 | `gh-cli get_issue ...` / `get_issue_comments ...` | entfernen (interne Helfer, kein Subcommand) |
-| Z.40–43 | `search_discussions`, `list_discussions`, `get_discussion` Quick-Ref | entfernen (gelöscht/intern) |
-| Z.46–48 | `list_commits`, `compare_commits` Quick-Ref | entfernen (gelöscht) |
-| Z.59 | `"Discussions ... planned, not yet built"` | fix: `index_discussions` ist gebaut; releases bleiben CLI-direct (kein RAG) |
-| Z.98–100 | Tabelle Issues & PRs: `search_items`, `get_issue`, `get_issue_comments` | entfernen; Sektion → "RAG-Semantic" mit `index_issues` + `index_discussions` |
-| Z.104–109 | Tabelle Discussions: `search_discussions`, `list_discussions`, `get_discussion` | entfernen |
-| Z.114–118 | Tabelle Commits & Releases: `list_commits`, `compare_commits` | entfernen; Sektion → "Releases" mit `list_releases`, `get_release` only |
-| Z.204–207 | Issue Investigation Workflow: `search_items` Schritt 1 | entfernen; Sektion sinnlos ohne search_items → entweder ganz entfernen oder als "via RAG" umschreiben |
-| Z.226–230 | Discussion Research Workflow: `search_discussions`, `list_discussions`, `get_discussion` | vollständig ersetzen (siehe §2.3) |
-| Z.234–238 | Commit History Workflow | `list_commits`/`compare_commits` entfernen; nur Release-Workflow behalten |
-| Z.358–370 | Parameter Reference: `search_items` | entfernen |
-| Z.371–377 | Parameter Reference: `get_issue` / `get_issue_comments` | entfernen (interne Helfer — kein CLI-Zugriff) |
-| Z.394–419 | Parameter Reference: `search_discussions`, `list_discussions`, `get_discussion` | entfernen (`get_discussion` intern, kein CLI) |
-| Z.421–439 | Parameter Reference: `list_commits`, `compare_commits` | entfernen |
-| Z.465 | Search Qualifiers: `repo:owner/repo ... search_items` | `search_items` aus Applies-to entfernen |
-| Z.538 | "For PR results from search_items --type pr" | entfernen (ganzer Satz) |
+| L.15 | `"Quick Reference — All 18 Tools"` | → `"All 11 Tools"` |
+| L.34 | `gh-cli search_items ...` | remove (tool deleted) |
+| L.35–36 | `gh-cli get_issue ...` / `get_issue_comments ...` | remove (internal helpers, no subcommand) |
+| L.40–43 | `search_discussions`, `list_discussions`, `get_discussion` quick-ref | remove (deleted/internal) |
+| L.46–48 | `list_commits`, `compare_commits` quick-ref | remove (deleted) |
+| L.59 | `"Discussions ... planned, not yet built"` | fix: `index_discussions` is built; releases stay CLI-direct (no RAG) |
+| L.98–100 | Table Issues & PRs: `search_items`, `get_issue`, `get_issue_comments` | remove; section → "RAG-Semantic" with `index_issues` + `index_discussions` |
+| L.104–109 | Table Discussions: `search_discussions`, `list_discussions`, `get_discussion` | remove |
+| L.114–118 | Table Commits & Releases: `list_commits`, `compare_commits` | remove; section → "Releases" with `list_releases`, `get_release` only |
+| L.204–207 | Issue Investigation Workflow: `search_items` step 1 | remove; section pointless without search_items → either remove entirely or rewrite as "via RAG" |
+| L.226–230 | Discussion Research Workflow: `search_discussions`, `list_discussions`, `get_discussion` | replace fully (see §2.3) |
+| L.234–238 | Commit History Workflow | remove `list_commits`/`compare_commits`; keep only the release workflow |
+| L.358–370 | Parameter Reference: `search_items` | remove |
+| L.371–377 | Parameter Reference: `get_issue` / `get_issue_comments` | remove (internal helpers — no CLI access) |
+| L.394–419 | Parameter Reference: `search_discussions`, `list_discussions`, `get_discussion` | remove (`get_discussion` internal, no CLI) |
+| L.421–439 | Parameter Reference: `list_commits`, `compare_commits` | remove |
+| L.465 | Search Qualifiers: `repo:owner/repo ... search_items` | remove `search_items` from applies-to |
+| L.538 | "For PR results from search_items --type pr" | remove (whole sentence) |
 
-### 1.2 Fehlendes: `index_discussions` komplett absent
+### 1.2 Missing: `index_discussions` completely absent
 
-- Nicht in Quick Reference
-- Nicht in Tools by Category
-- Kein Query-Engineering-Abschnitt
-- Kein Parameter-Reference-Eintrag
-- Kein Tool-Chaining-Workflow
-- Two Access Patterns (Z.58–59): nur `index_issues` erwähnt
+- Not in Quick Reference
+- Not in Tools by Category
+- No query-engineering section
+- No parameter-reference entry
+- No tool-chaining workflow
+- Two Access Patterns (L.58–59): only `index_issues` mentioned
 
 ### 1.3 Frontmatter
 
-Aktuell:
+Current:
 ```yaml
 ---
 name: github-search
 ---
 ```
-Fehlend: `description:` (kein Feld vorhanden — Skill-Auto-Activation nicht steuerbar).
-Fehlend: `allowed-tools:` (kein Feld — keine Tool-Constraint aktiv).
+Missing: `description:` (no field present — skill auto-activation not steerable).
+Missing: `allowed-tools:` (no field — no tool constraint active).
 
 ---
 
-## 2. Ziel-Struktur nach Rewrite (11 Tools)
+## 2. Target structure after rewrite (11 tools)
 
-### 2.1 Frontmatter (neu)
+### 2.1 Frontmatter (new)
 
 ```yaml
 ---
@@ -69,7 +69,7 @@ allowed-tools: Bash
 ---
 ```
 
-### 2.2 Quick Reference (11 Tools)
+### 2.2 Quick Reference (11 tools)
 
 ```bash
 # Discovery
@@ -97,7 +97,7 @@ gh-cli get_release anthropics claude-code --tag v2.0.0
 gh-cli get_release anthropics claude-code  # latest
 ```
 
-### 2.3 Tools by Category (neu)
+### 2.3 Tools by Category (new)
 
 **Discovery:** `search_repos`, `search_code`, `get_repo`
 **Repository Exploration:** `get_repo_tree`, `get_file_content`
@@ -106,14 +106,14 @@ gh-cli get_release anthropics claude-code  # latest
 **RAG-Semantic (Discussions):** `index_discussions`
 **Releases:** `list_releases`, `get_release`
 
-### 2.4 Two Access Patterns (Update)
+### 2.4 Two Access Patterns (update)
 
 - **Code & repo content → direct CLI.** `search_repos`, `search_code`, `get_repo`, `get_repo_tree`, `get_file_content`, `grep_file`, `grep_repo`, `list_releases`, `get_release`. Direct `gh-cli` calls.
 - **Conversation/discussion layer → query-driven RAG indexing.** Issues: `index_issues "<kw>" <owner/repo>` → `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `index_discussions "<kw>" <owner/repo>` → `rag-cli search_hybrid "<terms>" github_discussions`. A few broad vector searches replace many fine-grained tool-calls. Releases stay CLI-direct (exact-artifact lookup, not fuzzy retrieval).
 
 (Remove "planned, not yet built".)
 
-### 2.5 Query Engineering — index_discussions (NEU, spiegelt index_issues)
+### 2.5 Query Engineering — index_discussions (NEW, mirrors index_issues)
 
 ```
 ## Query Engineering (index_discussions)
@@ -128,7 +128,7 @@ gh-cli get_release anthropics claude-code  # latest
   in-list [ANSWER] tag is stripped automatically during indexing.
 ```
 
-### 2.6 Tool Chaining — Discussion Research (NEU ersetzt alte 3-Tool-Kette)
+### 2.6 Tool Chaining — Discussion Research (NEW, replaces old 3-tool chain)
 
 ```
 ### Discussion Research
@@ -138,7 +138,7 @@ gh-cli get_release anthropics claude-code  # latest
    → broad vector search across all indexed threads (replaces many get_discussion calls)
 ```
 
-### 2.7 Tool Chaining — Issue Investigation (UPDATE)
+### 2.7 Tool Chaining — Issue Investigation (update)
 
 Remove `search_items` step. The workflow now starts at `index_issues`:
 ```
@@ -149,7 +149,7 @@ Remove `search_items` step. The workflow now starts at `index_issues`:
 
 (The old `search_items → get_issue → get_issue_comments` chain is gone. The 3-step fine-grained lookup no longer has a CLI path; RAG replaces it.)
 
-### 2.8 Parameter Reference — index_discussions (NEU)
+### 2.8 Parameter Reference — index_discussions (NEW)
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -157,39 +157,39 @@ Remove `search_items` step. The workflow now starts at `index_issues`:
 | repo | str | required | Repository as owner/repo |
 | --limit | int | 30 | Max discussions to fetch and index |
 
-### 2.9 Commits & Releases Section
+### 2.9 Commits & Releases section
 
-Remove `list_commits` / `compare_commits` (deleted). Keep `list_releases` + `get_release` under renamed section "Releases". Remove "Commit History & Version Analysis" workflow; leave "Release Lookup" workflow.
+Remove `list_commits` / `compare_commits` (deleted). Keep `list_releases` + `get_release` under the renamed section "Releases". Remove the "Commit History & Version Analysis" workflow; leave the "Release Lookup" workflow.
 
 ---
 
-## 3. Scope-Cut für Etappe B
+## 3. Scope cut for Stage B
 
-### JETZT (Prod-Sync — Etappe B)
+### NOW (prod sync — Stage B)
 
 | Item | Source | Change |
 |---|---|---|
-| 18→11 Tool-Zahl | prod reality | quick-ref + all tables + section headers |
-| 5 dead tools raus | prod reality | all refs removed (see §1.1 audit) |
-| `index_discussions` rein | prod reality | QR + category table + query-eng section + chaining workflow + param ref |
+| 18→11 tool count | prod reality | quick-ref + all tables + section headers |
+| 5 dead tools out | prod reality | all refs removed (see §1.1 audit) |
+| `index_discussions` in | prod reality | QR + category table + query-eng section + chaining workflow + param ref |
 | Two Access Patterns fix | prod reality | remove "not yet built"; add discussions; releases stay CLI-direct |
-| `get_issue`/`get_issue_comments`-Demotion | prod reality | remove from user-facing param ref + tables (internal helpers, no subcommand) |
-| Frontmatter `description:` | bead github-4xx | new field with trigger phrases + negativ-liste |
+| `get_issue`/`get_issue_comments` demotion | prod reality | remove from user-facing param ref + tables (internal helpers, no subcommand) |
+| Frontmatter `description:` | bead github-4xx | new field with trigger phrases + negative list |
 | Frontmatter `allowed-tools: Bash` | bead github-chm | new field |
 | Issue Investigation workflow | prod reality | `search_items` step removed |
 
-### VERTAGT (nicht Etappe B)
+### DEFERRED (not Stage B)
 
-| Item | Source | Warum vertagt |
+| Item | Source | Why deferred |
 |---|---|---|
-| Progressive loading: SKILL.md → references/ | bead github-3cl | Architektur-Entscheidung; SKILL.md wird nach Prod-Sync erst 11-Tool-clean sein — dann lohnt Split-Evaluation |
-| Domain-Split: N Skills | bead github-6vg | Eigene Entscheidung; Multi-Skill-Frage (gleichzeitig aktiv?) ungeklärt |
-| Pre-baked Scripts | bead github-i1v | Nachgelagert; erst prod-clean, dann Scripts |
+| Progressive loading: SKILL.md → references/ | bead github-3cl | architecture decision; SKILL.md is 11-tool-clean only after prod sync — then a split evaluation pays off |
+| Domain split: N skills | bead github-6vg | own decision; multi-skill question (active simultaneously?) unresolved |
+| Pre-baked scripts | bead github-i1v | downstream; prod-clean first, then scripts |
 
 ---
 
-## 4. LOC-Schätzung nach Rewrite
+## 4. LOC estimate after rewrite
 
-Entfernt: ~180 Zeilen (5 tote Tool-Blöcke in QR + Tabellen + Workflows + ParamRef).
-Hinzugefügt: ~40 Zeilen (`index_discussions` QR + Tabelle + QE-Sektion + Workflow + ParamRef + Frontmatter).
-Net: 657 − 180 + 40 ≈ **517 Zeilen** (−21%). Noch kein Split (VERTAGT).
+Removed: ~180 lines (5 dead tool blocks in QR + tables + workflows + param ref).
+Added: ~40 lines (`index_discussions` QR + table + QE section + workflow + param ref + frontmatter).
+Net: 657 − 180 + 40 ≈ **517 lines** (−21%). No split yet (DEFERRED).

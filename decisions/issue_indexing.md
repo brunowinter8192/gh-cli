@@ -29,15 +29,12 @@ Indexing baseline (this session — `workflow.py index-dir` on 100 staged `anthr
 
 Noise breakdown: 38 `<img>` tags (mix of `width+height+alt+src` and `width+alt+src` variants — both caught by `<img\b[^>]*>`), 12 markdown images (`![image](github.com/.../assets/<uuid>)` without file extension — caught by `[^)]+` broad pattern), 2 Cloudflare/Datadome opaque cookie blobs >1000 chars (stripped by `\S{1000,}` net in patchright__76 and curl_cffi__463). False-positive guard: `[^)]+` (non-empty URL) prevents matching literal `![]()` code examples in prose (confirmed in MinerU__4986 discussion corpus). Real issue text (EN/CN descriptions, error messages, code blocks, stack traces) intact across all 18 changed files.
 
-## Recommendation (SOLL)
-- **N=30 (Keep)** — default `--limit`, coverage-based (top-30 relevance carries the signal). PENDING eval: "rank 31-100 adds no marginal insight" is unmeasured — a recall eval (index top-100, representative queries, check if any answer comes from rank 31-100) would confirm.
-- **Query max-3 + fallback 3→2→1 (Keep)** — robust regardless of GitHub issue-search AND/OR semantics. Pending: empirical check of multi-word issue-search semantics.
-- **Dedup via index-dir content-hash (Keep)** — no wrapper-side dedup.
-
 ## Offene Fragen
+- Does rank 31-100 add marginal insight at N=30? Unmeasured — a recall eval (index top-100, representative queries, check whether any answer comes from rank 31-100) would confirm.
+- Multi-word issue-search AND/OR semantics on GitHub — empirical check outstanding.
 - Wrapper's internal index-dir is synchronous (blocks ~N×7s for large N) — async/background variant for big N?
 - Freshness / re-index cadence / purge policy for github_issues (undefined).
 - Shared `github_issues` collection for all repos, or per-repo collections?
 
 ## Quellen
-- `decisions/OldThemes/repo_issue_indexing/roadmap.md`, `decisions/OldThemes/repo_issue_indexing/wrapper_build.md`
+- `decisions/OldThemes/issue_indexing/roadmap.md`, `decisions/OldThemes/issue_indexing/wrapper_build.md`

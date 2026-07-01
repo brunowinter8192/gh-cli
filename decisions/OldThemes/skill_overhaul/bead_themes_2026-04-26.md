@@ -1,52 +1,52 @@
-# Skill-Beads — Konsolidierung (2026-04-26)
+# Skill Beads — Consolidation (2026-04-26)
 
 > ⚠️ **STALENESS BANNER**
-> Diese Beads wurden 2026-04-26 gegen eine **21-Tool**-Oberfläche geschrieben.
-> Prod ist jetzt **11 Tools** (Stand 2026-05-30, nach `index_discussions`-Merge).
-> Vorschläge, die gelöschte Tools referenzieren, sind unten explizit markiert.
+> These beads were written 2026-04-26 against a **21-tool** surface.
+> Prod is now **11 tools** (as of 2026-05-30, after the `index_discussions` merge).
+> Proposals referencing deleted tools are explicitly marked below.
 >
-> Gelöschte Tools (Dateien aus `src/github/` entfernt): `search_items`, `list_commits`, `compare_commits`.
-> Deregistriert als Subcommands (Dateien behalten, intern): `get_issue`, `get_issue_comments` → interne Helfer von `index_issues`; `get_discussion` → interner Helfer von `index_discussions`.
-> Gelöschte Subcommands + Dateien: `search_discussions`, `list_discussions`.
+> Deleted tools (files removed from `src/github/`): `search_items`, `list_commits`, `compare_commits`.
+> Deregistered as subcommands (files kept, internal): `get_issue`, `get_issue_comments` → internal helpers of `index_issues`; `get_discussion` → internal helper of `index_discussions`.
+> Deleted subcommands + files: `search_discussions`, `list_discussions`.
 >
-> **github-6vg** ist am stärksten betroffen — seine Domänen-Tabelle basiert vollständig auf der alten Oberfläche.
+> **github-6vg** is most affected — its domain table is based entirely on the old surface.
 
 ---
 
-## Thema 1 — Progressive Loading: SKILL.md → references/ (Bead github-3cl)
+## Theme 1 — Progressive Loading: SKILL.md → references/ (Bead github-3cl)
 
-**Problem:** `SKILL.md` ist 656 Zeilen flat. Bei jeder Skill-Activation lädt Claude alles — auch wenn der Task nur ein `search_repos`-Lookup ist. Parameter-Reference (~250 Zeilen) und Output-Format-Regeln (~80 Zeilen) sind nicht task-relevant für simple Lookups.
+**Problem:** `SKILL.md` is 656 lines flat. On every skill activation Claude loads everything — even when the task is just a `search_repos` lookup. Parameter reference (~250 lines) and output-format rules (~80 lines) are not task-relevant for simple lookups.
 
-**Vorbild:** `automazeio/ccpm` (5-Phasen-Architektur):
-- `SKILL.md` (~80 Zeilen) — Tool-Inventar, Quick-Reference, Pointer auf `references/`
+**Model:** `automazeio/ccpm` (5-phase architecture):
+- `SKILL.md` (~80 lines) — tool inventory, quick reference, pointer to `references/`
 - `references/search-strategy.md`, `references/navigation.md`, `references/output-format.md`, `references/tool-reference.md`, `references/limitations.md`
 - URL: https://github.com/automazeio/ccpm/blob/main/skill/ccpm/SKILL.md
 
-**Vorschlag:** Split in:
-- `SKILL.md` (~80 Zeilen) — Tool-Inventar, Quick-Reference, Pointer auf `references/`
-- `references/search-strategy.md` — Tool-Selection, iteratives Refinement, Qualifiers
+**Proposal:** split into:
+- `SKILL.md` (~80 lines) — tool inventory, quick reference, pointer to `references/`
+- `references/search-strategy.md` — tool selection, iterative refinement, qualifiers
 - `references/navigation.md` — DOCS-first, ambiguous-matches, search-mode rules
-- `references/output-format.md` — FILE/EVIDENCE/VERDICT, Output Hygiene
-- `references/tool-reference.md` — vollständige Parameter-Tabellen pro Tool
-- `references/limitations.md` — Truncation, search_code data files, query limits
+- `references/output-format.md` — FILE/EVIDENCE/VERDICT, output hygiene
+- `references/tool-reference.md` — complete parameter tables per tool
+- `references/limitations.md` — truncation, search_code data files, query limits
 
-**Verifikation:** Skill-Activation lädt nur SKILL.md (kürzer); bei konkretem Task wird passendes references/-File explizit referenziert; Token-Einsparung pro Activation messbar.
+**Verification:** skill activation loads only SKILL.md (shorter); on a concrete task the matching references/ file is referenced explicitly; token saving per activation measurable.
 
-**Staleness-Note:** Die Tool-Zahl hat sich von 18 auf 11 geändert. Der Split bleibt sinnvoll, aber das "18 Tools = 250 Zeilen Parameter-Reference" Argument ist schwächer — 11 Tools = geschätzte 150 Zeilen. Entscheidung noch angemessen, Ausmaß kleiner als angenommen.
+**Staleness note:** the tool count changed from 18 to 11. The split stays reasonable, but the "18 tools = 250 lines parameter reference" argument is weaker — 11 tools = an estimated 150 lines. Decision still appropriate, magnitude smaller than assumed.
 
-**Status:** VERTAGT — Prod-Sync hat Priorität.
+**Status:** DEFERRED — prod sync has priority.
 
 ---
 
-## Thema 2 — Description-Field Schärfen (Bead github-4xx)
+## Theme 2 — Sharpen the description field (Bead github-4xx)
 
-**Problem:** Aktueller SKILL.md Frontmatter hat **kein `description:`-Feld** (leer — nur `name: github-search`). Claude entscheidet die Auto-Aktivierung anhand des `description`-Felds; fehlt es, wird die Skill zu zufällig aktiviert.
+**Problem:** the current SKILL.md frontmatter has **no `description:` field** (empty — only `name: github-search`). Claude decides auto-activation based on the `description` field; if it is missing, the skill activates too randomly.
 
-(Bead-Stand: der Bead beschreibt einen Stand mit `description: See ~/.claude/shared-rules/global/cli-skills.md` — diese Zeile existiert in der aktuellen Datei nicht mehr. Das macht das Problem nicht kleiner, sondern größer.)
+(Bead state: the bead describes a state with `description: See ~/.claude/shared-rules/global/cli-skills.md` — this line no longer exists in the current file. That does not shrink the problem, it grows it.)
 
-**Vorbild:** `automazeio/ccpm` — ~600-Zeichen-Description mit: (1) konkreten Trigger-Sätzen, (2) expliziter Negativ-Liste, (3) Synonymen.
+**Model:** `automazeio/ccpm` — ~600-character description with: (1) concrete trigger sentences, (2) explicit negative list, (3) synonyms.
 
-**Vorschlag (aus Bead, adaptiert für 11-Tool-Prod):**
+**Proposal (from bead, adapted for 11-tool prod):**
 ```yaml
 description: "GitHub remote research via gh-cli. Use when asked to find repos/projects,
   read remote files, search code patterns, browse issues/discussions, or check releases
@@ -54,22 +54,22 @@ description: "GitHub remote research via gh-cli. Use when asked to find repos/pr
   local code (use Grep/Glob instead), or operations on the user's own GitHub account."
 ```
 
-Trigger-Phrasen einbauen: "finde repos für X", "zeig mir wie X in Y implementiert ist", "was sind bekannte issues in Z", "index discussions von W für RAG". Negativ-Liste: lokal, `git commit`, `git push`, PR-Operationen auf eigenem Repo.
+Build in trigger phrases: "finde repos für X", "zeig mir wie X in Y implementiert ist", "was sind bekannte issues in Z", "index discussions von W für RAG". Negative list: local, `git commit`, `git push`, PR operations on own repo.
 
-**Verifikation:** Description-Field aktualisiert; plugin-sync ausgeführt; Test-Sessions: Skill aktiviert sich bei Trigger-Phrasen, NICHT bei lokalen Operationen.
+**Verification:** description field updated; plugin-sync run; test sessions: skill activates on trigger phrases, NOT on local operations.
 
-**Status:** JETZT (Etappe B Scope) — geringer Aufwand, hoher Klarheitsgewinn, kein Abhängigkeiten.
+**Status:** NOW (Stage B scope) — low effort, high clarity gain, no dependencies.
 
 ---
 
-## Thema 3 — Domain-Split-Architektur: N Skills statt 1 (Bead github-6vg)
+## Theme 3 — Domain-split architecture: N skills instead of 1 (Bead github-6vg)
 
-**Problem:** Eine monolithische `github-search` Skill mit allen Tools quer durch alle Domänen. Bei Aktivierung wird alles geladen.
+**Problem:** one monolithic `github-search` skill with all tools across all domains. On activation everything is loaded.
 
-**Vorbild:** `github/github-mcp-server` — 14 Toolsets (repos, issues, pull_requests, discussions, …), beim Server-Start aktivierbar/deaktivierbar via Flags. Agent lädt nur die Tools, die er braucht.
+**Model:** `github/github-mcp-server` — 14 toolsets (repos, issues, pull_requests, discussions, …), enable/disable at server start via flags. The agent loads only the tools it needs.
 URLs: https://github.com/github/github-mcp-server/blob/main/pkg/github/tools.go, https://github.com/github/github-mcp-server/blob/main/docs/toolsets-and-icons.md
 
-**Ursprünglicher Vorschlag (5 fokussierte Skills):**
+**Original proposal (5 focused skills):**
 
 | Skill | Tools (original, 2026-04-26) |
 |---|---|
@@ -79,9 +79,9 @@ URLs: https://github.com/github/github-mcp-server/blob/main/pkg/github/tools.go,
 | `github-discussions` | ~~search_discussions~~, ~~list_discussions~~, ~~get_discussion~~ |
 | `github-history` | ~~list_commits~~, ~~compare_commits~~, list_releases, get_release |
 
-> ⚠️ **Stark veraltet.** Durchgestrichene Tools sind gelöscht oder intern. Der Vorschlag in seiner ursprünglichen Form ist nicht mehr umsetzbar.
+> ⚠️ **Heavily outdated.** Struck-through tools are deleted or internal. The proposal in its original form is no longer implementable.
 
-**Aktualisierter Stand (11 Tools, nach index_discussions):**
+**Updated state (11 tools, after index_discussions):**
 
 | Skill | Tools (prod 2026-05-30) |
 |---|---|
@@ -90,47 +90,47 @@ URLs: https://github.com/github/github-mcp-server/blob/main/pkg/github/tools.go,
 | `github-rag` | index_issues, index_discussions |
 | `github-releases` | list_releases, get_release |
 
-Trade-offs unverändert: PRO = kleinere SKILL.md pro Skill, klarere Auto-Activation. CONTRA = Tool-Chaining über Domänen (z.B. search_code → grep_repo → index_issues) komplizierter; 4 Plugin-Source-Files statt 1.
+Trade-offs unchanged: PRO = smaller SKILL.md per skill, clearer auto-activation. CON = tool-chaining across domains (e.g. search_code → grep_repo → index_issues) more complicated; 4 plugin-source files instead of 1.
 
-**Status:** VERTAGT — Multi-Skill-Architektur ist eine Entscheidung eigener Größenordnung, NICHT im Vorbeigehen umsetzbar. Prod-Sync zuerst. Offene Frage: kann Claude mehrere Skills gleichzeitig aktiv haben? (noch ungeklärt).
+**Status:** DEFERRED — a multi-skill architecture is a decision of its own magnitude, NOT implementable in passing. Prod sync first. Open question: can Claude have multiple skills active at once? (still unresolved).
 
 ---
 
-## Thema 4 — allowed-tools: Bash Frontmatter (Bead github-chm)
+## Theme 4 — allowed-tools: Bash frontmatter (Bead github-chm)
 
-**Problem:** Kein `allowed-tools`-Feld im Frontmatter. Damit kann der Agent bei aktiver Skill theoretisch auch Read/Edit/Glob auf lokale Files anwenden — was bei `github-search` nie sinnvoll ist (wir lesen GitHub remote, nicht lokal).
+**Problem:** no `allowed-tools` field in the frontmatter. With an active skill the agent could theoretically apply Read/Edit/Glob to local files too — which for `github-search` is never sensible (we read GitHub remote, not local).
 
-**Vorbild:** `myuon/agent-skills` (`skills/gh/SKILL.md`):
+**Model:** `myuon/agent-skills` (`skills/gh/SKILL.md`):
 ```yaml
 allowed-tools: Bash
 ```
 URL: https://github.com/myuon/agent-skills/blob/main/skills/gh/SKILL.md
 
-**Vorschlag:** Frontmatter um `allowed-tools: Bash` erweitern.
+**Proposal:** extend the frontmatter with `allowed-tools: Bash`.
 
-**Caveat:** Vorher prüfen, ob `allowed-tools: Bash` mit dem Workflow kollidiert (z.B. wenn der Agent zwischendurch lokale Configs lesen müsste). Falls ja: `allowed-tools: Bash, Read` oder ähnlich. Aktuell: gh-cli gibt alles über stdout zurück; kein Read/Edit auf lokale Files nötig während GitHub-Recherche.
+**Caveat:** first check whether `allowed-tools: Bash` collides with the workflow (e.g. if the agent would need to read local configs in between). If yes: `allowed-tools: Bash, Read` or similar. Currently: gh-cli returns everything via stdout; no Read/Edit on local files needed during GitHub research.
 
-**Verifikation:** Frontmatter erweitert; plugin-sync ausgeführt; In Test-Session: Skill aktiv → Read-Tool-Call geblockt.
+**Verification:** frontmatter extended; plugin-sync run; in test session: skill active → Read tool call blocked.
 
-**Status:** JETZT (Etappe B Scope) — 1-Zeilen-Edit, kein Risiko wenn kein lokales-Read-Bedarf vorhanden.
+**Status:** NOW (Stage B scope) — 1-line edit, no risk when no local-read need exists.
 
 ---
 
-## Thema 5 — Pre-baked Scripts für Discovery-Patterns (Bead github-i1v)
+## Theme 5 — Pre-baked scripts for discovery patterns (Bead github-i1v)
 
-**Problem:** Wiederkehrende Research-Patterns erfordern 2-4 CLI-Calls + manuelles Sortieren/Filtern. Tool-Call-intensiv, Context-budget-belastend.
+**Problem:** recurring research patterns require 2-4 CLI calls + manual sorting/filtering. Tool-call-intensive, context-budget-heavy.
 
-**Vorbilder:**
-- `majiayu000/claude-skill-registry` — `scripts/gh_profile.sh`, `scripts/gh_repos.sh` mit `--limit` Flag. URL: https://github.com/majiayu000/claude-skill-registry/blob/main/skills/development/github-info/SKILL.md
-- `automazeio/ccpm` — Script-First-Rule: für deterministische read-and-report Operationen IMMER Script statt manuelle Tool-Sequenz. URL: https://github.com/automazeio/ccpm/blob/main/skill/ccpm/SKILL.md
+**Models:**
+- `majiayu000/claude-skill-registry` — `scripts/gh_profile.sh`, `scripts/gh_repos.sh` with `--limit` flag. URL: https://github.com/majiayu000/claude-skill-registry/blob/main/skills/development/github-info/SKILL.md
+- `automazeio/ccpm` — Script-First rule: for deterministic read-and-report operations ALWAYS a script instead of a manual tool sequence. URL: https://github.com/automazeio/ccpm/blob/main/skill/ccpm/SKILL.md
 
-**Vorschlag:** `skills/github-search/scripts/` mit:
+**Proposal:** `skills/github-search/scripts/` with:
 - `top_trending.sh <query> [--limit N]` — search_repos + sort=stars + take N
 - `repo_overview.sh <owner/repo>` — get_repo + get_repo_tree depth=1 + README
-- ~~`find_issues.sh <owner/repo> --label <label>`~~ — search_items entfernt
-- ~~`find_prs_touching.sh <owner/repo> <file_path>`~~ — PR-Tools entfernt
-- ~~`compare_releases.sh <owner/repo> <tag1> <tag2>`~~ — compare_commits entfernt
+- ~~`find_issues.sh <owner/repo> --label <label>`~~ — search_items removed
+- ~~`find_prs_touching.sh <owner/repo> <file_path>`~~ — PR tools removed
+- ~~`compare_releases.sh <owner/repo> <tag1> <tag2>`~~ — compare_commits removed
 
-> ⚠️ Drei der 5 Script-Vorschläge referenzieren gelöschte Tools. `top_trending.sh` und `repo_overview.sh` sind noch umsetzbar. Möglicherweise ergänzen: `index_and_search.sh <query> <owner/repo>` als Wrapper für `index_discussions` + `rag-cli search_hybrid`.
+> ⚠️ Three of the 5 script proposals reference deleted tools. `top_trending.sh` and `repo_overview.sh` are still implementable. Possibly add: `index_and_search.sh <query> <owner/repo>` as a wrapper for `index_discussions` + `rag-cli search_hybrid`.
 
-**Status:** VERTAGT — nützlich, aber nachgelagert. Erst Prod-Sync, dann Scripts als Ergänzung.
+**Status:** DEFERRED — useful, but downstream. Prod sync first, then scripts as an addition.

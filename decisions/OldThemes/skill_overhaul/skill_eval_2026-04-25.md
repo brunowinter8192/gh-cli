@@ -1,88 +1,88 @@
 # github-search SKILL Evaluation — 2026-04-25
 
-Aus einer Live-Recherche-Session in Monitor_CC dokumentiert. 8 gh-cli Calls für mitmproxy/textual/glances issues. Vergleichs-Vorbild: `tool-use` Skill (`/Users/brunowinter2000/Documents/ai/Meta/blank/skills/tool-use/SKILL.md`) der das Quality-Niveau setzt.
+Documented from a live research session in Monitor_CC. 8 gh-cli calls for mitmproxy/textual/glances issues. Comparison benchmark: the `tool-use` skill (`/Users/brunowinter2000/Documents/ai/Meta/blank/skills/tool-use/SKILL.md`), which sets the quality bar.
 
-> **Hinweis:** Ursprünglich als Bead in `.beads/` geplant, aber das Bead-System in MCP/github ist gerade in einem broken state (Dolt-DB "github" wird nicht gefunden, init scheitert). Wenn du das Repo wieder zum Laufen bekommst, dieses File 1:1 als Bead-Description übernehmen.
+> **Note:** originally planned as a bead in `.beads/`, but the bead system in MCP/github is currently in a broken state (Dolt DB "github" not found, init fails). If the repo runs again, adopt this file 1:1 as the bead description.
 
-Drei Stellschrauben separat angegangen.
+Three levers addressed separately.
 
-## 1. Lean Call — kürzere/intuitivere Bash-Invocations
+## 1. Lean Call — shorter / more intuitive Bash invocations
 
-Was schon gut ist: `gh-cli <verb> <positional> [--flags]` Struktur ist konsistent zu git/gh, einfach zu lernen.
+Already good: the `gh-cli <verb> <positional> [--flags]` structure is consistent with git/gh, easy to learn.
 
-Was suboptimal ist:
+Suboptimal:
 
-- `search_repos` query-limit (max 2-3 words) ist im SKILL.md erwähnt aber das Gefühl wann man pivoten muss kommt nicht rüber. „high memory" returned 0, „DataTable scroll" returned 68. Eine Keyword-Strategie wie „Bei Issue-Search: 'X leak' / 'X bug' / 'slow X' als Standard-Lead-Keywords statt 'high X' / 'too much X'" wäre konkret.
-- `repo:owner/repo` qualifier muss bei JEDEM `search_code`/`search_items` mitgegeben werden, sonst geht die Suche global. Default-Behavior könnte umgekehrt sein: aus dem aktuellen Repo-Pfad heraus könnte gh-cli automatisch ergänzen, mit Override-Flag für Cross-Repo.
-- Combo-Verbs wären praktisch: `gh-cli read_issue <owner> <repo> <num>` als Shortcut für `get_issue` + `get_issue_comments` in einem Call mit kombiniertem Output (Body + Comments mit klaren Trennern). Heute zwei Calls, könnte einer sein.
+- `search_repos` query limit (max 2-3 words) is mentioned in SKILL.md, but the sense of WHEN to pivot does not come across. "high memory" returned 0, "DataTable scroll" returned 68. A keyword strategy like "for issue search: use 'X leak' / 'X bug' / 'slow X' as default lead keywords instead of 'high X' / 'too much X'" would be concrete.
+- The `repo:owner/repo` qualifier must be passed on EVERY `search_code`/`search_items`, otherwise the search goes global. Default behavior could be reversed: from the current repo path, gh-cli could auto-append it, with an override flag for cross-repo.
+- Combo verbs would be handy: `gh-cli read_issue <owner> <repo> <num>` as a shortcut for `get_issue` + `get_issue_comments` in one call with combined output (body + comments with clear separators). Two calls today, could be one.
 
-## 2. Intelligente Wrapper / Configurables für Repo-Traversal
+## 2. Smart wrappers / configurables for repo traversal
 
-Heute beobachtet: die Recherche brauchte 5 sequenzielle Steps (search_items → top hit identifizieren → get_issue → get_issue_comments → reading). Kein Skill-Bug aber Optimierungs-Potenzial.
+Observed today: the research needed 5 sequential steps (search_items → identify top hit → get_issue → get_issue_comments → reading). Not a skill bug, but optimization potential.
 
-Konkrete Wrapper-Ideen:
-- `gh-cli explore_issue <owner> <repo> <num>`: gibt Issue + ALLE Comments (capped) + alle PRs die das Issue referenzieren in einem strukturierten File aus. Eine Tool-Call statt drei.
-- `gh-cli explore_repo <owner> <repo> --topic memory`: get_repo + get_repo_tree (depth=2) + grep_repo für Topic-Pattern + erste 3 hits in einem File. Architektur-Schnellüberblick in einem Schritt.
-- `gh-cli compare_issues <owner1>/<repo1>#N <owner2>/<repo2>#M`: zwei Issues parallel lesen mit Side-by-Side-Output für „leiden gleich an X?".
-- Cross-repo `search_items`: ein Query gegen mehrere Repos in einem Call (z.B. `--repos "Textualize/textual,nicolargo/glances,mitmproxy/mitmproxy"`). Heute manuell sequenziell → aufgewertet auf einen Call.
+Concrete wrapper ideas:
+- `gh-cli explore_issue <owner> <repo> <num>`: emits issue + ALL comments (capped) + all PRs referencing the issue in one structured file. One tool call instead of three.
+- `gh-cli explore_repo <owner> <repo> --topic memory`: get_repo + get_repo_tree (depth=2) + grep_repo for the topic pattern + first 3 hits in one file. Architecture quick-overview in one step.
+- `gh-cli compare_issues <owner1>/<repo1>#N <owner2>/<repo2>#M`: read two issues in parallel with side-by-side output for "do they suffer from the same X?".
+- Cross-repo `search_items`: one query against multiple repos in one call (e.g. `--repos "Textualize/textual,nicolargo/glances,mitmproxy/mitmproxy"`). Manually sequential today → upgraded to one call.
 
-Kein User-Search bisher: wenn man weiß dass mhils interessante Sachen baut, fehlt der Einstiegspunkt. `gh-cli get_user_repos mhils --top 10 --sort stars` wäre wertvoll.
+No user search yet: when you know mhils builds interesting things, the entry point is missing. `gh-cli get_user_repos mhils --top 10 --sort stars` would be valuable.
 
-Diskussions-Search ist global, kein Repo-scoped: `list_discussions <owner> <repo>` existiert, aber `search_discussions` hat kein `repo:` qualifier. Asymmetrisch zu search_items.
+Discussion search is global, not repo-scoped: `list_discussions <owner> <repo>` exists, but `search_discussions` has no `repo:` qualifier. Asymmetric to search_items.
 
-## 3. Noise-freier Output
+## 3. Noise-free output
 
-Was bei gh-cli sehr gut funktioniert (Quality-Bar):
-- `=== response ===` Header und `--- Comment N ---` Delimiter — parser-friendly mit sed/grep/head
-- Result-Limits sind konservativ gewählt (top 20 issues, top 30 comments default) — verhindert riesige Dumps
-- Empty-result handling explizit: „Found 0 issues matching your query." statt silent fail
+What works very well in gh-cli (quality bar):
+- `=== response ===` header and `--- Comment N ---` delimiter — parser-friendly with sed/grep/head
+- Result limits are chosen conservatively (top 20 issues, top 30 comments default) — prevents huge dumps
+- Empty-result handling explicit: "Found 0 issues matching your query." instead of silent fail
 
-Was suboptimal ist:
-- get_issue body enthält Original-Markdown inkl. Bilder-Links (`![mitmdump_rss](https://user-images.githubusercontent.com/...)`) und Original-Whitespace. Bei Issues mit vielen embedded images / large code blocks könnten die Output-Tokens explodieren. Optionaler `--strip-images` oder `--text-only` Flag wäre nützlich.
-- search_items output enthält für jeden Hit einen redundanten `[get_issue: owner=... repo=... issue_number=N]` Hint. Nice-to-have für AI/Claude (zeigt next-tool-call), aber als rohe-Text-Ausgabe für menschliche Skim-Reader Noise. Optional `--for-human` Flag der die Hints ausspart.
-- `get_issue_comments` listet ALLE Comments chronologisch — bei Issues mit 30+ Comments und viel Diskussion sind die top-by-upvotes wertvoller. `get_discussion` hat bereits `--comment-sort upvotes`, aber `get_issue_comments` nicht. Konsistenz fehlt.
-- `get_repo` Output ist gut formatiert (Description, Language, Topics, Stars, License) aber Topics-Liste ist Komma-Liste auf einer Zeile. Bei 10+ Topics wird das eine sehr lange Zeile. Multi-line-Wrap optional.
+Suboptimal:
+- get_issue body contains original markdown incl. image links (`![mitmdump_rss](https://user-images.githubusercontent.com/...)`) and original whitespace. For issues with many embedded images / large code blocks, output tokens could explode. An optional `--strip-images` or `--text-only` flag would help.
+- search_items output contains a redundant `[get_issue: owner=... repo=... issue_number=N]` hint per hit. Nice-to-have for AI/Claude (shows next tool call), but as raw text output for a human skim-reader it is noise. Optional `--for-human` flag that omits the hints.
+- `get_issue_comments` lists ALL comments chronologically — for issues with 30+ comments and much discussion, the top-by-upvotes are more valuable. `get_discussion` already has `--comment-sort upvotes`, but `get_issue_comments` does not. Consistency missing.
+- `get_repo` output is well formatted (description, language, topics, stars, license) but the topics list is a comma list on one line. With 10+ topics this becomes a very long line. Optional multi-line wrap.
 
-## 4. SKILL.md Struktur — Gap zu tool-use
+## 4. SKILL.md structure — gap to tool-use
 
 ### Frontmatter description
-- tool-use: „Tool-call hygiene. Reduces call-waste through concrete anti-patterns and preferred alternatives. Covers token efficiency, verbose output, tool selection, and per-tool behavior reference."
-- github-search: „See ~/.claude/shared-rules/global/cli-skills.md"
+- tool-use: "Tool-call hygiene. Reduces call-waste through concrete anti-patterns and preferred alternatives. Covers token efficiency, verbose output, tool selection, and per-tool behavior reference."
+- github-search: "See ~/.claude/shared-rules/global/cli-skills.md"
 
-Bei einem Browse durch `~/.claude/skills/` weiß man bei github-search nicht was es tut ohne die volle SKILL.md zu öffnen. → eigene Beschreibung in einem Satz fehlt.
+Browsing `~/.claude/skills/`, you cannot tell what github-search does without opening the full SKILL.md. → a one-sentence own description is missing.
 
-### Hard Rules am Anfang
-tool-use hat 7 hart nummerierte Rules mit datierten Concrete-Failure-Anker. github-search hat die Rules verstreut über mehrere Sections (Search Strategy / Navigation Rules / Path Integrity / Output Hygiene). Eine konsolidierte Top-Section „Hard Rules" wäre wertvoll. Konkrete Kandidaten:
-- „Repo-scoped: ALWAYS add `repo:owner/repo` to search_code/search_items"
-- „search_repos query: max 2-3 words"
-- „Path Integrity: only paths from previous get_repo_tree output"
-- „Always redirect get_issue_comments to /tmp file if >5 comments"
-- „search_items empty-result: never retry same query, pivot keywords"
-- „Local paths NEVER as `path` parameter"
+### Hard Rules up front
+tool-use has 7 hard-numbered rules with dated concrete-failure anchors. github-search has its rules scattered across several sections (Search Strategy / Navigation Rules / Path Integrity / Output Hygiene). A consolidated top section "Hard Rules" would be valuable. Concrete candidates:
+- "Repo-scoped: ALWAYS add `repo:owner/repo` to search_code/search_items"
+- "search_repos query: max 2-3 words"
+- "Path Integrity: only paths from previous get_repo_tree output"
+- "Always redirect get_issue_comments to /tmp file if >5 comments"
+- "search_items empty-result: never retry same query, pivot keywords"
+- "Local paths NEVER as `path` parameter"
 
-### Concrete Failures mit Datum
-tool-use hat „Concrete failure (2026-04-23): ..." Anker pro Rule. github-search hat WRONG/RIGHT-Beispiele aber keine Session-datierten Anker. Das datierte Anker-Pattern macht Rules „spürbar" — sie sind nicht abstrakt sondern aus echtem Schmerz entstanden.
+### Concrete failures with date
+tool-use has "Concrete failure (2026-04-23): ..." anchors per rule. github-search has WRONG/RIGHT examples but no session-dated anchors. The dated-anchor pattern makes rules "tangible" — they are not abstract but born from real pain.
 
-### Decision-Tree visualisiert
-tool-use's Heredoc-Decision-Flow (Case 1/2/3) ist als visueller 4-Step-Flow gestaltet. github-search's `search_repos` vs `search_code` Logik ist textuell beschrieben, würde von einem Decision-Tree-Visualization profitieren.
+### Decision tree visualized
+tool-use's heredoc decision flow (Case 1/2/3) is designed as a visual 4-step flow. github-search's `search_repos` vs `search_code` logic is described textually, would benefit from a decision-tree visualization.
 
-### Output Hygiene-Promotion
-„NEVER use local paths as tool parameters" steht in github-search unter „Output Hygiene" am Ende. Wegen seiner Kritikalität (instant fail) gehört das nach ganz vorne als Hard Rule #1.
+### Output Hygiene promotion
+"NEVER use local paths as tool parameters" sits in github-search under "Output Hygiene" at the end. Due to its criticality (instant fail) it belongs at the very front as Hard Rule #1.
 
-## 5. Feature-Lücken (Wunschliste)
+## 5. Feature gaps (wishlist)
 
-- `search_users` / `get_user_repos`: User-Einstiegspunkt fehlt komplett
+- `search_users` / `get_user_repos`: user entry point missing entirely
 - `get_repo_languages`: language-percentage breakdown
-- `grep_repo --include-history`: Pattern in deleted lines auch matchen
-- Cross-repo `search_items` mit Multi-Repo-Filter
-- Discussion-Search Repo-scoped
-- `explore_*` Combo-Verbs für häufige Sequenzen (Issue + Comments in einem Call)
-- Output-Flags: `--strip-images`, `--for-human`, `--comment-sort upvotes` für `get_issue_comments`
+- `grep_repo --include-history`: match pattern in deleted lines too
+- Cross-repo `search_items` with multi-repo filter
+- Discussion search repo-scoped
+- `explore_*` combo verbs for frequent sequences (issue + comments in one call)
+- Output flags: `--strip-images`, `--for-human`, `--comment-sort upvotes` for `get_issue_comments`
 
-## 6. Skill-Test-Methodologie für die Zukunft
+## 6. Skill-test methodology for the future
 
-Eine Live-Recherche-Session ist der beste Härtetest für ein Skill. Empfehlung: bei jedem Skill-Update eine Mini-Recherche-Aufgabe mitlaufen lassen („finde 3 Repos mit X-Pattern, lies das relevanteste Issue-Thread, fasse zusammen") und beobachten wo der Skill-Holder stolpert. Genau diese Stolperer sind die Stellen wo die SKILL.md klarer werden muss.
+A live research session is the best stress test for a skill. Recommendation: on every skill update, run a mini research task alongside ("find 3 repos with X pattern, read the most relevant issue thread, summarize") and observe where the skill holder stumbles. Exactly those stumbles are the spots where the SKILL.md must become clearer.
 
 ## 7. Concrete Source
 
-Recherche-Detail-Notes (das was wir gefunden haben, nicht die Skill-Eval) liegen in `/Users/brunowinter2000/Documents/ai/Monitor_CC/sources/RAM_research_2026-04-25.md`. Inhalt: gh-cli wurde 8 mal aufgerufen für mitmproxy #4456, textual #6381, glances #1447 + Helper-Calls. Output war sauber genug parser-friendly für sed/grep, alle Calls succeeded außer einer (textual + „high memory" zero-result, pivoted auf andere Keywords).
+Research detail notes (what we found, not the skill eval) are in `/Users/brunowinter2000/Documents/ai/Monitor_CC/sources/RAM_research_2026-04-25.md`. Content: gh-cli was called 8 times for mitmproxy #4456, textual #6381, glances #1447 + helper calls. Output was clean enough / parser-friendly for sed/grep, all calls succeeded except one (textual + "high memory" zero-result, pivoted to other keywords).

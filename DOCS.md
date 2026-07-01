@@ -17,7 +17,7 @@ CLI tool delivering 14 GitHub commands: 9 research commands (search, browse, rep
 | `src/github/` | Tool + infrastructure modules | ~1823 | 20 |
 | `skills/gh-cli-search/` | CC skill config + Bash usage docs | — | 1 |
 | `decisions/` | Pipeline decision records + OldThemes history | — | — |
-| `dev/` | Legacy test artifacts | — | — |
+| `dev/` | Dev suites per area (cleaning, indexing, exploration, usage extraction) + legacy endpoint tests | — | — |
 | `.claude-plugin/` | Plugin metadata (skills-only) | — | 1 |
 
 ## Flow
