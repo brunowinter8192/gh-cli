@@ -10,7 +10,7 @@
 
 ## Evidenz
 
-- Recursive full-tree dump = anti-pattern for live exploration (huge token cost, mostly noise). One-level traversal with per-entry signal shows where substance is and where to descend. GraphQL delivers tree + language + lineCount + repo metadata in one round-trip vs the old 3-REST chain (default-branch → SHA → `/git/trees?recursive`). → `decisions/OldThemes/repo_exploration/phaseB_results.md`, `endpoint_mapping.md`; dev probes `dev/repo_exploration/probe_graphql_explore.py`, raw `dev/repo_exploration/raw_results/graphql_explore.md` (root) + `graphql_plugins.md` (sub-path).
+- Recursive full-tree dump = anti-pattern for live exploration (huge token cost, mostly noise). One-level traversal with per-entry signal shows where substance is and where to descend. GraphQL delivers tree + language + lineCount + repo metadata in one round-trip vs the old 3-REST chain (default-branch → SHA → `/git/trees?recursive`). → `decisions/OldThemes/repo_exploration/phaseB_results.md`, `endpoint_mapping.md`; dev probes `dev/repo_exploration/probe_graphql_explore.py`, manually-captured output `dev/repo_exploration/md/graphql_explore.md` (root) + `graphql_plugins.md` (sub-path).
 - Rejected exploration endpoints: `/community/profile` (health metric, not orientation; `license` field uses licensee detection → reports `absent` for non-FOSS, confirmed on `anthropics/claude-code` where `LICENSE.md` exists but is reported absent), `/readme` (marginal over `get_file_content` once filename is known), `/languages` (subsumed by GraphQL `languages` field). → `phaseB_results.md`.
 
 ## Offene Fragen

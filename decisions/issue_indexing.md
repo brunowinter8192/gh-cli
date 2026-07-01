@@ -15,7 +15,7 @@ Indexing baseline (this session — `workflow.py index-dir` on 100 staged `anthr
 - Fetch: 2 core calls/issue; 200 for 100 = ~4% of 5000/hr core budget. Embedding dominates; search never the bottleneck.
 - Dedup idempotent: post-build smoke `--limit 1` on an unchanged issue → 0 new chunks.
 
-**Issue corpus re-clean (2026-06-18) — strip_generic_noise pass:** `dev/issue_cleaning/reclean_issues.py --apply` · report: `dev/issue_cleaning/reclean_reports/reclean_dryrun_20260618_002830.md` · dataset: 103 MDs, `data/documents/github_issues/`. Backup: `github_issues_backup_20260618_002830`.
+**Issue corpus re-clean (2026-06-18) — strip_generic_noise pass:** `dev/content_cleaning/04_reclean_issues.py --apply` · report: `dev/content_cleaning/md/04_reclean_dryrun_20260618_002830.md` · dataset: 103 MDs, `data/documents/github_issues/`. Backup: `github_issues_backup_20260618_002830`.
 
 | Metric | Value |
 |---|---|

@@ -5,7 +5,7 @@
 # intentional duplication, not drift. Update if the source changes.
 # strip_discussion_noise() is kept as a thin local wrapper (full version in index_discussions.py
 # which pulls mcp — not importable in dev/).
-# Usage: python3 dev/discussion_cleaning/A_strip_validation.py [--source-dir PATH]
+# Usage: python3 dev/content_cleaning/02_strip_validation.py [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -19,7 +19,7 @@ DEFAULT_SOURCE_DIR = Path(
     "/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli/"
     "data/documents/github_discussions"
 )
-REPORT_DIR = Path(__file__).parent / "A_strip_validation_reports"
+REPORT_DIR = Path(__file__).parent / "md"
 THRESHOLD = 1500
 
 # --- verbatim copy of src/github/discussion_cleaning.py (keep in sync) ---
@@ -65,7 +65,7 @@ def strip_validation_workflow(source_dir: Path) -> None:
     spot = spot_check(source_dir, SPOT_CHECK_FILES)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    report_path = REPORT_DIR / f"validation_{ts}.md"
+    report_path = REPORT_DIR / f"02_validation_{ts}.md"
     write_report(report_path, results, spot, len(md_files))
     print(report_path)
 

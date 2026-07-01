@@ -33,7 +33,7 @@ Strip is much smaller than issues (~30–40%) — discussion format is mostly bo
 
 Separate `github_discussions` collection (not merged into `github_issues`): confirmed. Discussion and issue content serve different query types; separate collections allow targeted retrieval.
 
-**Noise audit (2026-06-17):** `dev/discussion_cleaning/audit_discussion_noise.py` · report: `dev/discussion_cleaning/audit_reports/audit_20260617.md` · dataset: 78 MDs, `data/documents/github_discussions/`, opendatalab/MinerU + gastownhall/beads repos.
+**Noise audit (2026-06-17):** `dev/content_cleaning/01_audit_discussion_noise.py` · report: `dev/content_cleaning/md/01_audit_20260617.md` · dataset: 78 MDs, `data/documents/github_discussions/`, opendatalab/MinerU + gastownhall/beads repos.
 
 | Noise class | Files hit | Hits | Chars | Risk hits | Verdict |
 |---|---|---|---|---|---|
@@ -46,9 +46,9 @@ Separate `github_discussions` collection (not merged into `github_issues`): conf
 
 Root cause of 15/78 indexing failures: DOSU_FOOTER blocks contain base64-encoded SVG badge links (up to 6,299 chars without a space), which the char-based chunker emits as a single oversized chunk → embedding server HTTP 400 abort.
 
-**Strip validation v1 (2026-06-17, 6-class only):** `dev/discussion_cleaning/A_strip_validation_reports/validation_20260617_203934.md` — 39/40 files cleared; 1 residual (`MinerU__4820.md`, 6,299 chars): blockquoted camo badge 25 lines after marker, no marker at its local position.
+**Strip validation v1 (2026-06-17, 6-class only):** `dev/content_cleaning/md/02_validation_20260617_203934.md` — 39/40 files cleared; 1 residual (`MinerU__4820.md`, 6,299 chars): blockquoted camo badge 25 lines after marker, no marker at its local position.
 
-**Strip validation v2 (2026-06-17, +badge-line strip +no-space net):** `dev/discussion_cleaning/A_strip_validation.py` · report: `dev/discussion_cleaning/A_strip_validation_reports/validation_20260617_205746.md` · dataset: 78 MDs (in-memory, read-only). Note: this validation runs `strip_discussion_noise()` (noise + format pass combined); the reclean script below runs `strip_noise()` only (noise pass only — preserves headings/metadata already dropped from built MDs).
+**Strip validation v2 (2026-06-17, +badge-line strip +no-space net):** `dev/content_cleaning/02_strip_validation.py` · report: `dev/content_cleaning/md/02_validation_20260617_205746.md` · dataset: 78 MDs (in-memory, read-only). Note: this validation runs `strip_discussion_noise()` (noise + format pass combined); the reclean script below runs `strip_noise()` only (noise pass only — preserves headings/metadata already dropped from built MDs).
 
 | Metric | Before | After |
 |---|---|---|
@@ -59,7 +59,7 @@ Root cause of 15/78 indexing failures: DOSU_FOOTER blocks contain base64-encoded
 
 Content preservation (4 spot-check files): all comment attribution headers, threaded replies, and content section headings preserved at identical counts before/after.
 
-**Reclean round 1 (2026-06-17):** `dev/discussion_cleaning/reclean_existing_mds.py --apply` · report: `dev/discussion_cleaning/reclean_reports/reclean_apply_20260617_213527.md` · dataset: 78 existing MDs (written before strip_noise existed). Backup: `github_discussions_backup_20260617_213527`.
+**Reclean round 1 (2026-06-17):** `dev/content_cleaning/03_reclean_discussions.py --apply` · report: `dev/content_cleaning/md/03_reclean_apply_20260617_213527.md` · dataset: 78 existing MDs (written before strip_noise existed). Backup: `github_discussions_backup_20260617_213527`.
 
 | Metric | Value |
 |---|---|
@@ -69,7 +69,7 @@ Content preservation (4 spot-check files): all comment attribution headers, thre
 | Corpus peak no-space run after | 457 ✅ |
 | `## ` heading count identical per file | ✅ PASS |
 
-**Reclean round 2 (2026-06-17) — 3 new sub-categories (DOSU_FOOTER_TEXT, DOSU_GREETING_INLINE, MD_IMG):** `dev/discussion_cleaning/reclean_existing_mds.py --apply` · report: `dev/discussion_cleaning/reclean_reports/reclean_dryrun_20260617_224340.md` · dataset: same 78 MDs post round-1. Backup: `github_discussions_backup_20260617_224340`. Change-detection upgraded to `.rstrip()` comparison (eliminates trailing-whitespace-only rewrites).
+**Reclean round 2 (2026-06-17) — 3 new sub-categories (DOSU_FOOTER_TEXT, DOSU_GREETING_INLINE, MD_IMG):** `dev/content_cleaning/03_reclean_discussions.py --apply` · report: `dev/content_cleaning/md/03_reclean_dryrun_20260617_224340.md` · dataset: same 78 MDs post round-1. Backup: `github_discussions_backup_20260617_224340`. Change-detection upgraded to `.rstrip()` comparison (eliminates trailing-whitespace-only rewrites).
 
 | Metric | Value |
 |---|---|
@@ -82,7 +82,7 @@ Content preservation (4 spot-check files): all comment attribution headers, thre
 
 Per-file breakdown: MinerU__4820 (403 chars — Chinese DOSU_FOOTER_TEXT × 2, inline Greeting × 2); MinerU__4878 (121 chars — bare DOSU_FOOTER_TEXT); MinerU__4237 (94 chars — MD_IMG logo); MinerU__3309 (65 chars — blockquoted DOSU_FOOTER_TEXT).
 
-**Reclean round 4 (2026-06-17) — DOSU_MARKERLESS_GREETING:** `dev/discussion_cleaning/reclean_existing_mds.py --apply` · report: `dev/discussion_cleaning/reclean_reports/reclean_dryrun_20260617_230019.md` · dataset: same 78 MDs post round-2. Backup: `github_discussions_backup_20260617_230019`.
+**Reclean round 4 (2026-06-17) — DOSU_MARKERLESS_GREETING:** `dev/content_cleaning/03_reclean_discussions.py --apply` · report: `dev/content_cleaning/md/03_reclean_dryrun_20260617_230019.md` · dataset: same 78 MDs post round-2. Backup: `github_discussions_backup_20260617_230019`.
 
 | Metric | Value |
 |---|---|

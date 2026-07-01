@@ -7,7 +7,7 @@
 # dev/ may not import src/ (hook: block_dev_imports_src) — intentional duplication, not drift.
 # Update if the source changes. Source of truth: src/github/text_cleaning.py
 # Dry-run by default (no writes). Use --apply to overwrite files (creates timestamped backup first).
-# Usage: python3 dev/issue_cleaning/reclean_issues.py [--apply] [--source-dir PATH]
+# Usage: python3 dev/content_cleaning/04_reclean_issues.py [--apply] [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -22,7 +22,7 @@ DEFAULT_SOURCE_DIR = Path(
     "/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli/"
     "data/documents/github_issues"
 )
-REPORT_DIR = Path(__file__).parent / "reclean_reports"
+REPORT_DIR = Path(__file__).parent / "md"
 NO_SPACE_LIMIT = 1000
 
 # --- verbatim copy of src/github/text_cleaning.py (keep in sync) ---
@@ -61,19 +61,12 @@ def reclean_workflow(source_dir: Path, apply: bool) -> None:
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    report_path = REPORT_DIR / f"reclean_dryrun_{ts}.md"
+    report_path = REPORT_DIR / f"04_reclean_dryrun_{ts}.md"
     write_report(report_path, results, len(md_files))
     print(report_path)
 
     if apply:
-        backup_dir = apply_changes(source_dir, results, ts)
-        changed_count = sum(1 for r in results if r["changed"])
-        total_removed = sum(r["chars_removed"] for r in results)
-        corpus_after_peak = max(r["after_max"] for r in results)
-        print(f"Backup: {backup_dir}")
-        print(f"Files changed: {changed_count} / {len(results)}")
-        print(f"Total chars removed: {total_removed:,}")
-        print(f"Corpus peak no-space run after: {corpus_after_peak} (must be <{NO_SPACE_LIMIT}): {'OK' if corpus_after_peak < NO_SPACE_LIMIT else 'FAIL'}")
+        apply_changes(source_dir, results, ts)
 
 
 # FUNCTIONS
