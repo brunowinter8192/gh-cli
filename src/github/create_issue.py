@@ -1,6 +1,7 @@
 # INFRASTRUCTURE
 import logging
 from mcp.types import TextContent
+# From client.py: authenticated REST call (method, path, optional json/params) -> response dict
 from src.github.client import request
 
 logger = logging.getLogger(__name__)

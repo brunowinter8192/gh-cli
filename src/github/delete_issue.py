@@ -2,7 +2,9 @@
 import logging
 import sys
 from mcp.types import TextContent
+# From client.py: authenticated REST call (method, path, optional json/params) -> response dict
 from src.github.client import request
+# From graphql_client.py: execute GraphQL query against GitHub API
 from src.github.graphql_client import graphql_query
 
 logger = logging.getLogger(__name__)

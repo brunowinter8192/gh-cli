@@ -1,6 +1,7 @@
 # INFRASTRUCTURE
 import logging
 from mcp.types import TextContent
+# From graphql_client.py: execute GraphQL query against GitHub API
 from src.github.graphql_client import graphql_query
 
 logger = logging.getLogger(__name__)

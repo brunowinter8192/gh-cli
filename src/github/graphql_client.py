@@ -1,6 +1,7 @@
 # INFRASTRUCTURE
 import logging
 import requests
+# From client.py: resolved GitHub auth token (zshrc -> GH_TOKEN -> GITHUB_TOKEN)
 from src.github.client import GITHUB_TOKEN
 
 GITHUB_GRAPHQL = "https://api.github.com/graphql"

@@ -4,12 +4,15 @@ import re
 import requests
 import base64
 from mcp.types import TextContent
+# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
 
 logger = logging.getLogger(__name__)
 
-_SIZE_INLINE_MAX = 1_048_576    # 1 MB  — GitHub Contents API inlines base64 content
-_SIZE_API_MAX    = 104_857_600  # 100 MB — GitHub API hard limit; beyond this, no download supported
+# _SIZE_INLINE_MAX: GitHub Contents API inlines base64 content up to 1 MB
+# _SIZE_API_MAX: GitHub API hard limit at 100 MB — beyond this, no download supported
+_SIZE_INLINE_MAX = 1_048_576
+_SIZE_API_MAX    = 104_857_600
 
 
 # ORCHESTRATOR

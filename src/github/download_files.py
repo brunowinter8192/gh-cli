@@ -4,6 +4,7 @@ import os
 
 from mcp.types import TextContent
 
+# From get_file_content.py: fetch file metadata/content, stream-download to path, 100 MB API size limit
 from src.github.get_file_content import fetch_file_content, _stream_download, _SIZE_API_MAX
 
 logger = logging.getLogger(__name__)
