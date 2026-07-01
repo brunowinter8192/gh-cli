@@ -39,7 +39,7 @@ CLI tool delivering 14 GitHub commands: 9 research commands (search, browse, rep
 
 | File | LOC | Why at root |
 |------|-----|-------------|
-| `cli.py` | 202 | Entry point — argparse dispatch for all 14 tools; central error handler (BrokenPipeError + Exception) |
+| `cli.py` | 209 | Entry point — `_build_parser()` registers all 14 subparsers; `_dispatch(args, parser)` routes to `<tool>_workflow()`; `main()` orchestrates (12 LOC); central error handler (BrokenPipeError + Exception) |
 | `requirements.txt` | 2 | Dependencies: `mcp` (TextContent type), `requests` |
 
 ## Subdir DOCS
