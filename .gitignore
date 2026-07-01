@@ -17,9 +17,6 @@ bug_fixes/
 dev/*
 !dev/repo_exploration/
 !dev/content_cleaning/
-!dev/tool_design/
-!dev/issue_indexing/
-!dev/cleanup/
 
 # macOS
 .DS_Store
