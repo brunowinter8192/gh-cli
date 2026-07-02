@@ -8,7 +8,7 @@ Supersedes the upvote-resort behavior in `get_discussion.py` (the internal fetch
 - `sort_comments()` — Python-side re-sort of fetched comments by `upvoteCount` desc (active under the "upvotes" default).
 - `comment_limit` default = 50.
 
-## Current (IST → see `decisions/discussion_indexing.md`)
+## Current State (see `decisions/discussion_indexing.md`)
 
 - No `comment_sort`; comments render in the **natural chronological order** the GitHub API returns.
 - `comment_limit` default = **100**.

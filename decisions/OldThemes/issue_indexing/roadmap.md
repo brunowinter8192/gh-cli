@@ -12,7 +12,7 @@ Conceptual frame: a GitHub **issue** ≈ a Reddit **post** (discussion layer →
 
 - **Issues only.** PRs dropped from the index. Rationale: for closed-product / public-issue-tracker repos (e.g. `anthropics/claude-code`) external PRs are rarely merged = low signal (the heaviest PR in the probe was a community Rust-rewrite, 2022 files, never to be merged). Empirical: across 97 extracted real gh-cli invocations, `get_pr` / `get_pr_files` / `list_repo_prs` = 0 calls.
 - Discussions / Commits / Releases: deferred, not in the first index.
-- PR **tools** in the CLI (`list_repo_prs`, `get_pr`, `get_pr_files`): DECIDED — remove from the CLI entirely (never used: 0 calls; out of the index anyway). Executed in the feature-build block; on removal, `tool_design.md` / `api_strategy.md` / `delivery.md` IST drop from 20→17 tools, 17→14 REST.
+- PR **tools** in the CLI (`list_repo_prs`, `get_pr`, `get_pr_files`): DECIDED — remove from the CLI entirely (never used: 0 calls; out of the index anyway). Executed in the feature-build block; on removal, `tool_design.md` / `api_strategy.md` / `delivery.md` Current State drops from 20→17 tools, 17→14 REST.
 
 ## Empirical findings (this session — `anthropics/claude-code`, query "streaming")
 

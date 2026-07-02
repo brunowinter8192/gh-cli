@@ -29,6 +29,6 @@ Kept the existing REST search; appended ONE batched aliased GraphQL call (`r0: r
 - `search_repos "fastapi"` → 30 enriched lines, both `(off)` variants present (e.g. `zhanymkanov/fastapi-best-practices · ⭐17479 · issues:60 · discussions:0 (off)`).
 - `search_code "... repo:anthropics/claude-code"` → `## Repos (1 unique)` + `anthropics/claude-code · ⭐131774 · issues:65172 · discussions:0 (off)` — motivating case confirmed.
 
-## Quellen
+## Sources
 
 - `gh-cli-reference`: `docs_github_com_en_graphql_reference_repos.md`, `docs_github_com_en_rest_repos_repos.md`, `docs_github_com_en_rest_issues_issues.md` (PR-as-issue note), `docs_github_com_en_graphql_guides_using_the_graphql_api_for_discussions.md`.

@@ -10,7 +10,7 @@ Flow: query → max-3-keyword repo-scoped search → top-N issue numbers → in-
 ## Decisions
 
 ### N = 30 (default `--limit`)
-Rationale: COVERAGE, not latency (user: 11min for 100 is acceptable). Top-30 by GitHub relevance carries the signal; rank 31-100 adds no marginal insight. Flag-overridable. "31-100 adds nothing" is plausible but UNMEASURED — see `decisions/issue_indexing.md` SOLL.
+Rationale: COVERAGE, not latency (user: 11min for 100 is acceptable). Top-30 by GitHub relevance carries the signal; rank 31-100 adds no marginal insight. Flag-overridable. "31-100 adds nothing" is plausible but UNMEASURED — see `decisions/issue_indexing.md` Open Questions.
 
 ### Query engineering: max 3 keywords, fallback 3→2→1
 - Skill mandates MAX 3 keywords; wrapper hard-caps `query.split()[:3]`.

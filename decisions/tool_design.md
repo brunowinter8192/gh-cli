@@ -1,6 +1,6 @@
 # Tool Design
 
-## Status Quo (IST)
+## Current State
 
 - 14 tools registered in `cli.py` (argparse subcommands); 9 are research/query tools (search_repos, search_code, get_repo_tree, get_file_content, repo_freshness, download_files, index_issues, index_discussions, index_releases), 5 are issue-management commands (create_issue, update_issue, delete_issue, list_issues, get_issue)
 - `get_issue` exposed as CLI subcommand (owner/repo/number → title/state/body); also called internally by `index_issues.py`
@@ -17,9 +17,9 @@
 - `get_file_content` supports `offset`/`limit` for line-range reads and `metadata_only` mode; implementation: `GET /repos/{o}/{r}/contents/{path}` with three size tiers — ≤1 MB: base64 inline decode (offset/limit apply); 1–100 MB: stream `download_url` to `/tmp/gh-cli_{owner}_{repo}_{path}` via `requests` chunked streaming, return path (offset/limit do not apply — caller reads the /tmp file locally); >100 MB: return error (GitHub API hard limit, no download possible). `metadata_only` works for all sizes.
 - `get_repo_tree` one-level directory traversal (depth=1 always); implementation: GraphQL one-shot (`repository.object(expression)` → `Tree.entries`); metadata block (description/primaryLanguage/languages) on root call only; `--path` is the single exposed param; no depth/pattern/blob-reading
 
-## Evidenz
+## Evidence
 
-No benchmarks run. Query truncation added after observing GitHub Search returning 0 results for multi-word queries.
+Query truncation added after observing GitHub Search returning 0 results for multi-word queries.
 
 **GraphQL traversal probes** (`dev/repo_exploration/`):
 - Script: `probe_graphql_explore.py` — GraphQL one-shot depth=1 tree traversal; production shape (tree-only, metadata-on-root, single expression param).
@@ -29,10 +29,6 @@ No benchmarks run. Query truncation added after observing GitHub Search returnin
 
 **search_code content-term constraint** (confirmed via probe runs): `search_code` forwards qualifiers (filename:/extension:/path:/language:) but GitHub code search requires ≥1 free-text content term — a qualifier-only query is rejected. Pure name-only structural find (equivalent to `find -name`) is not achievable via `search_code`. Scope: default branch only, files <384KB, rate-limited to 10 req/min.
 
-## Offene Fragen
+## Open Questions
 
 - Should `list_issues` expose a `--page` parameter? Currently paginates internally; no `--page` param exposed.
-
-## Quellen
-
-None indexed.

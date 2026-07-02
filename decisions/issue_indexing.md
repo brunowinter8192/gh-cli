@@ -1,6 +1,6 @@
 # Issue Indexing (index_issues)
 
-## Status Quo (IST)
+## Current State
 - Tool `index_issues` (`index_issues_workflow()` in `src/github/index_issues.py`), gh-cli subcommand: `index_issues <query> <repo> [--limit 30]`.
 - Query: hard-capped to 3 keywords (`query.split()[:3]`); 0-result fallback drops last keyword 3→2→1, then errors; empty/whitespace query → guard error.
 - Search: `search_raw()` → `GET /search/issues?q="<kw> repo:<repo> is:issue"`, `per_page=min(limit,100)`, relevance order; returns top-`limit` issue numbers.
@@ -9,7 +9,7 @@
 - `DEFAULT_LIMIT = 30`. No sleeps. Auth via `build_headers` header (no token in artifacts).
 - Retrieval of indexed issues: `rag-cli search_hybrid "<terms>" github_issues`.
 
-## Evidenz
+## Evidence
 Indexing baseline (this session — `workflow.py index-dir` on 100 staged `anthropics/claude-code` "streaming" issues, embedding-8b; raw log `/tmp/gh_index.log`, one-off run not a persisted dev/ report):
 - 100 issues → 606 chunks (avg 6.06/issue); real 706s (~11.8 min), user 4.4s → embedding-server-bound (~7s/issue, ~1.16s/chunk). 0 skipped, 0 adopted.
 - Fetch: 2 core calls/issue; 200 for 100 = ~4% of 5000/hr core budget. Embedding dominates; search never the bottleneck.
@@ -29,12 +29,12 @@ Indexing baseline (this session — `workflow.py index-dir` on 100 staged `anthr
 
 Noise breakdown: 38 `<img>` tags (mix of `width+height+alt+src` and `width+alt+src` variants — both caught by `<img\b[^>]*>`), 12 markdown images (`![image](github.com/.../assets/<uuid>)` without file extension — caught by `[^)]+` broad pattern), 2 Cloudflare/Datadome opaque cookie blobs >1000 chars (stripped by `\S{1000,}` net in patchright__76 and curl_cffi__463). False-positive guard: `[^)]+` (non-empty URL) prevents matching literal `![]()` code examples in prose (confirmed in MinerU__4986 discussion corpus). Real issue text (EN/CN descriptions, error messages, code blocks, stack traces) intact across all 18 changed files.
 
-## Offene Fragen
+## Open Questions
 - Does rank 31-100 add marginal insight at N=30? Unmeasured — a recall eval (index top-100, representative queries, check whether any answer comes from rank 31-100) would confirm.
 - Multi-word issue-search AND/OR semantics on GitHub — empirical check outstanding.
 - Wrapper's internal index-dir is synchronous (blocks ~N×7s for large N) — async/background variant for big N?
 - Freshness / re-index cadence / purge policy for github_issues (undefined).
 - Shared `github_issues` collection for all repos, or per-repo collections?
 
-## Quellen
+## Sources
 - `decisions/OldThemes/issue_indexing/roadmap.md`, `decisions/OldThemes/issue_indexing/wrapper_build.md`

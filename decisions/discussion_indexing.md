@@ -1,6 +1,6 @@
 # Discussion Indexing (index_discussions)
 
-## Status Quo (IST)
+## Current State
 - Tool `index_discussions` (`index_discussions_workflow()` in `src/github/index_discussions.py`), gh-cli subcommand: `index_discussions <query> <repo> [--limit 30]`.
 - Query: hard-capped to 3 keywords (`query.split()[:3]`); 0-result fallback drops last keyword 3→2→1, then errors; empty/whitespace query → guard error.
 - Search: `search_discussions_raw()` → GraphQL `search(query: "<kw> repo:<repo>", type: DISCUSSION, first: limit)`; returns `(discussionCount, numbers[:limit])`. `repo:` injection confirmed working (probe: `memory repo:gastownhall/beads` returned all 23 beads discussions).
@@ -13,7 +13,7 @@
 - `get_discussion_workflow()` signature: `(owner, repo, number, comment_limit=100)` — `comment_sort` removed; comments rendered in natural chronological order (GitHub GraphQL `comments(first:N)` returns creation-order); `comments(first: $commentLimit)` cap is `min(comment_limit, 100)` (API per-page max).
 - Retrieval of indexed discussions: `rag-cli search_hybrid "<terms>" github_discussions`.
 
-## Evidenz
+## Evidence
 
 Probe on `gastownhall/beads` (2026-05-30). Report: `decisions/OldThemes/discussion_indexing/probe_beads_2026-05-30.md`. Dataset: 23 discussions, full corpus.
 
@@ -96,11 +96,11 @@ Per-file breakdown: MinerU__4820 (403 chars — Chinese DOSU_FOOTER_TEXT × 2, i
 
 Per-file breakdown: MinerU__5076 (93 chars — `Hi @fancyerii! … helping the OpenDataLab team.`); MinerU__5129 (93 chars — `Hi @daisail0! … helping the OpenDataLab team.`); MinerU__4820 (86 chars — `Hi @mmMm128! … helping the MinerU team.`); MinerU__4878 (59 chars — `Hi @qyb320! I'm Dosu&nbsp;and I'm helping the MinerU team.` — `&nbsp;` normalization required). 2 user-quoted attribution lines in MinerU__3309 and MinerU__4820 correctly preserved (stripped form starts with `@user**:`, not `Hi @`).
 
-## Offene Fragen
+## Open Questions
 - Freshness / re-index cadence / purge policy for `github_discussions` (undefined, same open question as `github_issues`).
 - Shared collection for all repos or per-repo collections? (same open question as `github_issues`).
 - No floor currently applied (all 23 beads threads indexed). For large repos with >50 discussions and >40% zero-comment fraction, a `comment_count >= 1` floor may be appropriate.
 
-## Quellen
+## Sources
 - `decisions/OldThemes/discussion_indexing/probe_beads_2026-05-30.md`
 - `decisions/OldThemes/discussion_indexing/feasibility.md`

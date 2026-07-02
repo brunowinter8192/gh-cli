@@ -1,47 +1,27 @@
-# github/ — GitHub Research CLI
+# gh-cli/ (root)
 
 ## Role
+Argparse entry point for the GitHub Research CLI. `cli.py` registers 14 subcommands and routes each to a `<tool>_workflow()` in `src/github/`. Touch this file only to add/remove a subcommand or change dispatch/error-handling; tool logic lives in `src/github/`, not here.
 
-CLI tool delivering 14 GitHub commands: 9 research commands (search, browse, repo freshness, file download, issues, discussions, releases) plus 5 issue-management commands (3 write: create, update, delete; 2 read: list, get). `cli.py` is the argparse entry point; each subcommand delegates to a `<tool>_workflow()` function in `src/github/`. Delivered to Claude Code sessions via the `gh-cli` wrapper and `gh-cli-search` skill — invoked through Bash calls, no MCP protocol.
-
-## Entry Points
-
-- `cli.py` → 14 argparse subcommands; each imports `<tool>_workflow` from `src.github.<tool>`
-- `~/.local/bin/gh-cli` wrapper → resolves to `python cli.py`; installed externally
-- `skills/gh-cli-search/SKILL.md` → CC skill loaded by `.claude-plugin/plugin.json`; drives `gh-cli` calls from Claude Code sessions via Bash
-
-## Directory Map
-
-| Subdir | Role | LOC | Modules |
-|--------|------|-----|---------|
-| `src/github/` | Tool + infrastructure modules | ~1850 | 21 |
-| `skills/gh-cli-search/` | CC skill config + Bash usage docs | — | 1 |
-| `decisions/` | Pipeline decision records + OldThemes history | — | — |
-| `dev/` | Dev suites per area (cleaning, indexing, exploration, usage extraction) + legacy endpoint tests | — | — |
-| `.claude-plugin/` | Plugin metadata (skills-only) | — | 1 |
+## Public Interface
+No package `__init__` — `cli.py` is a standalone script. Entry path: `~/.local/bin/gh-cli` wrapper → `python cli.py <cmd> [args]`; also loaded by Claude Code via the `gh-cli-search` skill through Bash.
 
 ## Flow
+1. `gh-cli <cmd> [args]` → wrapper runs `python cli.py <cmd> [args]`.
+2. `_build_parser()` parses args; `_dispatch()` routes to `<tool>_workflow(params)`.
+3. Workflow returns `list[TextContent]`; `main()` prints `result[0].text` to stdout.
+4. `BrokenPipeError` → devnull dup2 + exit 0; any other `Exception` → `Error: {e}` to stderr + exit 1.
 
-1. `gh-cli <cmd> [args]` — wrapper invokes `python cli.py <cmd> [args]`
-2. `cli.py` parses args, dispatches to `<tool>_workflow(params)`
-3. Workflow calls fetch function — REST via `requests` + `build_headers()` / GraphQL via `graphql_query()`
-4. Format function transforms raw API JSON to human-readable text
-5. Workflow returns `list[TextContent]`
-6. `cli.py` prints `result[0].text` to stdout; on any `Exception` → `Error: {str(e)}` to stderr + exit 1; `BrokenPipeError` → devnull dup2 + exit 0 (pipe-to-head stays clean)
+## Modules
 
-## Shared State
+### cli.py (209 LOC)
 
-| Owner | State | Who reads |
-|-------|-------|-----------|
-| `client.py` | `GITHUB_TOKEN` (str, module-level) — resolved once at import via `_resolve_token()` | all 12 REST modules (11 visible + `get_issue_comments`) via `build_headers()` / `request()`; `graphql_client.py` at import |
+**Purpose:** Argparse CLI entry — build parser (14 subparsers), dispatch to workflows, central error handling.
+**Reads:** `sys.argv` (argparse); prepends its own dir to `sys.path` at import so `src.github.*` resolves from any cwd.
+**Writes:** `result[0].text` to stdout; `Error: {e}` to stderr on failure; exit codes 0/1.
+**Called by:** `~/.local/bin/gh-cli` wrapper; `gh-cli-search` skill via Bash.
+**Calls out:** all 14 `<tool>_workflow` functions from `src.github.*`; stdlib `argparse`, `os`, `sys`.
 
-## Root-Level Files
-
-| File | LOC | Why at root |
-|------|-----|-------------|
-| `cli.py` | 209 | Entry point — `_build_parser()` registers all 14 subparsers; `_dispatch(args, parser)` routes to `<tool>_workflow()`; `main()` orchestrates (12 LOC); central error handler (BrokenPipeError + Exception) |
-| `requirements.txt` | 2 | Dependencies: `mcp` (TextContent type), `requests` |
-
-## Subdir DOCS
-
-- [src/github/DOCS.md](src/github/DOCS.md) — Module map for 16 tool modules + 2 cleaning/utility modules + 3 infrastructure modules (21 total)
+## Gotchas
+- `sys.path.insert(0, ...)` at line 6 runs before the `src.github.*` imports — required so the CLI works regardless of invocation cwd. Do not reorder.
+- `BrokenPipeError` is caught first and swallowed (devnull dup2 + exit 0) so `gh-cli ... | head` stays clean; `SystemExit`/`KeyboardInterrupt` pass through unhandled.

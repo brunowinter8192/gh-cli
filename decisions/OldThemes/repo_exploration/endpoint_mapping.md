@@ -60,7 +60,7 @@ Browse mode = ls. Pattern mode = find -name. No per-entry language or line count
 - Is `/community/profile` `files` map reliably populated (paths vs just presence flags)? Check in Phase B.
 - Is adding tool surface justified? The user removed `get_repo` for no use-case — any new tool must demonstrate a concrete orientation benefit that skill guidance alone cannot provide.
 
-## Quellen
+## Sources
 
 - `gh-cli-reference: docs_github_com_en_rest_repos_contents` (readme, contents endpoints)
 - `gh-cli-reference: docs_github_com_en_rest_metrics_community` (community/profile endpoint)

@@ -1,38 +1,38 @@
 # dev/repo_exploration/
 
-## Problem
+## Role
+Probe + smoke-test suite for the repo-orientation tools. Validated the GraphQL one-shot depth=1 tree traversal now in `get_repo_tree` (production shape: tree-only, metadata-on-root, single expression param) and the three-tier size handling in `get_file_content`. Backs `decisions/repo_exploration.md` and `decisions/tool_design.md`.
 
-`gh-cli` has no "understand an unknown repo top-down" orientation flow. `get_repo_tree` (ls/find) and `get_file_content` (cat) exist, but there is no strategy for: what files matter, what the tech stack is, where the anchor documents live. This suite probes GitHub endpoints that may fill that gap.
+## Modules
 
-Production code status quo: `get_repo_tree` uses a 3-REST-call chain (default-branch → SHA → `/git/trees?recursive`); `get_file_content` is `/contents/{path}` + base64 decode. See `decisions/tool_design.md` IST.
+### probe_client.py (79 LOC)
 
-Open question under investigation: can a set of cheaper / higher-signal calls replace or augment the current approach for orientation tasks? Decision deferred to next session after probe results.
+**Purpose:** Shared auth/HTTP infrastructure — verbatim copy of `src/github` token resolution (`_read_zshrc_token`/`_resolve_token`/`build_headers`) and `graphql_query()` for dev/-self-containment. Not a runnable probe.
+**Reads:** `~/.zshrc` / env for the GitHub token.
+**Writes:** exports headers + `graphql_query()` to the other probes.
+**Called by:** `probe_graphql_explore.py` (imports auth helpers).
+**Calls out:** `requests`; stdlib.
 
-## Investigation
+---
 
-### Code Analysis
+### probe_graphql_explore.py (124 LOC)
 
-- `src/github/client.py` — token resolution (`_read_zshrc_token` / `_resolve_token`) + `build_headers()` copied verbatim into `probe_client.py` for dev/-self-containment (hook `block_dev_imports_src` forbids `from src.` in dev/ files — intentional duplication, not drift).
-- `src/github/graphql_client.py` — `graphql_query(query, variables)` copied verbatim into `probe_client.py` for same reason.
+**Purpose:** GraphQL one-shot depth=1 tree traversal — per-entry name/type/language/lineCount/size; repository metadata (description/primaryLanguage/languages) printed only for root expressions (`HEAD:`), omitted for sub-paths. Blob expression → redirect message, no file read.
+**Reads:** GitHub GraphQL API via `probe_client.py`; args `<owner> <repo> [expression]`.
+**Writes:** prints to stdout (console diagnostic); `md/graphql_explore.md` (root) + `md/graphql_plugins.md` (sub-path) hold manually-captured output.
+**Called by:** run manually (dev entry point).
+**Calls out:** imports auth from `probe_client.py`.
 
-### External Research
+---
 
-| Source | Result | Relevance |
-|--------|--------|-----------|
-| GitHub GraphQL: TreeEntry.lineCount / .language | ✅ | Per-entry language+lineCount — not available from REST `/git/trees` |
+### probe_large_file.py (101 LOC)
 
-### Hypotheses
+**Purpose:** Smoke test for `get_file_content` three-tier size handling — Tier 1 (≤1 MB base64 inline, octocat/Hello-World README), Tier 2 (1–100 MB stream to /tmp, MuRongPIG/Proxy-Master http.txt), Tier 3 (>100 MB error, simulated via `format_toolarge_response` on a fake 200 MB dict). Invokes `cli.py` via subprocess (hook forbids `from src.` in dev/).
+**Reads:** live GitHub via `cli.py get_file_content`; `/tmp/gh-cli_MuRongPIG_Proxy-Master_http.txt` on disk to verify the Tier-2 download.
+**Writes:** prints per-tier PASS/FAIL to stdout; exits 1 on any failure.
+**Called by:** run manually (dev entry point).
+**Calls out:** stdlib `subprocess`, `os`, `sys`.
 
-| Hypothesis | Status | Evidence |
-|------------|--------|----------|
-| GraphQL one-shot wins on token cost vs 3-REST chain | Unverified | lineCount+language per entry suggests higher signal density; measure next session |
-
-## Scripts
-
-**`probe_client.py`** — shared auth/HTTP infrastructure (verbatim copy of src/ auth for dev/-self-containment). Not a runnable probe.
-
-**`probe_graphql_explore.py`** — Tree-only, depth=1. GraphQL one round-trip returns per-entry: name, type, language, lineCount, size. Repository metadata (description, primaryLanguage, languages) printed only for root expressions (path after ":" is empty, e.g. `"HEAD:"`); omitted for sub-path expressions to avoid repeated noise. If expression resolves to a Blob, prints a redirect message — does NOT read file content. Prints to stdout (console diagnostic tool); `md/` holds manually-captured probe output.
-```
-.venv/bin/python dev/repo_exploration/probe_graphql_explore.py <owner> <repo> [expression]
-# expression examples: "HEAD:" (root, prints metadata), "HEAD:plugins/" (subtree, table only)
-```
+## Gotchas
+- `probe_client.py` is a verbatim copy of `src/github` auth (`block_dev_imports_src` hook forbids `from src.` in dev/) — update it when the source auth changes (duplication, not drift).
+- The probes print to console; `md/` holds manually-captured snapshots, not script-written report files.

@@ -224,3 +224,11 @@
 **Writes:** per-discussion MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
 **Calls out:** `mcp.types`; imports from `discussion_cleaning.py`, `graphql_client.py`, `get_discussion.py`.
+
+---
+
+## State
+`client.py` owns `GITHUB_TOKEN` (str, module-level) — resolved once at import via `_resolve_token()` (zshrc `GH_TOKEN` → env `GH_TOKEN` → env `GITHUB_TOKEN`). Never mutated after import. Read by all 12 REST modules via `build_headers()`/`request()` and by `graphql_client.py` (imported directly; `repo_counts.py` transitively). No other cross-module state.
+
+## Gotchas
+- `text_cleaning.py` / `discussion_cleaning.py` have verbatim inline copies inside `dev/content_cleaning/` scripts — the `block_dev_imports_src` hook forbids `from src.` in dev/. When the source strip logic changes, update the dev copies in the same pass (duplication, not drift).
