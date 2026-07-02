@@ -15,13 +15,13 @@ from src.github.get_issue import get_issue_workflow
 from src.github.get_issue_comments import get_issue_comments_workflow
 # From text_cleaning.py: generic image/data-URI/no-space strips (additive, after issue-specific strips)
 from src.github.text_cleaning import strip_generic_noise
+# From config.py: shared RAG root path and default fetch/index limit
+from src.github.config import RAG_ROOT, DEFAULT_LIMIT
 
 logger = logging.getLogger(__name__)
 
-RAG_ROOT    = Path("/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli")
 RAG_DOC_DIR = RAG_ROOT / "data" / "documents" / "github_issues"
 COLLECTION  = "github_issues"
-DEFAULT_LIMIT = 30
 
 
 # ORCHESTRATOR

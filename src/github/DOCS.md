@@ -2,7 +2,7 @@
 
 ## Role
 
-21 modules: 16 tool modules (14 visible CLI subcommands: 11 REST + 3 GraphQL; 1 internal REST helper `get_issue_comments`; 1 internal GraphQL helper `get_discussion`), 2 cleaning/utility modules (`text_cleaning`, `discussion_cleaning`), and 3 infrastructure modules (`client`, `graphql_client`, `repo_counts`). Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+22 modules: 16 tool modules (14 visible CLI subcommands: 11 REST + 3 GraphQL; 1 internal REST helper `get_issue_comments`; 1 internal GraphQL helper `get_discussion`), 2 cleaning/utility modules (`text_cleaning`, `discussion_cleaning`), and 4 infrastructure modules (`client`, `graphql_client`, `repo_counts`, `config`). Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives; `config.py` holds shared RAG constants. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -16,6 +16,16 @@
 4. Workflow wraps string in `TextContent`, returns `list[TextContent]`
 
 ## Modules
+
+### config.py (5 LOC)
+
+**Purpose:** Shared RAG-side constants — `RAG_ROOT` (local rag-cli install path) and `DEFAULT_LIMIT` (default fetch/index count) used identically across the three index modules.
+**Reads:** nothing — pure constants.
+**Writes:** exports `RAG_ROOT` (Path), `DEFAULT_LIMIT` (int).
+**Called by:** `index_issues.py`, `index_discussions.py` (both constants); `index_releases.py` (`RAG_ROOT` only).
+**Calls out:** stdlib (`pathlib`).
+
+---
 
 ### client.py (70 LOC)
 
@@ -133,7 +143,7 @@
 **Reads:** GitHub Search Issues API + `get_issue_workflow` + `get_issue_comments_workflow` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
 **Writes:** per-issue MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`, `text_cleaning.py` (`strip_generic_noise` applied additively after `strip_noise`/`strip_comments_noise`).
+**Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`, `text_cleaning.py` (`strip_generic_noise` applied additively after `strip_noise`/`strip_comments_noise`), `config.py` (`RAG_ROOT`, `DEFAULT_LIMIT`).
 
 ---
 
@@ -143,7 +153,7 @@
 **Reads:** `GET /repos/{o}/{r}/releases?per_page=100`; globs doc dir for MD count; `rag-cli list_collections` for chunk total.
 **Writes:** per-release MDs to `RAG_ROOT/data/documents/github_releases/` as `<tag>.md` (fixed collection, not per-repo path); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit from either `delete` (janitor) or `index` — raise is before rmtree so old state stays intact on busy; returns `list[TextContent]` summary with follow-up `rag-cli search_hybrid` command.
 **Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`, `shutil`, `subprocess`.
+**Calls out:** `requests`, `mcp.types`, `shutil`, `subprocess`; imports `RAG_ROOT` from `config.py`.
 
 ---
 
@@ -223,7 +233,7 @@
 **Reads:** GitHub GraphQL Search API (repo-scoped `search(type:DISCUSSION)`) + `get_discussion_workflow()` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
 **Writes:** per-discussion MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
-**Calls out:** `mcp.types`; imports from `discussion_cleaning.py`, `graphql_client.py`, `get_discussion.py`.
+**Calls out:** `mcp.types`; imports from `discussion_cleaning.py`, `graphql_client.py`, `get_discussion.py`, `config.py` (`RAG_ROOT`, `DEFAULT_LIMIT`).
 
 ---
 
