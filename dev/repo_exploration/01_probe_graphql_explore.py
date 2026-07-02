@@ -7,12 +7,16 @@ expressions (path component after ":" is empty, e.g. "HEAD:").
 If expression resolves to a Blob, prints a redirect message — does NOT read content.
 
 Usage (from project root):
-  .venv/bin/python dev/repo_exploration/probe_graphql_explore.py <owner> <repo> [expression]
+  .venv/bin/python dev/repo_exploration/01_probe_graphql_explore.py <owner> <repo> [expression]
   # expression examples: "HEAD:" (root), "HEAD:plugins/" (subtree)
 """
 # INFRASTRUCTURE
 import argparse
+from pathlib import Path
+
 from probe_client import graphql_query
+
+REPORT_DIR = Path(__file__).parent / "md"
 
 _QUERY = """
 query ExploreRepo($owner: String!, $name: String!, $expression: String!) {
@@ -56,7 +60,10 @@ def main():
     parser.add_argument("expression", nargs="?", default="HEAD:",
                         help='Git expression (default: "HEAD:" = root tree)')
     args = parser.parse_args()
-    print(fetch_and_print(args.owner, args.repo, args.expression))
+    output = fetch_and_print(args.owner, args.repo, args.expression)
+    print(output)
+    report_path = write_report(output, args.expression)
+    print(report_path)
 
 
 # FUNCTIONS
@@ -99,6 +106,16 @@ def fetch_and_print(owner: str, repo: str, expression: str) -> str:
     lines.append(format_tree(obj.get("entries", [])))
 
     return "\n".join(lines)
+
+
+# Write probe output to the report dir — root call vs sub-path call get distinct filenames
+def write_report(output: str, expression: str) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    is_root = expression.split(":", 1)[1] == ""
+    label = "explore" if is_root else "plugins"
+    report_path = REPORT_DIR / f"01_graphql_{label}.md"
+    report_path.write_text(output + "\n")
+    return report_path
 
 
 # Format tree entries as a table
