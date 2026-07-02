@@ -22,9 +22,9 @@
 Query truncation added after observing GitHub Search returning 0 results for multi-word queries.
 
 **GraphQL traversal probes** (`dev/repo_exploration/`):
-- Script: `probe_graphql_explore.py` — GraphQL one-shot depth=1 tree traversal; production shape (tree-only, metadata-on-root, single expression param).
-- Root call output: `md/graphql_explore.md` — metadata block + 17-entry root tree for `anthropics/claude-code`; one round-trip.
-- Sub-path call output: `md/graphql_plugins.md` — tree-only (no metadata) for `HEAD:plugins/`; 14 entries, one round-trip.
+- Script: `01_probe_graphql_explore.py` — GraphQL one-shot depth=1 tree traversal; production shape (tree-only, metadata-on-root, single expression param).
+- Root call output: `md/01_graphql_explore.md` — metadata block + 17-entry root tree for `anthropics/claude-code`; one round-trip.
+- Sub-path call output: `md/01_graphql_plugins.md` — tree-only (no metadata) for `HEAD:plugins/`; 14 entries, one round-trip.
 - GraphQL schema (TreeEntry fields lineCount/language/size): gh-cli-reference: docs_github_com_en_graphql_reference_git.
 
 **search_code content-term constraint** (confirmed via probe runs): `search_code` forwards qualifiers (filename:/extension:/path:/language:) but GitHub code search requires ≥1 free-text content term — a qualifier-only query is rejected. Pure name-only structural find (equivalent to `find -name`) is not achievable via `search_code`. Scope: default branch only, files <384KB, rate-limited to 10 req/min.

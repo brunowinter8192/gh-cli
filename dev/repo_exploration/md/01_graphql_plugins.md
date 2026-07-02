@@ -1,8 +1,3 @@
-# probe_graphql_explore — anthropics/claude-code HEAD:plugins/
-
-`/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/gh-cli/.venv/bin/python dev/repo_exploration/probe_graphql_explore.py anthropics claude-code "HEAD:plugins/"`
-
-```
 type: Tree
 
   name                                     type   lang               lines      size
@@ -21,4 +16,3 @@ type: Tree
   pr-review-toolkit                        tree   -                      -         0
   ralph-wiggum                             tree   -                      -         0
   security-guidance                        tree   -                      -         0
-```
