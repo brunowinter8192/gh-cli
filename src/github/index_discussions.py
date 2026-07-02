@@ -12,13 +12,13 @@ from src.github.discussion_cleaning import strip_noise
 from src.github.graphql_client import graphql_query
 # From get_discussion.py: fetch and format a single GitHub discussion with comments
 from src.github.get_discussion import get_discussion_workflow
+# From config.py: shared RAG root path and default fetch/index limit
+from src.github.config import RAG_ROOT, DEFAULT_LIMIT
 
 logger = logging.getLogger(__name__)
 
-RAG_ROOT    = Path("/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli")
 RAG_DOC_DIR = RAG_ROOT / "data" / "documents" / "github_discussions"
 COLLECTION  = "github_discussions"
-DEFAULT_LIMIT = 30
 
 SEARCH_QUERY = """
 query($query: String!, $first: Int!) {

@@ -10,10 +10,10 @@ from mcp.types import TextContent
 
 # From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
+# From config.py: shared RAG root path
+from src.github.config import RAG_ROOT
 
 logger = logging.getLogger(__name__)
-
-RAG_ROOT   = Path("/Users/brunowinter2000/Documents/ai/Meta/ClaudeCode/cli/rag-cli")
 
 COLLECTION = "github_releases"
 
