@@ -1,7 +1,7 @@
 # dev/content_cleaning/
 
 ## Role
-Audit, validate, and re-clean the noise strip for `index_discussions` and `index_issues`. Backs `decisions/content_cleaning.md`, `decisions/discussion_indexing.md`, `decisions/issue_indexing.md`. Operates on the built MD corpora (`github_discussions/` and `github_issues/` doc dirs).
+Audit, validate, and re-clean the noise strip for `index_discussions` and `index_issues`. Backs `process-docs/content_cleaning/`, `process-docs/discussion_indexing/`, `process-docs/issue_indexing/`. Operates on the built MD corpora (`github_discussions/` and `github_issues/` doc dirs).
 
 ## Modules
 

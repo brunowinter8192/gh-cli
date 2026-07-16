@@ -8,7 +8,7 @@ Supersedes the upvote-resort behavior in `get_discussion.py` (the internal fetch
 - `sort_comments()` — Python-side re-sort of fetched comments by `upvoteCount` desc (active under the "upvotes" default).
 - `comment_limit` default = 50.
 
-## Current State (see `decisions/discussion_indexing.md`)
+## Post-change state (as of 2026-06-11)
 
 - No `comment_sort`; comments render in the **natural chronological order** the GitHub API returns.
 - `comment_limit` default = **100**.
@@ -29,4 +29,4 @@ Supersedes the upvote-resort behavior in `get_discussion.py` (the internal fetch
 
 `index_discussions` / `index_issues` silently swallowed RAG lock contention: when the rag DB was busy (a concurrent `list_documents` on `searxng_crypto`), the index step exited non-zero and the tool reported `New chunks added: 0` / `0 chunks total` while the per-thread MDs were already written to disk. Recovered by re-running `rag-cli index --collection github_discussions` (24 files → 96 chunks).
 
-**Resolution (2026-06-11):** loud error, NOT a retry — see `decisions/OldThemes/index_failure_surfacing_2026-06-11.md`. The index step now raises `RuntimeError` on any non-zero `rag-cli index` exit. Retry/backoff was explicitly rejected (user direction): rag-cli is always available, manual re-index when free is trivial; the only unacceptable behavior is silent-fail-and-index-nothing.
+**Resolution (2026-06-11):** loud error, NOT a retry. The index step now raises `RuntimeError` on any non-zero `rag-cli index` exit. Retry/backoff was explicitly rejected (user direction): rag-cli is always available, manual re-index when free is trivial; the only unacceptable behavior is silent-fail-and-index-nothing.

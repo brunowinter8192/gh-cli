@@ -1,6 +1,6 @@
 # index_discussions Wrapper — Build & Decisions (2026-05-30)
 
-Port session implementing the discussion-indexing wrapper whose design was converged by the probe (`probe_beads_2026-05-30.md`). Mirrors `index_issues` throughout; this file documents what was decided + built.
+Port session implementing the discussion-indexing wrapper whose design was converged by the beads probe. Mirrors `index_issues` throughout; this file documents what was decided + built.
 
 ## Built
 
@@ -30,7 +30,7 @@ Flow: query → max-3-keyword repo-scoped GraphQL search → top-N discussion nu
 
 Deregistered: `search_discussions`, `list_discussions`, `get_discussion`.
 Added: `index_discussions`.
-Rationale crystallized in `decisions/OldThemes/rag_vs_cli_split/tool_surface_2026-05-30.md` — the 3 discussion primitives existed only because `index_discussions` didn't yet. Once the RAG-indexing command covers the semantic-retrieval use case, the individual primitives have no standalone value on the CLI surface.
+Rationale: the 3 discussion primitives existed only because `index_discussions` didn't yet. Once the RAG-indexing command covers the semantic-retrieval use case, the individual primitives have no standalone value on the CLI surface.
 
 ## Constants vs index_issues
 
@@ -46,4 +46,4 @@ Discussion fetch is simpler than issues — one GraphQL call returns body + comm
 
 ## Probe Baseline
 
-23 beads threads, 116 KB written, 5.6% strip reduction. `isAnswered = 0/23` — dedup path not triggered for this corpus but implemented correctly. Full numbers in `probe_beads_2026-05-30.md`.
+23 beads threads, 116 KB written, 5.6% strip reduction. `isAnswered = 0/23` — dedup path not triggered for this corpus but implemented correctly.

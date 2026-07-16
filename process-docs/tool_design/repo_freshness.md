@@ -1,6 +1,6 @@
 # repo_freshness — freshness signal: emission site
 
-Process record for the `repo_freshness` tool. Final state lives in `decisions/tool_design.md`.
+Process record for the `repo_freshness` tool. Final state lives in the code (`src/github/repo_freshness.py`) + `src/github/DOCS.md`.
 
 ## Problem
 

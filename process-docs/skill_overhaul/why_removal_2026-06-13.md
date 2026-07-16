@@ -1,10 +1,10 @@
 # SKILL.md Why-Removal — 2026-06-13
 
-Principle reaffirmed: a skill states WHAT + HOW (tools, parameters, landmines, procedure) — NO rationale ("why X is so the way it is"). Rationale lives in `decisions/OldThemes/`. Tool-failure-modes (landmines) are NOT rationale and stay.
+Principle reaffirmed: a skill states WHAT + HOW (tools, parameters, landmines, procedure) — NO rationale ("why X is so the way it is"). Rationale lives in the process-docs history, not the skill. Tool-failure-modes (landmines) are NOT rationale and stay.
 
 ## Audit result
 
-`skills/gh-cli-search/SKILL.md` (309 lines) was already largely why-free after the two prior slimming passes (580 → 457 → 345 → 309). Big design rationales had been externalized to `decisions/OldThemes/` (e.g. `search_code_compaction.md`, `release_indexing/redesign.md`). Only three pure-rationale fragments remained.
+`skills/gh-cli-search/SKILL.md` (309 lines) was already largely why-free after the two prior slimming passes (580 → 457 → 345 → 309). Big design rationales had been externalized to the process-docs history. Only three pure-rationale fragments remained.
 
 ## Cuts
 

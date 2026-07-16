@@ -1,7 +1,7 @@
 # dev/repo_exploration/
 
 ## Role
-Probe + smoke-test suite for the repo-orientation tools. Validated the GraphQL one-shot depth=1 tree traversal now in `get_repo_tree` (production shape: tree-only, metadata-on-root, single expression param) and the three-tier size handling in `get_file_content`. Backs `decisions/repo_exploration.md` and `decisions/tool_design.md`.
+Probe + smoke-test suite for the repo-orientation tools. Validated the GraphQL one-shot depth=1 tree traversal now in `get_repo_tree` (production shape: tree-only, metadata-on-root, single expression param) and the three-tier size handling in `get_file_content`. Backs `process-docs/repo_exploration/` and `process-docs/tool_design/`.
 
 ## Modules
 

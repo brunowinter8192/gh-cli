@@ -25,4 +25,4 @@ Cross-tool decision for `index_issues` / `index_discussions` / `index_releases`:
 
 ## Scope note
 
-Current State captured in `decisions/issue_indexing.md` + `decisions/discussion_indexing.md`. `index_releases` has no dedicated decision file — its janitor/run_index error behavior lives in code + `src/github/DOCS.md`. Same commit also corrected a stale Current-State line in both decision files: the index mechanism was documented as `RAG/venv/bin/python workflow.py index-dir` but the code uses `rag-cli index --collection <X>` (the historical Evidence-baseline line in `issue_indexing.md` was left as-is — it describes a past run with the old mechanism).
+Current state lives in code + `src/github/DOCS.md` (`index_issues`, `index_discussions`, `index_releases` modules). The same commit also corrected a stale current-state line documented elsewhere at the time: the index mechanism had been described as `RAG/venv/bin/python workflow.py index-dir` but the code uses `rag-cli index --collection <X>`.

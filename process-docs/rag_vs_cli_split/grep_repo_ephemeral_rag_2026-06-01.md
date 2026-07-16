@@ -1,15 +1,15 @@
 # grep_repo Failure + Ephemeral-RAG for Aggregated Search (2026-06-01)
 
-Continuation of `tool_surface_2026-05-30.md`. The 2026-05-30 split kept `search_repos`/`search_code`/`grep_repo` as CLI-direct. This file revisits that, triggered by `grep_repo` being the weakest tool on the surface + the persisted-output (po) → bad-agent-grep failure pattern.
+Continuation of the 2026-05-30 tool-surface analysis. That split kept `search_repos`/`search_code`/`grep_repo` as CLI-direct. This file revisits that, triggered by `grep_repo` being the weakest tool on the surface + the persisted-output (po) → bad-agent-grep failure pattern.
 
 ## Trigger
 
-- `grep_repo` = weakest link. Silent false negatives (`search_strategy_fallback.md` DockDoor case). Candidate for removal.
+- `grep_repo` = weakest link. Silent false negatives (the DockDoor false-negative case). Candidate for removal.
 - po problem: aggregated-search output too large → proxy persists to tmp + strips preview → agent greps the tmp file → content-greps for prose/metadata are garbage (`description`/`language` dumps, no value). This is a RULE problem (agent behavior on po), not a hook problem. The proxy preview-strip works correctly.
 
 ## grep_repo Code-Level Diagnosis (corrects the "undiagnosed" hypothesis)
 
-`search_strategy_fallback.md` called the DockDoor false-negative "undiagnosed" and hypothesized "server-side content filtering". **Wrong — the cause is client-side, visible in code.**
+An earlier analysis called the DockDoor false-negative "undiagnosed" and hypothesized "server-side content filtering". **Wrong — the cause is client-side, visible in code.**
 
 `grep_repo_workflow()` (`grep_repo.py`) rebuilds grep from parts: `fetch_default_branch` → `get_tree_sha` → `fetch_tree(recursive=True)` → `filter_by_pattern` → per-file `fetch_file_content` (Contents API) → base64 decode → `re` over lines.
 
@@ -59,5 +59,4 @@ PENDING — gated on GitHub API-docs research. Plan: crawl GitHub API docs (web-
 ## Evidence Sources
 
 - Code: `grep_repo.py`, `grep_file.py`, `get_repo_tree.py` (`filter_by_pattern`, `PATTERN_RESULTS_LIMIT=50`), `get_file_content.py` (`fetch_file_content` Contents API), `search_code.py`, `search_repos.py` (`MAX_OUTPUT_CHARS=80_000`), `client.py` (`RESULTS_PER_PAGE=20`).
-- Prior: `decisions/OldThemes/rag_vs_cli_split/tool_surface_2026-05-30.md`, `decisions/OldThemes/search_strategy_fallback.md` (DockDoor case), `decisions/tool_design.md`.
 - Usage evidence (not yet run): `dev/ghcli_usage/extract_ghcli_calls.py` (extracts real gh-cli calls from Monitor_CC proxy logs).

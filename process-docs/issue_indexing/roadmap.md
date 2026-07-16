@@ -12,7 +12,7 @@ Conceptual frame: a GitHub **issue** ≈ a Reddit **post** (discussion layer →
 
 - **Issues only.** PRs dropped from the index. Rationale: for closed-product / public-issue-tracker repos (e.g. `anthropics/claude-code`) external PRs are rarely merged = low signal (the heaviest PR in the probe was a community Rust-rewrite, 2022 files, never to be merged). Empirical: across 97 extracted real gh-cli invocations, `get_pr` / `get_pr_files` / `list_repo_prs` = 0 calls.
 - Discussions / Commits / Releases: deferred, not in the first index.
-- PR **tools** in the CLI (`list_repo_prs`, `get_pr`, `get_pr_files`): DECIDED — remove from the CLI entirely (never used: 0 calls; out of the index anyway). Executed in the feature-build block; on removal, `tool_design.md` / `api_strategy.md` / `delivery.md` Current State drops from 20→17 tools, 17→14 REST.
+- PR **tools** in the CLI (`list_repo_prs`, `get_pr`, `get_pr_files`): DECIDED — remove from the CLI entirely (never used: 0 calls; out of the index anyway). Executed in the feature-build block; on removal, the tool count drops from 20→17 tools, 17→14 REST.
 
 ## Empirical findings (this session — `anthropics/claude-code`, query "streaming")
 
@@ -35,7 +35,7 @@ Conceptual frame: a GitHub **issue** ≈ a Reddit **post** (discussion layer →
 
 ## Security finding & redaction precondition (this session)
 
-The `streaming` extraction surfaced a token leak. Past sessions used inline `export GH_TOKEN="…" ; gh-cli …` (a workaround for the CC shell-snapshot staleness — see `token_resolution.md`). The Monitor_CC proxy logged those command lines; the extractor copied them verbatim into `ghcli_calls.jsonl`, which then carried the **live** `ghp_…` token (== current zshrc token) plus an old `github_pat_…`. GitHub push-protection blocked the push — the token never reached the remote.
+The `streaming` extraction surfaced a token leak. Past sessions used inline `export GH_TOKEN="…" ; gh-cli …` (a workaround for the CC shell-snapshot staleness). The Monitor_CC proxy logged those command lines; the extractor copied them verbatim into `ghcli_calls.jsonl`, which then carried the **live** `ghp_…` token (== current zshrc token) plus an old `github_pat_…`. GitHub push-protection blocked the push — the token never reached the remote.
 
 Resolution this session: `dev/` is now gitignored (never public); local `main` was reset to the clean origin state and only the public roadmap pushed; the token-bearing commit (`ghcli_calls.jsonl`) stays on the local `dev` branch only.
 

@@ -1,6 +1,6 @@
 # download_files — file-to-disk download tool
 
-Process record for the `download_files` tool. Final state lives in `decisions/tool_design.md`.
+Process record for the `download_files` tool. Final state lives in the code (`src/github/download_files.py`) + `src/github/DOCS.md`.
 
 ## Problem
 

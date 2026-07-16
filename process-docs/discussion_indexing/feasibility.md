@@ -27,8 +27,8 @@ GitHub GraphQL `search(query:...)` honors the same qualifiers as issue search. I
 Endpoint-wise we likely already have what's needed (repo-scoped search + get_discussion).
 
 ## Open questions
-- Does `search(type:DISCUSSION)` honor `repo:`? **RESOLVED** — confirmed working. `memory repo:gastownhall/beads` returned 23/23 beads discussions correctly scoped. See `probe_beads_2026-05-30.md`.
+- Does `search(type:DISCUSSION)` honor `repo:`? **RESOLVED** — confirmed working. `memory repo:gastownhall/beads` returned 23/23 beads discussions correctly scoped.
 - Test repo with discussions? **RESOLVED** — `gastownhall/beads` used; 23 discussions fetched.
 - N for discussions (mirror 30, or different)? **RESOLVED** — beads corpus is 23 total; no floor needed at this scale. For larger repos, cap 30 is appropriate.
-- Noise-stripping for get_discussion's output format? **RESOLVED** — strip implemented in `dev/repo_indexing/fetch_discussions_probe.py`; 5.6% reduction (smaller than issues due to less boilerplate). See probe report for strip rules.
+- Noise-stripping for get_discussion's output format? **RESOLVED** — strip implemented in `dev/repo_indexing/fetch_discussions_probe.py`; 5.6% reduction (smaller than issues due to less boilerplate).
 - Same `github_issues` collection or separate `github_discussions`? **RESOLVED** — separate `github_discussions` collection confirmed.
