@@ -62,8 +62,7 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 - **Index before search** — run `rag-cli search_hybrid` on `github_issues` / `github_discussions` only after indexing in this session. Index first, then search.
 
 **Per-call keyword rules:**
-- **MAX 3 keywords** (mandatory) — the wrapper hard-caps at 3; extra words are silently dropped before the search call.
-- **Most distinctive keyword first** — the fallback loop drops from the back (3→2→1 keywords). If the 3-keyword query returns 0 results, it retries with 2, then 1. A nonsense or overly-narrow last keyword won't block the run; an overly-narrow *first* keyword will error.
+- **MAX 3 keywords, fallback 3→2→1** (mandatory; identical rule for `search_repos`, `index_issues`, `index_discussions`) — the wrapper hard-caps at 3, extra words are silently dropped before the search call. Most distinctive keyword first: the fallback loop drops from the back (3→2→1), so if the 3-keyword query returns 0 it retries with 2, then 1. A nonsense or overly-narrow last keyword won't block the run; an overly-narrow *first* keyword will error.
 - **Indexing is SYNCHRONOUS — the command blocks until done.** `index_issues` / `index_discussions` fetch, strip, write MDs, and run `rag-cli index` in-process; they return the summary directly when finished. Run `rag-cli search_hybrid` immediately after — no waiting, no polling, no notification needed.
 - **After indexing, search via RAG:**
   ```
@@ -94,9 +93,7 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 - GOOD: `search_code("def submit_post repo:specific/repo")` → finds implementation
 - BAD: `search_code("reddit post selenium")` → finds 2000+ unrelated files globally
 
-**`search_repos` query limit (NON-NEGOTIABLE):**
-- MAX 3 keywords — most distinctive first. Extra words are dropped before the search call.
-- Automatic 3→2→1 fallback: if the 3-keyword query returns 0, it retries with 2 keywords, then 1. A narrow last keyword won't block the run; a narrow *first* keyword will.
+**`search_repos` query limit:** same MAX-3-keywords / 3→2→1-fallback rule as the index tools (see Query Engineering above).
 - WRONG: `search_repos("reddit browser submit post without api")` → first 3 words used
 - RIGHT: `search_repos("reddit bot")` → then narrow with `sort_by=stars`
 
