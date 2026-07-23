@@ -45,7 +45,7 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 ## Two Access Patterns
 
 - **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo_tree`, `get_file_content`. Direct `gh-cli` calls — read the output.
-- **The conversation & release layer → query-driven RAG indexing.** The text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search_hybrid "<terms>" github_discussions`. Releases: `gh-cli index_releases <owner/repo>` → then `rag-cli search_hybrid "<feature>" github_releases`.
+- **The conversation & release layer → query-driven RAG indexing.** The text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search "<terms>" github_discussions`. Releases: `gh-cli index_releases <owner/repo>` → then `rag-cli search "<feature>" github_releases`.
 
 ## Gotchas
 
@@ -59,18 +59,18 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 
 **Execution (task-level):**
 - **≥2 passes per problem** — one concrete (exact symptom: error string / signal code) plus one broader (component / feature / area). Both accumulate into the same collection; further angles optional, the broad pass is mandatory.
-- **Index before search** — run `rag-cli search_hybrid` on `github_issues` / `github_discussions` only after indexing in this session. Index first, then search.
+- **Index before search** — run `rag-cli search` on `github_issues` / `github_discussions` only after indexing in this session. Index first, then search.
 
 **Per-call keyword rules:**
 - **MAX 3 keywords, fallback 3→2→1** (mandatory; identical rule for `search_repos`, `index_issues`, `index_discussions`) — the wrapper hard-caps at 3, extra words are silently dropped before the search call. Most distinctive keyword first: the fallback loop drops from the back (3→2→1), so if the 3-keyword query returns 0 it retries with 2, then 1.
-- **Indexing is SYNCHRONOUS — the command blocks until done.** `index_issues` / `index_discussions` fetch, strip, write MDs, and run `rag-cli index` in-process; they return the summary directly when finished. Run `rag-cli search_hybrid` immediately after — no waiting, no polling, no notification needed.
+- **Indexing is SYNCHRONOUS — the command blocks until done.** `index_issues` / `index_discussions` fetch, strip, write MDs, and run `rag-cli index` in-process; they return the summary directly when finished. Run `rag-cli search` immediately after — no waiting, no polling, no notification needed.
 - **After indexing, search via RAG:**
   ```
   gh-cli index_issues "streaming" anthropics/claude-code --limit 30
-  rag-cli search_hybrid "streaming context window tool_use" github_issues
+  rag-cli search "streaming context window tool_use" github_issues
 
   gh-cli index_discussions "memory" gastownhall/beads --limit 30
-  rag-cli search_hybrid "memory tracking workflow" github_discussions
+  rag-cli search "memory tracking workflow" github_discussions
   ```
 - **Re-run = re-index** — always overwrites MDs and re-indexes. Items with new comments get re-chunked automatically (RAG `index-dir` skips unchanged content-hash).
 
@@ -157,7 +157,7 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 ```
 1. index_issues "<concrete: exact error string / signal>" owner/repo [--limit 30]
 2. index_issues "<broader: component / feature / area>" owner/repo [--limit 30]
-3. rag-cli search_hybrid "<symptom or topic terms>" github_issues
+3. rag-cli search "<symptom or topic terms>" github_issues
    → broad vector search over the accumulated corpus (concrete + broad pass)
 ```
 
@@ -166,7 +166,7 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 ```
 1. index_discussions "<concrete: exact topic / symptom>" owner/repo [--limit 30]
 2. index_discussions "<broader: component / feature / area>" owner/repo [--limit 30]
-3. rag-cli search_hybrid "<terms>" github_discussions
+3. rag-cli search "<terms>" github_discussions
    → broad vector search over the accumulated corpus (concrete + broad pass)
 ```
 
@@ -183,7 +183,7 @@ Query 3: "fastapi oauth2 jwt language:python stars:>50" -> 12 results, focused
 1. index_releases owner/repo
    → fetches the last 100 releases (newest-first), strips changelog noise, writes MDs,
      and WIPES + rebuilds the single github_releases collection (clean-before-index)
-2. rag-cli search_hybrid "<feature or slash-command>" github_releases
+2. rag-cli search "<feature or slash-command>" github_releases
    → e.g. "dynamic workflows /workflows" → the release that introduced it + the version
 ```
 Use this to answer "since when does feature X exist / does our version have it".
@@ -244,7 +244,7 @@ One directory level per call (GraphQL one-shot). Root call also returns repo met
 
 ### index_releases
 
-Fetches the last 100 releases (newest-first), strips changelog noise, and indexes them into the single RAG collection `github_releases`. Clean-before-index: each run WIPES and rebuilds `github_releases` with the given repo's releases — so the collection holds only ONE repo at a time (the last indexed) and is always fresh. Always index your target repo immediately before searching: `rag-cli search_hybrid "<feature>" github_releases`.
+Fetches the last 100 releases (newest-first), strips changelog noise, and indexes them into the single RAG collection `github_releases`. Clean-before-index: each run WIPES and rebuilds `github_releases` with the given repo's releases — so the collection holds only ONE repo at a time (the last indexed) and is always fresh. Always index your target repo immediately before searching: `rag-cli search "<feature>" github_releases`.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
