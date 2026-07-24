@@ -108,7 +108,7 @@ URL: https://github.com/myuon/agent-skills/blob/main/skills/gh/SKILL.md
 
 **Proposal:** extend the frontmatter with `allowed-tools: Bash`.
 
-**Caveat:** first check whether `allowed-tools: Bash` collides with the workflow (e.g. if the agent would need to read local configs in between). If yes: `allowed-tools: Bash, Read` or similar. Currently: gh-cli returns everything via stdout; no Read/Edit on local files needed during GitHub research.
+**Caveat:** first check whether `allowed-tools: Bash` collides with the workflow (e.g. if the agent would need to read local configs in between). If yes: `allowed-tools: Bash, Read` or similar. As of 2026-04-26: gh-cli returns everything via stdout; no Read/Edit on local files needed during GitHub research.
 
 **Verification:** frontmatter extended; plugin-sync run; in test session: skill active → Read tool call blocked.
 

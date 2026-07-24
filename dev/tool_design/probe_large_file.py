@@ -10,7 +10,7 @@ Covers all three size tiers via CLI subprocess (hook forbids 'from src.' in dev/
                         branch is trivial: return error text when size > _SIZE_API_MAX)
 
 Usage (from project root):
-  python3 dev/repo_exploration/probe_large_file.py
+  python3 dev/tool_design/probe_large_file.py
 """
 # INFRASTRUCTURE
 import os

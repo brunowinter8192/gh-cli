@@ -41,15 +41,15 @@ Aggregated searches (`search_repos`, `search_code`) → index results into RAG, 
 **grep_repo: replace/demote, don't fix.** Even repaired (drop 50-cap, Blobs-API for >1 MB, `re.IGNORECASE`), it stays N+2 sequential calls vs `search_code`'s single indexed call — correct-but-slow, never better on indexed file types. Only residual niche: file types GitHub Code Search does NOT index (CSV/TSV/data) — narrow. DockDoor evidence: `grep_repo` actively misleads. Proposed: `search_code` (with `repo:`) becomes primary "does pattern X exist in repo", `grep_file` stays for known file, `grep_repo` removed or shrunk to data-file niche.
 
 **Ephemeral-RAG: two independent po-fixes, decide deliberately.**
-- *Lean output* (simple): `search_repos` → one line per repo (full_name, stars, 1-line desc, url). At the current 20-result cap, no po, no RAG needed. Sufficient on its own.
+- *Lean output* (simple): `search_repos` → one line per repo (full_name, stars, 1-line desc, url). As of 2026-06-01, at the 20-result cap, no po, no RAG needed. Sufficient on its own.
 - *Ephemeral RAG, 24h TTL* (heavy): worth it ONLY if we lift the 20-result cap to index large candidate pools (100+) and semantic-narrow. Real capability gain, not just po-avoidance.
 - The real question is therefore NOT "RAG yes/no" but "do we want result-sets bigger than 20?" — gated on whether GitHub pagination makes big pools cheap.
 
 ## Open Questions (all gated on GitHub API-docs research)
 
-- Does GitHub Search pagination make large result-sets (>20) cheap, or is it rate-limit-prohibitive? (`search_repos`/`search_code` currently fixed `RESULTS_PER_PAGE=20`, no cursor pagination.)
+- Does GitHub Search pagination make large result-sets (>20) cheap, or is it rate-limit-prohibitive? (as of 2026-06-01, `search_repos`/`search_code` fixed `RESULTS_PER_PAGE=20`, no cursor pagination.)
 - `search_code` `repo:` qualifier coverage + rate limits + which file types it skips → determines `grep_repo`'s true residual niche.
-- Do native GitHub endpoints (REST/GraphQL) already solve our problems? We only know the endpoints currently wired. GitHub has many more.
+- Do native GitHub endpoints (REST/GraphQL) already solve our problems? As of 2026-06-01, only the wired endpoints are known. GitHub has many more.
 - Where do the GitHub API docs live? No `github_reference`/`gh_reference` collection exists yet (only `github-docs`, `github_issues`, `github_discussions`) → must crawl + index.
 
 ## Decision Status

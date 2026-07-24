@@ -1,6 +1,6 @@
 ---
 name: gh-cli-search
-description: "GitHub remote research via gh-cli. Use when the user asks to find repos/projects ('finde repos für X', 'was gibt es zu Y'), read remote files ('lies das README von Z'), search code patterns ('zeig mir wie X in Y implementiert ist'), index and search issues or discussions ('index issues von X', 'index discussions von Y', 'bekannte issues in Z für RAG'), look up releases on GitHub, check how recently a repo was pushed to to judge how current/trustworthy it is ('wie aktuell ist repo X', 'wann wurde Y zuletzt gepusht', 'ist Z noch maintained'), or download specific repo file(s) to a local directory as a throwaway worker reference ('lade datei X aus repo Y runter', 'download file Z to disk for the worker'). Do NOT use for: editing local files, running local git commands, searching local code (use Grep/Glob instead), or operations on the user's own GitHub account."
+description: 
 allowed-tools: Bash
 ---
 
@@ -45,7 +45,7 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 ## Two Access Patterns
 
 - **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo_tree`, `get_file_content`. Direct `gh-cli` calls — read the output.
-- **The conversation & release layer → query-driven RAG indexing.** The text layer AROUND the code. Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search "<terms>" github_discussions`. Releases: `gh-cli index_releases <owner/repo>` → then `rag-cli search "<feature>" github_releases`.
+- **The conversation & release layer → query-driven RAG indexing.** Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search "<terms>" github_discussions`. Releases: `gh-cli index_releases <owner/repo>` → then `rag-cli search "<feature>" github_releases`.
 
 ## Gotchas
 
@@ -102,12 +102,12 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 When the task specifies a target repo (e.g., "search anthropics/claude-code"):
 - **ALWAYS** add `repo:owner/repo` to ALL search_code queries
 - `search_code("session IPC repo:anthropics/claude-code")` — not just `search_code("session IPC")`
-- Broad queries without `repo:` return results from unrelated repos and waste turns
+- Broad queries without `repo:` return results from unrelated repos
 
 ### Query Engineering (search_code)
 
 - **Always include at least one free-text term** — a qualifier alone (e.g., `language:go`) is invalid; combine with a search term (e.g., `"http.Get language:go"`).
-- **`repo:owner/repo`** — scope to a known repo (primary use). Without it, results span all of GitHub and signal drops sharply.
+- **`repo:owner/repo`** — scope to a known repo (primary use). Without it, results span all of GitHub.
 - **`language:LANG`** — filter by file language (e.g., `language:python`, `language:go`, `language:typescript`).
 - Only the **default branch** is searched. Files >384KB are excluded.
 
@@ -261,7 +261,7 @@ Runs on a single repo (one REST call). Prints `pushed_at` (last commit push to a
 
 ### download_files
 
-Writes one or more specific repo files to a local directory on disk — no clone, no RAG indexing. Use case (orchestrator → worker): download external reference file(s) into a worker's worktree so the worker can READ them; the files are NOT committed/merged, so they vanish with the worktree. Each file is written flat as `<dest>/<basename>`; `<dest>` is created if missing. Output is a per-path report: written paths (with bytes) and failed paths (directory / 404 / >100 MB) listed separately — one bad path does not abort the others.
+Writes one or more specific repo files to a local directory on disk — no clone, no RAG indexing. Use case (orchestrator → worker): download external reference file(s) into a worker's worktree; the files are NOT committed/merged. Each file is written flat as `<dest>/<basename>`; `<dest>` is created if missing. Output is a per-path report: written paths (with bytes) and failed paths (directory / 404 / >100 MB) listed separately — one bad path does not abort the others.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -313,9 +313,9 @@ This check must be done every time, even for paths that "look like files".
 When ANY search (search_code, search_repos, RAG) returns 0 / "No matches", do NOT conclude "it isn't there" from a single tool. Escalate:
 
 1. `search_code` empty → traverse with `get_repo_tree` (root, then `--path` into the likely directory) to find the file structurally, then `get_file_content` on the exact path. Note: `search_code` needs a free-text content term — a name/extension qualifier alone is rejected, so it cannot enumerate files by name.
-2. Still empty → vary the term itself: synonym, shorter substring, different casing. Do NOT re-run the identical term in the identical tool (guessing).
+2. Still empty → vary the term itself: synonym, shorter substring, different casing. Do NOT re-run the identical term in the identical tool.
 
-Rule: only **two different tools** both returning nothing counts as evidence of absence. One tool's silence is not — it's a prompt to switch tools, not to give up.
+Rule: only **two different tools** both returning nothing counts as evidence of absence. One tool's silence is not.
 
 ## When to Stop
 
