@@ -14,20 +14,44 @@ Usage (from project root):
 """
 # INFRASTRUCTURE
 import os
-import subprocess
 import sys
+import subprocess
+from datetime import datetime
+from pathlib import Path
+
+REPORT_DIR = Path(__file__).parent / "md"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+# ORCHESTRATOR
+def main():
+    sections = []
+    passed, failed = 0, 0
+
+    passed, failed = run_tier1(sections, passed, failed)
+    passed, failed = run_tier2(sections, passed, failed)
+    passed, failed = run_tier3(sections, passed, failed)
+
+    report_path = write_report(sections, passed, failed)
+    print(f"Results: {passed} passed, {failed} failed")
+    print(report_path)
+    if failed:
+        sys.exit(1)
+
+
+# FUNCTIONS
+
+# Invoke cli.py as a subprocess and capture combined stdout+stderr
 def run_cli(*args):
     result = subprocess.run(
         [sys.executable, "cli.py"] + list(args),
-        capture_output=True, text=True, cwd=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        capture_output=True, text=True, cwd=PROJECT_ROOT
     )
     return result.stdout + result.stderr
 
 
+# Simulate the >100 MB branch via format_toolarge_response with a fake response dict
 def check_tier3_error():
-    # Inline Python -c so we never write 'from src.' at module level in this file.
     code = (
         "import sys; sys.path.insert(0, '.'); "
         "from src.github.get_file_content import format_toolarge_response; "
@@ -37,64 +61,54 @@ def check_tier3_error():
     )
     result = subprocess.run(
         [sys.executable, "-c", code],
-        capture_output=True, text=True,
-        cwd=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        capture_output=True, text=True, cwd=PROJECT_ROOT
     )
     return result.stdout + result.stderr
 
 
-# ORCHESTRATOR
-def main():
-    passed = 0
-    failed = 0
+# Tier 1 (<=1 MB): expect inline content block
+def run_tier1(sections, passed, failed):
+    out = run_cli("get_file_content", "octocat", "Hello-World", "README")
+    ok = "Content:" in out and "Lines:" in out
+    verdict = "PASS: inline content present" if ok else "FAIL: expected inline content block"
+    sections.append(f"## Tier 1: <=1 MB (octocat/Hello-World README)\n\n{out[:500]}\n\n{verdict}")
+    return (passed + 1, failed) if ok else (passed, failed + 1)
 
-    # ── Tier 1: <=1 MB ───────────────────────────────────────────────────────
-    print("=" * 60)
-    print("Tier 1: <=1 MB (octocat/Hello-World README)")
-    out1 = run_cli("get_file_content", "octocat", "Hello-World", "README")
-    print(out1[:500])
-    if "Content:" in out1 and "Lines:" in out1:
-        print("PASS: inline content present")
-        passed += 1
-    else:
-        print("FAIL: expected inline content block")
-        failed += 1
 
-    # ── Tier 2: 1–100 MB ─────────────────────────────────────────────────────
-    print("=" * 60)
-    print("Tier 2: 1-100 MB (MuRongPIG/Proxy-Master http.txt, ~1.8 MB)")
-    out2 = run_cli("get_file_content", "MuRongPIG", "Proxy-Master", "http.txt")
-    print(out2[:500])
+# Tier 2 (1-100 MB): expect stream-to-/tmp with file present on disk
+def run_tier2(sections, passed, failed):
+    out = run_cli("get_file_content", "MuRongPIG", "Proxy-Master", "http.txt")
     tmp_path = "/tmp/gh-cli_MuRongPIG_Proxy-Master_http.txt"
-    if "Downloaded to:" in out2 and tmp_path in out2:
-        if os.path.isfile(tmp_path):
-            size_on_disk = os.path.getsize(tmp_path)
-            print(f"PASS: file on disk at {tmp_path} ({size_on_disk:,} bytes)")
-            passed += 1
-        else:
-            print(f"FAIL: output mentions path but file not found on disk: {tmp_path}")
-            failed += 1
+    ok = False
+    if "Downloaded to:" in out and tmp_path in out and os.path.isfile(tmp_path):
+        size_on_disk = os.path.getsize(tmp_path)
+        verdict = f"PASS: file on disk at {tmp_path} ({size_on_disk:,} bytes)"
+        ok = True
+    elif "Downloaded to:" in out and tmp_path in out:
+        verdict = f"FAIL: output mentions path but file not found on disk: {tmp_path}"
     else:
-        print(f"FAIL: expected 'Downloaded to: {tmp_path}' in output")
-        failed += 1
+        verdict = f"FAIL: expected 'Downloaded to: {tmp_path}' in output"
+    sections.append(f"## Tier 2: 1-100 MB (MuRongPIG/Proxy-Master http.txt, ~1.8 MB)\n\n{out[:500]}\n\n{verdict}")
+    return (passed + 1, failed) if ok else (passed, failed + 1)
 
-    # ── Tier 3: >100 MB ──────────────────────────────────────────────────────
-    print("=" * 60)
-    print("Tier 3: >100 MB (simulated — fake 200 MB response dict)")
-    out3 = check_tier3_error()
-    print(out3[:500])
-    if "Error: file exceeds 100 MB" in out3 and "No content returned." in out3:
-        print("PASS: error message present, no content returned")
-        passed += 1
-    else:
-        print("FAIL: expected >100 MB error message")
-        failed += 1
 
-    # ── Summary ───────────────────────────────────────────────────────────────
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed")
-    if failed:
-        sys.exit(1)
+# Tier 3 (>100 MB): expect explicit error, no content
+def run_tier3(sections, passed, failed):
+    out = check_tier3_error()
+    ok = "Error: file exceeds 100 MB" in out and "No content returned." in out
+    verdict = "PASS: error message present, no content returned" if ok else "FAIL: expected >100 MB error message"
+    sections.append(f"## Tier 3: >100 MB (simulated — fake 200 MB response dict)\n\n{out[:500]}\n\n{verdict}")
+    return (passed + 1, failed) if ok else (passed, failed + 1)
+
+
+# Write the tier-by-tier report to md/
+def write_report(sections, passed, failed):
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = REPORT_DIR / f"probe_large_file_{timestamp}.md"
+    header = f"# get_file_content large-file tier smoke test\n\nResults: {passed} passed, {failed} failed\n"
+    report_path.write_text(header + "\n" + "\n\n".join(sections) + "\n")
+    return report_path
 
 
 if __name__ == "__main__":
