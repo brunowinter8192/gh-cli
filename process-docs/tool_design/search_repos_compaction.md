@@ -1,4 +1,4 @@
-# search_repos Compaction — Rationale
+# search_repos Compaction — Rationale (2026-06-03)
 
 ## Why one-line `full_name stars`
 
@@ -24,4 +24,4 @@ GitHub's `best_match` applies a multi-factor relevance ranking that considers te
 
 ## API surface note
 
-The GitHub Search Repositories REST endpoint (`GET /search/repositories`) exposes 5 query parameters: `q`, `sort`, `order`, `per_page`, `page`. The `search_repos` wrapper currently exposes only `q` (as `query`) and `sort` (as `sort_by`). `order` is fixed to `desc`; `per_page` is fixed to 30 (local constant); `page` is not exposed (no cursor pagination). This is intentional — exposing `per_page` and `page` as CLI params is deferred until a concrete need arises.
+The GitHub Search Repositories REST endpoint (`GET /search/repositories`) exposes 5 query parameters: `q`, `sort`, `order`, `per_page`, `page`. As of 2026-06-03 the `search_repos` wrapper exposed only `q` (as `query`) and `sort` (as `sort_by`); `order` fixed to `desc`, `per_page` fixed to 30 (local constant), `page` not exposed (no cursor pagination). Intentional — exposing `per_page` and `page` as CLI params was deferred until a concrete need arises.

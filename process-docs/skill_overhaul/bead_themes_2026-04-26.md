@@ -1,19 +1,19 @@
-# Skill Beads — Consolidation (2026-04-26)
+# Skill Improvement Themes — Consolidation (2026-04-26)
 
 > ⚠️ **STALENESS BANNER**
-> These beads were written 2026-04-26 against a **21-tool** surface.
-> Prod is now **11 tools** (as of 2026-05-30, after the `index_discussions` merge).
+> These themes were written 2026-04-26 against a **21-tool** surface.
+> As of 2026-05-30 (after the `index_discussions` merge) the surface is **11 tools**.
 > Proposals referencing deleted tools are explicitly marked below.
 >
 > Deleted tools (files removed from `src/github/`): `search_items`, `list_commits`, `compare_commits`.
 > Deregistered as subcommands (files kept, internal): `get_issue`, `get_issue_comments` → internal helpers of `index_issues`; `get_discussion` → internal helper of `index_discussions`.
 > Deleted subcommands + files: `search_discussions`, `list_discussions`.
 >
-> **github-6vg** is most affected — its domain table is based entirely on the old surface.
+> **Theme 3** is most affected — its domain table is based entirely on the old surface.
 
 ---
 
-## Theme 1 — Progressive Loading: SKILL.md → references/ (Bead github-3cl)
+## Theme 1 — Progressive Loading: SKILL.md → references/
 
 **Problem:** `SKILL.md` is 656 lines flat. On every skill activation Claude loads everything — even when the task is just a `search_repos` lookup. Parameter reference (~250 lines) and output-format rules (~80 lines) are not task-relevant for simple lookups.
 
@@ -38,15 +38,15 @@
 
 ---
 
-## Theme 2 — Sharpen the description field (Bead github-4xx)
+## Theme 2 — Sharpen the description field
 
 **Problem:** the current SKILL.md frontmatter has **no `description:` field** (empty — only `name: github-search`). Claude decides auto-activation based on the `description` field; if it is missing, the skill activates too randomly.
 
-(Bead state: the bead describes a state with `description: See ~/.claude/shared-rules/global/cli-skills.md` — this line no longer exists in the current file. That does not shrink the problem, it grows it.)
+(An earlier state had `description: See ~/.claude/shared-rules/global/cli-skills.md` — this line no longer exists in the current file. That does not shrink the problem, it grows it.)
 
 **Model:** `automazeio/ccpm` — ~600-character description with: (1) concrete trigger sentences, (2) explicit negative list, (3) synonyms.
 
-**Proposal (from bead, adapted for 11-tool prod):**
+**Proposal (adapted for 11-tool prod):**
 ```yaml
 description: "GitHub remote research via gh-cli. Use when asked to find repos/projects,
   read remote files, search code patterns, browse issues/discussions, or check releases
@@ -62,7 +62,7 @@ Build in trigger phrases: "finde repos für X", "zeig mir wie X in Y implementie
 
 ---
 
-## Theme 3 — Domain-split architecture: N skills instead of 1 (Bead github-6vg)
+## Theme 3 — Domain-split architecture: N skills instead of 1
 
 **Problem:** one monolithic `github-search` skill with all tools across all domains. On activation everything is loaded.
 
@@ -96,7 +96,7 @@ Trade-offs unchanged: PRO = smaller SKILL.md per skill, clearer auto-activation.
 
 ---
 
-## Theme 4 — allowed-tools: Bash frontmatter (Bead github-chm)
+## Theme 4 — allowed-tools: Bash frontmatter
 
 **Problem:** no `allowed-tools` field in the frontmatter. With an active skill the agent could theoretically apply Read/Edit/Glob to local files too — which for `github-search` is never sensible (we read GitHub remote, not local).
 
@@ -116,7 +116,7 @@ URL: https://github.com/myuon/agent-skills/blob/main/skills/gh/SKILL.md
 
 ---
 
-## Theme 5 — Pre-baked scripts for discovery patterns (Bead github-i1v)
+## Theme 5 — Pre-baked scripts for discovery patterns
 
 **Problem:** recurring research patterns require 2-4 CLI calls + manual sorting/filtering. Tool-call-intensive, context-budget-heavy.
 

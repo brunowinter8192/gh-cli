@@ -1,4 +1,4 @@
-# Repo Exploration — Endpoint Mapping (Phase A: Probe Build)
+# Repo Exploration — Endpoint Mapping (Phase A: Probe Build, 2026-06-03)
 
 ## The Gap
 

@@ -1,4 +1,4 @@
-# Releases RAG — Design Rationale
+# Releases RAG — Design Rationale (2026-06-04)
 
 ## Use Cases
 
@@ -19,7 +19,7 @@ RAG collapses this to one `search_hybrid` call that returns the relevant release
 
 **Superseded approach:** collection name `github_releases__{owner}__{repo}` (isolation via separate collections — different repos → different collection names). Rejected because: the agent had to pass the per-repo collection name explicitly, and tooling/infra benefits from a fixed, predictable collection name.
 
-**Current convention:** single fixed collection `github_releases`, fixed doc dir `RAG_ROOT/data/documents/github_releases/`, regardless of which repo is being indexed. Isolation is via **clean-before-index wipe**: the janitor deletes the collection and rmtrees the doc dir before every `index_releases` call, then refills from scratch. Only one repo's releases are present at a time. The agent always queries `github_releases` — no per-repo name to track.
+**Chosen convention:** single fixed collection `github_releases`, fixed doc dir `RAG_ROOT/data/documents/github_releases/`, regardless of which repo is being indexed. Isolation is via **clean-before-index wipe**: the janitor deletes the collection and rmtrees the doc dir before every `index_releases` call, then refills from scratch. Only one repo's releases are present at a time. The agent always queries `github_releases` — no per-repo name to track.
 
 Alternative that was also considered and rejected: single `github_releases` collection with owner/repo as metadata filter. Rejected because `rag-cli search_hybrid` has no metadata-filter param; clean-before-index wipe is simpler and sufficient.
 
@@ -49,6 +49,6 @@ Claude Code release bodies are already clean (mostly feature bullet lists). Stri
 
 ## Downstream dependency
 
-`index_releases_workflow()` (`index_releases.py`) is functionally blocked by a bug in `rag-cli delete`: the janitor calls `rag-cli delete --collection <name>` before re-indexing, but the current delete implementation leaves the `indexed_files` manifest intact. On the next `workflow.py index-dir` run, the indexer sees all files as already-hashed in the manifest and skips them — producing an empty collection. The wipe-and-reindex strategy only works correctly when delete also clears the manifest.
+As of 2026-06-04, `index_releases_workflow()` (`index_releases.py`) was functionally blocked by a bug in `rag-cli delete`: the janitor calls `rag-cli delete --collection <name>` before re-indexing, but the then-current delete implementation left the `indexed_files` manifest intact. On the next `workflow.py index-dir` run, the indexer saw all files as already-hashed in the manifest and skipped them — producing an empty collection. The wipe-and-reindex strategy only works correctly when delete also clears the manifest.
 
 The full investigation and fix status live in the rag-cli project's process history.

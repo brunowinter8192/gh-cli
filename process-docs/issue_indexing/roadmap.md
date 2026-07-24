@@ -1,6 +1,6 @@
-# Repo Issue Indexing — Roadmap & Findings
+# Repo Issue Indexing — Roadmap & Findings (2026-05-29)
 
-Process documentation for the planned "index a repo's issues into RAG" capability. Not yet in prod.
+Process documentation for the planned "index a repo's issues into RAG" capability. Not yet in prod as of 2026-05-29.
 
 ## Idea
 

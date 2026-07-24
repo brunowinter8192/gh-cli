@@ -2,8 +2,6 @@
 
 Documented from a live research session in Monitor_CC. 8 gh-cli calls for mitmproxy/textual/glances issues. Comparison benchmark: the `tool-use` skill (`/Users/brunowinter2000/Documents/ai/Meta/blank/skills/tool-use/SKILL.md`), which sets the quality bar.
 
-> **Note:** originally planned as a bead in `.beads/`, but the bead system in MCP/github is currently in a broken state (Dolt DB "github" not found, init fails). If the repo runs again, adopt this file 1:1 as the bead description.
-
 Three levers addressed separately.
 
 ## 1. Lean Call — shorter / more intuitive Bash invocations

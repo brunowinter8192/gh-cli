@@ -1,4 +1,4 @@
-# Token Resolution: zshrc-Canonical Pattern
+# Token Resolution: zshrc-Canonical Pattern (2026-05-29)
 
 ## Problem
 

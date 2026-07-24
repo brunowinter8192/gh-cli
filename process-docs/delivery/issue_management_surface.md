@@ -1,4 +1,4 @@
-# Issue Management Surface — Rationale
+# Issue Management Surface — Rationale (2026-06-02)
 
 Captures the two surface changes made to `cli.py` issue commands: removal of `comment_issue` and promotion of `get_issue` from internal helper to CLI subcommand.
 

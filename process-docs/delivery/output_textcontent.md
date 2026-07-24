@@ -1,4 +1,4 @@
-# Output Contract: list[TextContent]
+# Output Contract: list[TextContent] (2026-05-29)
 
 Two sequential output bugs in late 2025 drove the current workflow return type. Both occurred in the original FastMCP server era and the fix survives the CLI migration.
 
@@ -28,6 +28,6 @@ Two distinct symptoms, same session (2025-11-18):
 
 All `<tool>_workflow()` functions return `list[TextContent]` (imported from `mcp.types`). Wrapping in `TextContent` prevents FastMCP from generating `structuredContent`, forcing CC to use only the `content` array where newlines render correctly.
 
-## Current Status
+## Status as of 2026-05-29
 
-The `list[TextContent]` contract survives the MCP → CLI migration. `cli.py` dispatches with `print(result[0].text)` (line 272). The `mcp` package remains in `requirements.txt` exclusively for this import — no MCP server is running. All 20 workflow functions in `src/github/` carry `-> list[TextContent]` return annotations.
+The `list[TextContent]` contract survived the MCP → CLI migration. `cli.py` dispatched with `print(result[0].text)`. The `mcp` package remained in `requirements.txt` exclusively for this import — no MCP server running. All 20 workflow functions in `src/github/` carried `-> list[TextContent]` return annotations at that point.

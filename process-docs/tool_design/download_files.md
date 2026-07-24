@@ -1,4 +1,4 @@
-# download_files — file-to-disk download tool
+# download_files — file-to-disk download tool (2026-06-30)
 
 Process record for the `download_files` tool. Final state lives in the code (`src/github/download_files.py`) + `src/github/DOCS.md`.
 

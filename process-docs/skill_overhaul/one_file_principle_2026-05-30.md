@@ -4,7 +4,7 @@
 
 **Context:** During skill architecture review, a `references/` split was considered — entry file with core rules + separate sub-files loaded on demand (e.g., `references/parameter_tables.md`, `references/query_engineering.md`).
 
-**Decision:** Single-file skill, no progressive loading. The deferred progressive-loading idea (formerly tracked as Bead github-3cl) is superseded.
+**Decision:** Single-file skill, no progressive loading. The earlier deferred progressive-loading idea is superseded.
 
 **Rationale — why progressive loading loses:**
 

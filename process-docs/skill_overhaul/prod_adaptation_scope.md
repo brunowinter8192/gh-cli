@@ -174,17 +174,17 @@ Remove `list_commits` / `compare_commits` (deleted). Keep `list_releases` + `get
 | `index_discussions` in | prod reality | QR + category table + query-eng section + chaining workflow + param ref |
 | Two Access Patterns fix | prod reality | remove "not yet built"; add discussions; releases stay CLI-direct |
 | `get_issue`/`get_issue_comments` demotion | prod reality | remove from user-facing param ref + tables (internal helpers, no subcommand) |
-| Frontmatter `description:` | bead github-4xx | new field with trigger phrases + negative list |
-| Frontmatter `allowed-tools: Bash` | bead github-chm | new field |
+| Frontmatter `description:` | improvement theme (description field) | new field with trigger phrases + negative list |
+| Frontmatter `allowed-tools: Bash` | improvement theme (allowed-tools) | new field |
 | Issue Investigation workflow | prod reality | `search_items` step removed |
 
 ### DEFERRED (not Stage B)
 
 | Item | Source | Why deferred |
 |---|---|---|
-| Progressive loading: SKILL.md → references/ | bead github-3cl | architecture decision; SKILL.md is 11-tool-clean only after prod sync — then a split evaluation pays off |
-| Domain split: N skills | bead github-6vg | own decision; multi-skill question (active simultaneously?) unresolved |
-| Pre-baked scripts | bead github-i1v | downstream; prod-clean first, then scripts |
+| Progressive loading: SKILL.md → references/ | improvement theme (progressive loading) | architecture decision; SKILL.md is 11-tool-clean only after prod sync — then a split evaluation pays off |
+| Domain split: N skills | improvement theme (domain split) | own decision; multi-skill question (active simultaneously?) unresolved |
+| Pre-baked scripts | improvement theme (pre-baked scripts) | downstream; prod-clean first, then scripts |
 
 ---
 

@@ -1,4 +1,4 @@
-# MCP to CLI Migration
+# MCP to CLI Migration (2026-05-29)
 
 ## Context
 
@@ -21,4 +21,4 @@ Three drivers for the migration:
 - Tool docstrings replaced by argparse `help=` strings
 - `mcp` package retained in `requirements.txt`: all `<tool>_workflow()` functions still return `list[TextContent]` for the newline-rendering fix
 
-Current delivery state lives in `cli.py` + the root `DOCS.md`.
+Delivery state lives in `cli.py` + the root `DOCS.md`.

@@ -11,8 +11,8 @@ Principle reaffirmed: a skill states WHAT + HOW (tools, parameters, landmines, p
 | Location | Removed fragment | Type |
 |---|---|---|
 | Two Access Patterns | "A few broad vector searches replace many fine-grained tool-calls." | efficiency rationale (HOW stands above it) |
-| When to Stop → research task | "— alternatives matter" | begründung appended to the 3-query rule |
-| When to Stop → research task | "— one result is not a comparison, it's a starting point" | begründung appended to do-not-stop |
+| When to Stop → research task | "— alternatives matter" | rationale appended to the 3-query rule |
+| When to Stop → research task | "— one result is not a comparison, it's a starting point" | rationale appended to do-not-stop |
 
 The rules themselves ("Minimum 3 distinct queries before stopping", "Do NOT stop at first match") stay — only the trailing why was cut.
 

@@ -1,4 +1,4 @@
-# search_code Compaction — Rationale
+# search_code Compaction — Rationale (2026-06-03)
 
 ## Why the fragment is KEPT and UNTRUNCATED
 

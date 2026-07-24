@@ -1,4 +1,4 @@
-# repo_freshness — freshness signal: emission site
+# repo_freshness — freshness signal: emission site (2026-06-30)
 
 Process record for the `repo_freshness` tool. Final state lives in the code (`src/github/repo_freshness.py`) + `src/github/DOCS.md`.
 
