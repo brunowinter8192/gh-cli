@@ -12,7 +12,7 @@ gh-cli **direct** = code + repo search (content INSIDE a repo). RAG-**indexing**
 - Discussions are PER-REPO; many repos have NONE (incl. anthropics/claude-code) → need a repo with active discussions as test target.
 - Confirm discussion content is worth indexing (vs per-repo sparsity).
 
-## Current prod state (3 GraphQL tools, via graphql_client.py)
+## Prod state at 2026-05-30 (3 GraphQL tools, via graphql_client.py)
 - `search_discussions(query, first)` — GLOBAL: GraphQL `search(query, type: DISCUSSION, first)` (`search_discussions.py:10`). NO repo scope in current impl; returns repo per hit.
 - `list_discussions(owner, repo, --category, --answered)` — repo-scoped, ordered UPDATED_AT DESC. Not relevance-ranked.
 - `get_discussion(owner, repo, number, --comment-limit, --comment-sort)` — full thread: body + threaded comments + accepted answer (`[ANSWER]` tag) in ONE call. Better than issues' two-call fetch.

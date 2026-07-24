@@ -32,7 +32,7 @@ Earlier planning included changelogs/releases in the RAG-indexing track. This wa
 
 `get_issue` + `get_issue_comments` deregistered as subcommands, **files kept**: `index_issues.py` imports both workflows directly (`get_issue_workflow`, `get_issue_comments_workflow`) to fetch each issue's body and comments during the indexing loop. Deleting the files would break the pipeline. They become internal-only helpers — same pattern `get_discussion` will follow when `index_discussions` is built.
 
-## Current and Planned Surface
+## Surface After This Block + Planned Surface (2026-05-30)
 
 **After this block — 13 visible subcommands:**
 
