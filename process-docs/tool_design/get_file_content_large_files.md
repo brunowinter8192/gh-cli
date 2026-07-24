@@ -21,7 +21,7 @@ In `get_file_content_workflow`, dispatch on Contents-API `size` (response carrie
 
 **Why download-to-tmp (not `raw` media type inline):** the partial-read GitHub can't do, the LOCAL filesystem can — once on disk, the Read tool gives offset/limit/head for free, and big content stays OUT of the agent context (vs `raw` inline which floods context).
 
-Current State: `src/github/DOCS.md` (`get_file_content` module). Implementation: `src/github/get_file_content.py` (104→168 LOC). Smoke: `dev/repo_exploration/probe_large_file.py` (3 tiers, 3/3). Live-verified: 1.8MB http.txt → /tmp path, head readable locally.
+State as of 2026-06-23: `src/github/DOCS.md` (`get_file_content` module). Implementation: `src/github/get_file_content.py` (104→168 LOC). Smoke: `dev/repo_exploration/probe_large_file.py` (3 tiers, 3/3; folder later renamed to `dev/tool_design/`). Live-verified: 1.8MB http.txt → /tmp path, head readable locally.
 
 ## Sources
 
