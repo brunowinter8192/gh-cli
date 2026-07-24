@@ -102,7 +102,6 @@ On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr
 When the task specifies a target repo (e.g., "search anthropics/claude-code"):
 - **ALWAYS** add `repo:owner/repo` to ALL search_code queries
 - `search_code("session IPC repo:anthropics/claude-code")` — not just `search_code("session IPC")`
-- Broad queries without `repo:` return results from unrelated repos
 
 ### Query Engineering (search_code)
 
@@ -312,7 +311,7 @@ This check must be done every time, even for paths that "look like files".
 
 When ANY search (search_code, search_repos, RAG) returns 0 / "No matches", do NOT conclude "it isn't there" from a single tool. Escalate:
 
-1. `search_code` empty → traverse with `get_repo_tree` (root, then `--path` into the likely directory) to find the file structurally, then `get_file_content` on the exact path. Note: `search_code` needs a free-text content term — a name/extension qualifier alone is rejected, so it cannot enumerate files by name.
+1. `search_code` empty → traverse with `get_repo_tree` (root, then `--path` into the likely directory) to find the file structurally, then `get_file_content` on the exact path. Note: `search_code` needs a free-text content term — a name/extension qualifier alone is rejected.
 2. Still empty → vary the term itself: synonym, shorter substring, different casing. Do NOT re-run the identical term in the identical tool.
 
 Rule: only **two different tools** both returning nothing counts as evidence of absence. One tool's silence is not.
