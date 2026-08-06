@@ -189,6 +189,14 @@ Use this to answer "since when does feature X exist / does our version have it".
 github_releases holds ONLY the last-indexed repo (each index wipes + refills it) — so
 always run index_releases for your target repo immediately before searching.
 
+**Release recency / activity questions → `read_document`, not search and not external APIs.**
+After `index_releases`, answer "what is the latest release / how active is this package" by
+reading the newest indexed release directly, starting at its first chunk:
+```
+rag-cli list_documents github_releases
+rag-cli read_document github_releases <newest-release>.md 0 --after 2
+```
+
 ## Parameter Reference
 
 ### search_repos
