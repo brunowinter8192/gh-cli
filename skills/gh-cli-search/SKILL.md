@@ -42,6 +42,19 @@ gh-cli index_releases anthropics/claude-code   # index last 100 releases, then R
 
 On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr and exits non-zero. Check `GH_TOKEN` env var is set.
 
+## Bash Invocation Rules (hook-enforced)
+
+A PreToolUse hook guards the research tools (`search_repos`, `search_code`, `get_repo_tree`, `get_file_content`, `index_issues`, `index_discussions`, `index_releases`):
+
+- **Combine only research calls with each other** (plus `repo_freshness`) in one Bash command, separated by `&&`. Every segment must start with one of these tools — any other segment (echo, git, cd) in the same command blocks the whole call.
+- **Output always returns in full to context.** Piping/filtering a research call (`| head`, `| grep`, `| tail`, `| wc`) is blocked — narrow via the tool's own args instead: `--limit`, `--offset`, `--path`, `--metadata-only`, `--sort-by`.
+- `rag-cli` follow-up searches run in their OWN Bash block (rag-cli has its own chaining hook) — never appended to a gh-cli chain.
+
+```bash
+# canonical combined research block: freshness + two index passes in ONE command
+gh-cli repo_freshness unclecode crawl4ai && gh-cli index_issues "Invalid IPv6 URL" unclecode/crawl4ai --limit 30 && gh-cli index_issues "raw markdown conversion" unclecode/crawl4ai --limit 30
+```
+
 ## Two Access Patterns
 
 - **Code & repo content → direct CLI.** Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo_tree`, `get_file_content`. Direct `gh-cli` calls — read the output.
