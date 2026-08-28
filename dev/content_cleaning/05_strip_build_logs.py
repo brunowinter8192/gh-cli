@@ -94,29 +94,39 @@ def _is_prose_line(line: str) -> bool:
 # Vocabulary: line-start / structural anchors for machine-generated build & install output.
 # Split into two tiers with different collision risk against ordinary prose:
 #
-# _LOOSE_VERB_RE — a single common English verb (running/creating/copying/...) followed by
-# arbitrary non-whitespace. This is the pattern that can open a real sentence ("running the
-# tests locally is step one"), so it alone is additionally gated by _is_prose_line() below.
+# _LOOSE_VERB_RE / _LOOSE_GERUND_RE — a single common English word followed by arbitrary
+# content, nothing else required. This is the shape that can open a real sentence ("running the
+# tests locally is step one", "Downloading the wheel by hand ... is the only thing that worked"),
+# so these alone are additionally gated by _is_prose_line() below. Measured per-anchor against
+# the 844-file corpus (dev/content_cleaning/ process notes) before deciding which bare words
+# belong here: "Collecting" costs 0 real lines when prose-gated (free), "Downloading" costs 16
+# (gdb debug-symbol-fetch messages, modelscope's "Downloading Model from X to Y") — gated anyway,
+# because an ungated bare gerund is exactly the shape a person's sentence can wear.
 #
 # SIGNAL_PATTERNS — multi-word or structurally specific anchors (exact pip/conda/VCS strings,
 # file:line:col diagnostic headers, "::" conda spec rows, digit-anchored VCS summaries). These
 # follow the project's existing corpus-grep methodology (a phrase this specific essentially never
-# occurs in human prose) and are NOT prose-gated for signal classification — doing so produced
-# false exclusions on ~300 genuine "Requirement already satisfied: X in Y (from Z)" pip lines
-# during tuning, because pip's own phrasing legitimately contains "in"/"from". They remain
-# subject to the prose gate like everything else when encountered as a BRIDGE candidate (see
-# _is_bridge_blocked) — that check does not depend on which category a line would otherwise
-# match.
+# occurs in human prose) and are NOT prose-gated for signal classification. Measured and left
+# ungated on purpose: "Requirement already satisfied" costs ~300 lines, "Use 'X' instead of 'Y'
+# as the compiler" costs 2, "Created wheel for" costs 2, "The following packages will be
+# downloaded:" costs 4, "added N changesets with M changes to K files" costs 1, the
+# file:line:col diagnostic header costs 8 — all genuine tool output, and all long/specific enough
+# (or digit/colon-anchored) that a person coincidentally typing the exact phrase is not a
+# realistic residual risk the way a bare gerund is. They remain subject to the prose gate like
+# everything else when encountered as a BRIDGE candidate (see _is_bridge_blocked) — that check
+# does not depend on which category a line would otherwise match.
 _LOOSE_VERB_RE = re.compile(
     r'^\s*(running|creating|copying|writing|reading|installing|removing|deleting|'
     r'generating|skipping|cleaning|overriding|byte-compiling|moving)\s+\S'
 )
+_LOOSE_GERUND_RE = re.compile(r'^\s*(Collecting|Downloading)\b')
 SIGNAL_PATTERNS = [
     re.compile(r"^\s*warning: no (directories|files|previously-included files) found matching"),
     re.compile(r"^Use '.*' instead of '.*' as the compiler$"),
     re.compile(r"^\s*building '.*' extension$"),
-    # pip / conda package-manager output
-    re.compile(r'^\s*(Collecting|Downloading|Using cached|Requirement already satisfied|'
+    # pip / conda package-manager output (bare "Collecting"/"Downloading" live in
+    # _LOOSE_GERUND_RE instead — see comment above)
+    re.compile(r'^\s*(Using cached|Requirement already satisfied|'
                r'Installing collected packages|Successfully installed|Successfully built|'
                r'Building wheel for|Building wheels for collected packages|'
                r'Installing build dependencies|Getting requirements to build wheel|'
@@ -153,15 +163,18 @@ def _is_protected(line: str) -> bool:
     return bool(ERROR_RE.search(line) or TRACE_RE.search(line) or BACKTRACE_RE.search(line))
 
 
-# Line matches the build-log vocabulary and is not hard-excluded. The loose verb pattern is the
-# one ambiguous enough to open a real sentence, so it alone is also required to not read as
-# prose; the multi-word/structural anchors in SIGNAL_PATTERNS are not (see comment above them).
+# Line matches the build-log vocabulary and is not hard-excluded. The loose verb/gerund patterns
+# are the ones ambiguous enough to open a real sentence, so they alone are also required to not
+# read as prose; the multi-word/structural anchors in SIGNAL_PATTERNS are not (see comment above
+# them).
 def _is_signal(line: str) -> bool:
     if _is_protected(line):
         return False
     if any(p.search(line) for p in SIGNAL_PATTERNS):
         return True
-    return bool(_LOOSE_VERB_RE.search(line)) and not _is_prose_line(line)
+    if _LOOSE_VERB_RE.search(line) or _LOOSE_GERUND_RE.search(line):
+        return not _is_prose_line(line)
+    return False
 
 
 # A candidate bridge line (arbitrary filler between two confirmed signal lines) must never be
