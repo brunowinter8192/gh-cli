@@ -241,9 +241,13 @@ def assert_safety(results: list[dict]) -> None:
         sys.exit(1)
 
 
-# Backup the whole corpus dir, then overwrite only changed files
+# Backup the whole corpus dir, then overwrite only changed files. Named so its purpose is
+# obvious from the directory name alone: the 873 existing MDs have no raw counterpart (raw
+# logging only covers fetches from 2026-08-28 onward), so this backup is the only surviving
+# record of their pre-build-log-strip state — the evidence base for judging this filter against
+# the existing corpus later. Not a disposable safety net: do not delete.
 def apply_changes(source_dir: Path, results: list[dict], ts: str) -> Path:
-    backup_dir = source_dir.parent / f"{source_dir.name}_backup_{ts}"
+    backup_dir = source_dir.parent / f"{source_dir.name}_PRE_BUILDLOG_STRIP_BACKUP_{ts}"
     shutil.copytree(source_dir, backup_dir)
     for r in results:
         if r["changed"]:

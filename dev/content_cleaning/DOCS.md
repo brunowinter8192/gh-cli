@@ -55,11 +55,11 @@ Audit, validate, and re-clean the noise strip for `index_discussions` and `index
 
 ---
 
-### 06_reclean_build_logs.py (303 LOC)
+### 06_reclean_build_logs.py (307 LOC)
 
-**Purpose:** Re-clean existing issue MDs with `strip_build_logs()` — build/install-tool log noise pass, mirrors `04_reclean_issues.py`'s shape. Dry-run by default; `--apply` overwrites in place after a timestamped backup (the corpus is gitignored, so the backup is the only safety net); refuses to write anything — report or corpus — if the safety assertion fails.
+**Purpose:** Re-clean existing issue MDs with `strip_build_logs()` — build/install-tool log noise pass, mirrors `04_reclean_issues.py`'s shape. Dry-run by default; `--apply` overwrites in place after a timestamped backup (the corpus is gitignored, so the backup is the only safety net); refuses to write anything — report or corpus — if the safety assertion fails. Applied once, 2026-08-28: 8 files changed, 56 blocks, gross 333,184 / net 331,055 chars removed — see `process-docs/content_cleaning/`.
 **Reads:** issue MD corpus (`--source-dir PATH` override); verbatim inline copy of `src/github/text_cleaning.py` strip logic.
-**Writes:** report MD to `md/06_reclean_dryrun_<timestamp>.md` with both gross (size of text cut out) and net (file shrinkage, accounting for the placeholder written back) chars-removed figures, labelled separately — never collapsed into one number; with `--apply`, overwrites corpus files (backup first); prints the report path.
+**Writes:** report MD to `md/06_reclean_dryrun_<timestamp>.md` with both gross (size of text cut out) and net (file shrinkage, accounting for the placeholder written back) chars-removed figures, labelled separately — never collapsed into one number; with `--apply`, backs up the full corpus first to `<source_dir>_PRE_BUILDLOG_STRIP_BACKUP_<timestamp>` (named so its purpose — the only surviving pre-strip record, since the existing corpus has no raw counterpart — is obvious without opening it; not disposable, do not delete), then overwrites only the changed corpus files; prints the report path and backup path.
 **Called by:** run manually (dev entry point).
 **Calls out:** stdlib only.
 
