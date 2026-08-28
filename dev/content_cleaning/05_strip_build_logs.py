@@ -210,15 +210,29 @@ def strip_build_logs_workflow(source_dir: Path, threshold: int, apply: bool) -> 
 
     results = measure_all(md_files, threshold)
     safety_ok, safety_total = assert_safety(results)
-    sensitivity = measure_sensitivity(md_files)
-    worst_file = measure_worst_file_coverage(md_files)
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
     report_path = REPORT_DIR / f"05_strip_build_logs_dryrun_{ts}.md"
-    write_report(report_path, results, len(md_files), threshold, sensitivity, safety_ok,
-                 safety_total, worst_file)
-    print(report_path)
+    write_dump(report_path, results)
+
+    # All measurement/summary output goes to stdout (for the calling agent's chat message),
+    # never into the artifact itself — the artifact is the removed content, nothing else.
+    total_blocks = sum(len(fr.blocks) for fr in results)
+    total_lines = sum(b.length for fr in results for b in fr.blocks)
+    total_chars = sum(fr.chars_removed for fr in results)
+    print(f"report: {report_path}")
+    print(f"files_scanned={len(md_files)} files_affected={len(results)} "
+          f"blocks={total_blocks} lines_removed={total_lines} chars_removed={total_chars} "
+          f"safety={'PASS' if safety_ok else 'FAIL'} ({safety_total} lines checked)")
+    for row in measure_sensitivity(md_files):
+        print(f"sensitivity threshold={row['threshold']}: "
+              f"files_affected={row['files_affected']} blocks={row['blocks']} "
+              f"lines_removed={row['lines_removed']} chars_removed={row['chars_removed']}")
+    wf = measure_worst_file_coverage(md_files)
+    print(f"worst_file={wf['filename']} file_chars={wf['file_chars']} "
+          f"candidate_lines={wf['candidate_lines']} narrow_hits={wf['narrow_hits']} "
+          f"full_hits={wf['full_hits']} chars_removed={wf['chars_removed']}")
 
     if apply:
         # Not exercised in this milestone (negative scope: no --apply run). Present only for
@@ -327,134 +341,18 @@ def measure_sensitivity(md_files: list) -> list:
     return rows
 
 
-# Write the dry-run report MD: corpus summary, sensitivity table, vocabulary note, safety
-# assertion, per-file table, and full per-block detail (source file, start line, length, the
-# 4 boundary context lines, and the complete removed text).
-def write_report(path: Path, results: list, total_files: int, threshold: int,
-                  sensitivity: list, safety_ok: bool, safety_total: int, worst_file: dict) -> None:
-    total_blocks = sum(len(fr.blocks) for fr in results)
-    total_lines = sum(b.length for fr in results for b in fr.blocks)
-    total_chars_removed = sum(fr.chars_removed for fr in results)
-    affected_chars = sum(fr.file_chars for fr in results)
-    share_pct = (total_chars_removed / affected_chars * 100) if affected_chars else 0.0
-
-    o = [
-        f"# Build Log Strip — Dry-Run Report — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"\nCorpus: {total_files} files · `data/documents/github_issues/` (READ-ONLY, dry-run only, no writes)",
-        f"\nDetector: `strip_build_logs()` — run-length threshold = {threshold} lines, bridge gap = {BRIDGE_GAP} lines.",
-        "\n## Summary\n",
-        "| Metric | Value |",
-        "|---|---|",
-        f"| Files scanned | {total_files} |",
-        f"| Files affected | {len(results)} |",
-        f"| Blocks removed | {total_blocks} |",
-        f"| Lines removed | {total_lines:,} |",
-        f"| Chars removed | {total_chars_removed:,} |",
-        f"| Share of affected-files' chars | {share_pct:.1f}% |",
-    ]
-
-    o += [
-        "\n## Run-Length Sensitivity\n",
-        "Sweep of the minimum-block-length threshold (bridge gap fixed at "
-        f"{BRIDGE_GAP} lines). Lower thresholds catch more short dumps (env-info tables, "
-        "download-progress fragments) at the cost of touching more files; the production "
-        f"default used above is **{threshold}**.\n",
-        "| Threshold (lines) | Files affected | Blocks | Lines removed | Chars removed |",
-        "|---|---|---|---|---|",
-    ]
-    for row in sensitivity:
-        o.append(f"| {row['threshold']} | {row['files_affected']} | {row['blocks']} | "
-                  f"{row['lines_removed']:,} | {row['chars_removed']:,} |")
-
-    o += [
-        "\n## Detection Vocabulary\n",
-        "Determined by reading the corpus (see files listed in the task prompt plus a full-corpus "
-        "scan), not by re-using the prior 7-verb setuptools baseline "
-        "(`copying/creating/running/writing/reading/installing/byte-compiling`). Categories:\n",
-        "- **setuptools/distutils verbs** at line start (running, creating, copying, writing, "
-        "reading, installing, removing, deleting, generating, skipping, cleaning, overriding, "
-        "byte-compiling, moving) + distutils `warning: no ... found matching` lines.",
-        "- **pip/conda output**: `Collecting`, `Downloading`, `Using cached`, `Requirement "
-        "already satisfied`, `Installing collected packages`, `Successfully installed/built`, "
-        "`Building wheel(s) for`, pip's `━━━` progress bar, conda's `Package Plan`/channel/"
-        "package-spec lines, and pip-list two-column package/version table rows.",
-        "- **VCS clone output** (git/hg): `Cloning into`, `remote:`, `Receiving objects`, "
-        "`Resolving deltas`, `requesting all changes`, `adding changesets/manifests/file "
-        "changes`, `updating to branch`, `N files updated, ...`.",
-        "- **compiler invocation + diagnostics**: full clang/gcc invocation lines, "
-        "`file:line:col: warning:`/`note:` diagnostic headers, `clang: warning:`, `N warnings "
-        "generated.`.",
-        f"\n**Re-measurement of the prior 34% claim** — computed fresh against "
-        f"`{worst_file['filename']}` (the corpus's largest file, {worst_file['file_chars']:,} "
-        f"chars): of its {worst_file['candidate_lines']:,} non-blank, non-error-indicator lines, "
-        f"the narrow 7-verb baseline (`copying/creating/running/writing/reading/installing/"
-        f"byte-compiling`) matches **{worst_file['narrow_hits'] / worst_file['candidate_lines'] * 100:.1f}%** "
-        f"({worst_file['narrow_hits']:,}/{worst_file['candidate_lines']:,}) on a raw line-match "
-        f"basis — not 34%; the exact prior methodology could not be reproduced from the number "
-        f"alone, consistent with 'do not take that prior number as ground truth'. The vocabulary "
-        f"above (before any run-length gating) matches "
-        f"**{worst_file['full_hits'] / worst_file['candidate_lines'] * 100:.1f}%** "
-        f"({worst_file['full_hits']:,}/{worst_file['candidate_lines']:,}) of those lines. After "
-        f"run-length gating at the production threshold ({threshold}) — which deliberately "
-        f"leaves short/isolated diagnostic fragments in place for safety — the final removal is "
-        f"**{worst_file['chars_removed'] / worst_file['file_chars'] * 100:.1f}%** of the file's "
-        f"total characters ({worst_file['chars_removed']:,}/{worst_file['file_chars']:,}).\n",
-        "\n**Safety-motivated gap**: identifiers containing `error`/`exception` as a substring "
-        "(e.g. `curl_cffi/requests/errors.py`, `exceptiongroup` the PyPI package) trip the hard "
-        "error-indicator exclusion and split what would otherwise be one larger block into two. "
-        "This is intentional: the exclusion is substring-based and case-insensitive by design, "
-        "trading a small amount of recall for zero risk of matching a real error/exception line.",
-        "\n**Traceback/backtrace protection**: Python's PEP 657 caret-underline annotations "
-        "(`^^^^^^^^^^`) and C-compiler diagnostic underline markers (`~~~~^~~~~`) share the same "
-        "character set. An early version of this detector treated bare caret/tilde marker lines "
-        "as vocabulary, which let the bridge mechanism hop across real `File \"...\", line N, in "
-        "func` traceback frames sandwiched between them (found in camoufox__7.md, "
-        "crawl4ai__1354.md/1457.md, curl_cffi__203.md, ghostty__10379.md/11261.md, "
-        "MinerU__174.md/3985.md, pyobjc__610.md during tuning). Fixed by (a) dropping the bare "
-        "marker line from the vocabulary and (b) adding an explicit hard-protected pattern for "
-        "`File \"...\", line N, in ` and native/gdb backtrace frames "
-        "(`path:line:col: 0xADDR in func`) so they can never be classified as signal or bridged "
-        "over, even without literally containing an error-indicator word. None of those 9 files "
-        "are affected by the final detector.",
-    ]
-
-    safety_verdict = "PASS" if safety_ok else "FAIL"
-    safety_line = (
-        f"- **No removed line contains an error indicator "
-        f"(`error`/`fatal`/`Traceback`/`Exception`/`failed`, case-insensitive)**: "
-        f"{safety_verdict} — {safety_total:,} removed lines checked, "
-        f"{'0 violations' if safety_ok else 'violations found, see stderr'}."
-    )
-    o += ["\n## Safety Assertion\n", safety_line]
-
-    o += [
-        "\n## Per-File Results (sorted by chars removed)\n",
-        "| File | Blocks | Lines removed | Chars removed | Share of file |",
-        "|---|---|---|---|---|",
-    ]
-    for fr in sorted(results, key=lambda x: -x.chars_removed):
-        share = fr.chars_removed / fr.file_chars * 100 if fr.file_chars else 0.0
-        lines_removed = sum(b.length for b in fr.blocks)
-        o.append(f"| `{fr.filename}` | {len(fr.blocks)} | {lines_removed:,} | "
-                  f"{fr.chars_removed:,} | {share:.1f}% |")
-
-    o += ["\n## Per-Block Detail\n",
-          "Four context lines per block — the line immediately before, the first line of the "
-          "block, the last line of the block, and the line immediately after — followed by the "
-          "full removed text.\n"]
-    block_idx = 0
-    for fr in sorted(results, key=lambda x: -x.chars_removed):
+# Write the dump: nothing but the removed content. One identification line per block (source
+# file + line range, nothing else on that line), then the removed text verbatim and unmodified,
+# then the next block. No summary, no tables, no vocabulary discussion, no context lines, no
+# per-block commentary. All measurement belongs in the caller's chat output, not in this file.
+def write_dump(path: Path, results: list) -> None:
+    o = []
+    for fr in sorted(results, key=lambda x: x.filename):
         for b in fr.blocks:
-            block_idx += 1
-            o.append(f"\n### Block {block_idx} — `{b.filename}` L{b.start_line}-{b.end_line} "
-                      f"({b.length} lines)\n")
-            o.append(f"- before: `{b.before[:200]}`")
-            o.append(f"- first:  `{b.first[:200]}`")
-            o.append(f"- last:   `{b.last[:200]}`")
-            o.append(f"- after:  `{b.after[:200]}`")
-            o.append(f"\n```\n{b.text}\n```")
-
-    path.write_text('\n'.join(o) + '\n')
+            o.append(f"{b.filename}:{b.start_line}-{b.end_line}")
+            o.append(b.text)
+            o.append("")
+    path.write_text('\n'.join(o))
 
 
 if __name__ == "__main__":
