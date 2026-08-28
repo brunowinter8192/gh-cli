@@ -137,13 +137,13 @@
 
 ---
 
-### index_issues.py (199 LOC)
+### index_issues.py (202 LOC)
 
 **Purpose:** Fetch GitHub issues matching a query, strip noise, write per-issue MDs, and index into the `github_issues` RAG collection. Keyword-fallback loop (3→2→1) ensures a non-empty result set.
 **Reads:** GitHub Search Issues API + `get_issue_workflow` + `get_issue_comments_workflow` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
 **Writes:** per-issue MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`, `text_cleaning.py` (`strip_generic_noise` applied additively after `strip_noise`/`strip_comments_noise`), `config.py` (`RAG_ROOT`, `DEFAULT_LIMIT`).
+**Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`, `text_cleaning.py` (`strip_generic_noise` then `strip_build_logs`, both applied additively after `strip_noise`/`strip_comments_noise`, to body and comments separately — see `text_cleaning.py` entry for why separately is safe against a build log spanning the body/comments boundary), `config.py` (`RAG_ROOT`, `DEFAULT_LIMIT`).
 
 ---
 
@@ -207,12 +207,16 @@
 
 ---
 
-### text_cleaning.py (30 LOC)
+### text_cleaning.py (254 LOC)
 
-**Purpose:** Generic text noise-strip primitives shared across issue and discussion cleaning. No mcp dependency. Exports `strip_generic_noise(text) -> str` (full-text entry point) and `_strip_line(line) -> str` (per-line helper). Also exports regexes: `IMG_RE` (any HTML `<img\b[^>]*>` tag), `MD_IMG_RE` (any markdown image with non-empty URL `!\[[^\]]*\]\([^)]+\)` — non-empty URL required to avoid matching literal `![]()` code examples in prose), `DATA_URI_RE` (bare base64 data-URIs not inside markdown syntax). Strip order: IMG → MD_IMG → DATA_URI → FAILED_UPLOAD (`!\[Uploading...\]\(\)` empty-URL form, explicit since not subsumed by MD_IMG_RE) → `\S{1000,}` no-space net.
+**Purpose:** Generic text noise-strip primitives shared across issue and discussion cleaning, plus build/install-tool log detection. No mcp dependency.
+
+Generic strips: exports `strip_generic_noise(text) -> str` (full-text entry point) and `_strip_line(line) -> str` (per-line helper). Also exports regexes: `IMG_RE` (any HTML `<img\b[^>]*>` tag), `MD_IMG_RE` (any markdown image with non-empty URL `!\[[^\]]*\]\([^)]+\)` — non-empty URL required to avoid matching literal `![]()` code examples in prose), `DATA_URI_RE` (bare base64 data-URIs not inside markdown syntax). Strip order: IMG → MD_IMG → DATA_URI → FAILED_UPLOAD (`!\[Uploading...\]\(\)` empty-URL form, explicit since not subsumed by MD_IMG_RE) → `\S{1000,}` no-space net.
+
+Build-log strip: exports `strip_build_logs(text) -> str`. Detects setuptools/distutils output, pip/conda install output, compiler invocations + diagnostics, and VCS clone output via a run-length threshold (`MIN_BLOCK_LINES = 10`) over a line-classified vocabulary (`SIGNAL_PATTERNS` for multi-word/structurally specific anchors; `_LOOSE_VERB_RE`/`_LOOSE_GERUND_RE` for single ambiguous words, additionally gated by a stopword-density prose check so a human sentence is never classified as signal nor bridged over — see `process-docs/content_cleaning/` for the full design trail and per-anchor cost measurements). `ERROR_RE`/`TRACE_RE`/`BACKTRACE_RE` hard-protect error/traceback/backtrace lines everywhere, unconditionally. A detected block is replaced with a one-line placeholder (`[build log output removed — N lines]`); non-matched content is untouched.
 **Reads:** nothing — pure text transform.
 **Writes:** returns cleaned string (never mutates argument).
-**Called by:** `discussion_cleaning.py` (imports `strip_generic_noise`); `index_issues.py` (imports `strip_generic_noise`, applied additively to body + comments after issue-specific strips).
+**Called by:** `discussion_cleaning.py` (imports `strip_generic_noise`); `index_issues.py` (imports `strip_generic_noise` then `strip_build_logs`, both applied additively to body + comments — each stripped separately, not on the assembled MD).
 **Calls out:** stdlib only (`re`).
 
 ---
@@ -241,4 +245,5 @@
 `client.py` owns `GITHUB_TOKEN` (str, module-level) — resolved once at import via `_resolve_token()` (zshrc `GH_TOKEN` → env `GH_TOKEN` → env `GITHUB_TOKEN`). Never mutated after import. Read by all 12 REST modules via `build_headers()`/`request()` and by `graphql_client.py` (imported directly; `repo_counts.py` transitively). No other cross-module state.
 
 ## Gotchas
-- `text_cleaning.py` / `discussion_cleaning.py` have verbatim inline copies inside `dev/content_cleaning/` scripts — the `block_dev_imports_src` hook forbids `from src.` in dev/. When the source strip logic changes, update the dev copies in the same pass (duplication, not drift).
+- `text_cleaning.py` / `discussion_cleaning.py` have verbatim inline copies inside `dev/content_cleaning/` scripts — the `block_dev_imports_src` hook forbids `from src.` in dev/. When the source strip logic changes, update the dev copies in the same pass (duplication, not drift). `dev/content_cleaning/05_strip_build_logs.py` carries the `strip_build_logs()` copy specifically.
+- `index_issues.py` strips the body and the comments blob separately (not the assembled MD) for `strip_build_logs()`. This is safe against a build log spanning the body/comments boundary: `build_issue_md()` always separates the two with a blank line, then `# Comments on ...` / `Total: N comments`, then another blank line before the first `--- Comment N ---` marker — and the detector's bridge mechanism can never skip across a blank line to reach a line it hasn't confirmed is signal. A run ending at the body's last line structurally cannot bridge into the comments (or across a `--- Comment N ---` separator between two comments, by the same property), so processing separately loses no detection the assembled-MD approach would have caught, while guaranteeing the structural markers themselves are never at risk of being swallowed.

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # Detect + (dry-run) strip build/install-tool log noise from issue MDs (setuptools/distutils
 # output, pip/conda install output, compiler invocations + diagnostics, VCS clone output).
-# Read-only in this milestone — dry-run only, no --apply exercised, corpus never modified.
+# This dev script stays dry-run only (no --apply exercised, corpus never modified via this file);
+# production re-cleaning of the existing corpus is a separate script (06_reclean_build_logs.py).
 #
-# strip_build_logs() below is written to be moved verbatim into src/github/text_cleaning.py in a
-# later, separately approved step (stdlib-only, no dev-specific logic). Source of truth once
-# merged: src/github/text_cleaning.py. dev/ may not import src/ (hook: block_dev_imports_src) —
-# intentional duplication, not drift, per the convention in 03/04's DOCS.md entry.
+# Intentional verbatim copy of src/github/text_cleaning.py (strip_build_logs() + everything it
+# needs: ERROR_RE/TRACE_RE/BACKTRACE_RE, the prose guard, SIGNAL_PATTERNS, _find_build_log_blocks).
+# dev/ may not import src/ (hook: block_dev_imports_src) — intentional duplication, not drift,
+# per the convention in 03/04's DOCS.md entry. Update this copy if the source changes.
+# Source of truth: src/github/text_cleaning.py.
 #
 # Usage: python3 dev/content_cleaning/05_strip_build_logs.py [--source-dir PATH] [--threshold N]
 
@@ -33,7 +35,7 @@ SENSITIVITY_THRESHOLDS = [5, 8, 10, 15, 20, 30]
 
 
 # ============================================================================================
-# --- verbatim copy candidate for src/github/text_cleaning.py (keep in sync once merged) -----
+# --- verbatim copy of src/github/text_cleaning.py (keep in sync) ---------------------------
 # stdlib-only (re). No dev-specific logic.
 
 # Hard safety exclusion — a line matching any of these is NEVER classified as removable and
@@ -258,7 +260,7 @@ def strip_build_logs(text: str) -> str:
         result += '\n'
     return result
 
-# --- end verbatim copy candidate --------------------------------------------------------------
+# --- end verbatim copy -------------------------------------------------------------------------
 # ============================================================================================
 
 

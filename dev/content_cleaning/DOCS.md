@@ -47,7 +47,7 @@ Audit, validate, and re-clean the noise strip for `index_discussions` and `index
 
 ### 05_strip_build_logs.py (450 LOC)
 
-**Purpose:** Detect build/install-tool log noise (setuptools/distutils output, pip/conda install output, compiler invocations + diagnostics, VCS clone output) in issue MDs and dry-run strip it via `strip_build_logs()`. Read-only in the current milestone — dry-run only, `--apply` exists but is never exercised. `strip_build_logs()` is written to be moved verbatim into `src/github/text_cleaning.py` in a later, separately approved step.
+**Purpose:** Detect build/install-tool log noise (setuptools/distutils output, pip/conda install output, compiler invocations + diagnostics, VCS clone output) in issue MDs and dry-run strip it via `strip_build_logs()`. This script itself stays dry-run only — `--apply` exists but is never exercised here; production re-cleaning of the existing corpus is `06_reclean_build_logs.py`. `strip_build_logs()` is an intentional verbatim copy of `src/github/text_cleaning.py`, which is wired into `index_issues.py` for future fetches. Source of truth: `src/github/text_cleaning.py`.
 **Reads:** issue MD corpus (`--source-dir PATH` override, also pointed at `fixtures/` for the regression suite).
 **Writes:** dump MD to `md/05_strip_build_logs_dryrun_<timestamp>.md` (removed content only — one `<file>:<start>-<end>` identification line per block, then the verbatim removed text, nothing else); all measurement (corpus/sensitivity/vocabulary-coverage/safety-assertion numbers) goes to stdout, never into the artifact; prints the report path.
 **Called by:** run manually (dev entry point).
