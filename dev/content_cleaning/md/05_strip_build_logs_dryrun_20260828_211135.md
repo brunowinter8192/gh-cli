@@ -57,3 +57,47 @@ Collecting jinja2 (from torch>=2.0.0->mypkg[full])
   Downloading https://files.pythonhosted.org/packages/99/00/jinja2-3.1.6-py3-none-any.whl (134 kB)
 Installing collected packages: filelock, tqdm, sympy, requests, pyyaml, pillow, numpy, networkx, jinja2, torch, mypkg
 Successfully installed filelock-3.18.0 jinja2-3.1.6 mypkg-2.1.0 networkx-3.4.2 numpy-2.1.1 pillow-11.2.1 pyyaml-6.0.2 requests-2.32.3 sympy-1.13.1 torch-2.3.0 tqdm-4.67.1
+
+13_human_sentence_inside_log.md:10-21
+copying src/mod_0.py -> build/lib/mod_0.py
+copying src/mod_1.py -> build/lib/mod_1.py
+copying src/mod_2.py -> build/lib/mod_2.py
+copying src/mod_3.py -> build/lib/mod_3.py
+copying src/mod_4.py -> build/lib/mod_4.py
+copying src/mod_5.py -> build/lib/mod_5.py
+copying src/mod_6.py -> build/lib/mod_6.py
+copying src/mod_7.py -> build/lib/mod_7.py
+copying src/mod_8.py -> build/lib/mod_8.py
+copying src/mod_9.py -> build/lib/mod_9.py
+copying src/mod_10.py -> build/lib/mod_10.py
+copying src/mod_11.py -> build/lib/mod_11.py
+
+13_human_sentence_inside_log.md:23-34
+copying src/other_0.py -> build/lib/other_0.py
+copying src/other_1.py -> build/lib/other_1.py
+copying src/other_2.py -> build/lib/other_2.py
+copying src/other_3.py -> build/lib/other_3.py
+copying src/other_4.py -> build/lib/other_4.py
+copying src/other_5.py -> build/lib/other_5.py
+copying src/other_6.py -> build/lib/other_6.py
+copying src/other_7.py -> build/lib/other_7.py
+copying src/other_8.py -> build/lib/other_8.py
+copying src/other_9.py -> build/lib/other_9.py
+copying src/other_10.py -> build/lib/other_10.py
+copying src/other_11.py -> build/lib/other_11.py
+
+15_answer_directly_after_log.md:8-21
+creating build/temp/dir_0
+creating build/temp/dir_1
+creating build/temp/dir_2
+creating build/temp/dir_3
+creating build/temp/dir_4
+creating build/temp/dir_5
+creating build/temp/dir_6
+creating build/temp/dir_7
+creating build/temp/dir_8
+creating build/temp/dir_9
+creating build/temp/dir_10
+creating build/temp/dir_11
+creating build/temp/dir_12
+creating build/temp/dir_13

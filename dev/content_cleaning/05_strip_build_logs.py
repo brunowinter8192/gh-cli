@@ -46,14 +46,72 @@ ERROR_RE = re.compile(r'error|fatal|traceback|exception|failed', re.IGNORECASE)
 TRACE_RE = re.compile(r'^\s*File "[^"]+", line \d+, in ')
 BACKTRACE_RE = re.compile(r':\d+:\d+:.*0x[0-9a-fA-F]+ in ')
 
+# Human-language guard — protected on the same footing as error/traceback lines, for two
+# reasons: (1) a prose line sandwiched inside a signal run must never be bridged over (it is not
+# a wrapped diagnostic continuation, it is a person's sentence), and (2) a prose sentence that
+# happens to start with a vocabulary verb ("running the tests locally is step one") must never be
+# classified as signal in the first place. Tool output (distutils/pip/VCS/compiler lines) is
+# terse and essentially never carries function words like "the", "is", "which" — ordinary English
+# sentences do. A word-tokenized stopword count is a cheap, language-structure-based proxy for
+# that distinction; it does not depend on the vocabulary regexes above, so it catches prose
+# regardless of which verb it happens to open with.
+#
+# 'a' and 'i' are deliberately excluded even though they are common English words: '-I/path' and
+# '-Iinclude/' are real compiler include flags (a bare "I" lands as its own token whenever the
+# path starts with a non-word char), and single-letter macro/loop parameters named 'a' are
+# common C ("#define ALIGN(v, a) ..."). Both would otherwise leak a spurious stopword hit from
+# genuine tool/source output. No other word in this list is a plausible single/double-letter
+# compiler flag or common short C identifier on its own.
+_PROSE_STOPWORDS = frozenset({
+    'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+    'do', 'does', 'did', 'me', 'my', 'we', 'our', 'you', 'your', 'he', 'she', 'it', 'its',
+    'they', 'them', 'this', 'that', 'these', 'those', 'and', 'but', 'if', 'or', 'because', 'as',
+    'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'into', 'through', 'during',
+    'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'on', 'off', 'over',
+    'under', 'again', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all',
+    'any', 'both', 'each', 'more', 'most', 'other', 'some', 'such', 'no', 'not', 'only', 'own',
+    'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now', 'which', 'who',
+    'whom',
+})
+_PROSE_MIN_STOPWORD_HITS = 2
+
+
+# A line reads as ordinary English prose (function-word density), not terse tool output.
+# \b...\b (not a bare character class) matters: a flag token like "-Wshorten-64-to-32" or an
+# arch name like "i386"/"x86_64" is one contiguous \w run, so a naive [A-Za-z']+ scan (which
+# ignores digits) fragments it into spurious standalone words — "i386" yields a bare "i", which
+# collides with the pronoun "I". Word-boundary anchors refuse to match inside a \w run that
+# contains digits, so compiler flags stay non-words instead of leaking fake stopword hits.
+# Counted as a SET, not a running count: a compiler diagnostic like
+# "precision: 'long' to 'int' [-Wshorten-64-to-32]" contains the real preposition "to" plus a
+# second "to" fragment from the flag name itself — two occurrences of the same word, which is not
+# the density signature of a sentence. Genuine prose reliably uses 2+ *distinct* function words.
+def _is_prose_line(line: str) -> bool:
+    words = re.findall(r"\b[A-Za-z']+\b", line.lower())
+    hits = {w for w in words if w in _PROSE_STOPWORDS}
+    return len(hits) >= _PROSE_MIN_STOPWORD_HITS
+
 # Vocabulary: line-start / structural anchors for machine-generated build & install output.
-# Deliberately loose (single verbs, generic phrases) — safety comes from the run-length gate
-# in _find_build_log_blocks, not from vocabulary precision. See report for corpus-grep
-# justification (these verbs also occur in ordinary prose, but never in long unbroken runs).
+# Split into two tiers with different collision risk against ordinary prose:
+#
+# _LOOSE_VERB_RE — a single common English verb (running/creating/copying/...) followed by
+# arbitrary non-whitespace. This is the pattern that can open a real sentence ("running the
+# tests locally is step one"), so it alone is additionally gated by _is_prose_line() below.
+#
+# SIGNAL_PATTERNS — multi-word or structurally specific anchors (exact pip/conda/VCS strings,
+# file:line:col diagnostic headers, "::" conda spec rows, digit-anchored VCS summaries). These
+# follow the project's existing corpus-grep methodology (a phrase this specific essentially never
+# occurs in human prose) and are NOT prose-gated for signal classification — doing so produced
+# false exclusions on ~300 genuine "Requirement already satisfied: X in Y (from Z)" pip lines
+# during tuning, because pip's own phrasing legitimately contains "in"/"from". They remain
+# subject to the prose gate like everything else when encountered as a BRIDGE candidate (see
+# _is_bridge_blocked) — that check does not depend on which category a line would otherwise
+# match.
+_LOOSE_VERB_RE = re.compile(
+    r'^\s*(running|creating|copying|writing|reading|installing|removing|deleting|'
+    r'generating|skipping|cleaning|overriding|byte-compiling|moving)\s+\S'
+)
 SIGNAL_PATTERNS = [
-    # distutils/setuptools verb lines (running install, creating build/, copying X -> Y, ...)
-    re.compile(r'^\s*(running|creating|copying|writing|reading|installing|removing|deleting|'
-               r'generating|skipping|cleaning|overriding|byte-compiling|moving)\s+\S'),
     re.compile(r"^\s*warning: no (directories|files|previously-included files) found matching"),
     re.compile(r"^Use '.*' instead of '.*' as the compiler$"),
     re.compile(r"^\s*building '.*' extension$"),
@@ -87,25 +145,41 @@ SIGNAL_PATTERNS = [
 ]
 
 
-# Hard-excluded: never signal, never bridgeable, always breaks a run.
+# Hard-excluded: never signal, never bridgeable, always breaks a run. Error/traceback/backtrace
+# only — NOT prose. Prose gating is scoped separately (see _is_signal and _is_bridge_blocked)
+# because gating every anchored pattern here excluded ~300 genuine
+# "Requirement already satisfied: X in Y (from Z)" pip lines during tuning.
 def _is_protected(line: str) -> bool:
     return bool(ERROR_RE.search(line) or TRACE_RE.search(line) or BACKTRACE_RE.search(line))
 
 
-# Line matches the build-log vocabulary and is not hard-excluded
+# Line matches the build-log vocabulary and is not hard-excluded. The loose verb pattern is the
+# one ambiguous enough to open a real sentence, so it alone is also required to not read as
+# prose; the multi-word/structural anchors in SIGNAL_PATTERNS are not (see comment above them).
 def _is_signal(line: str) -> bool:
     if _is_protected(line):
         return False
-    return any(p.search(line) for p in SIGNAL_PATTERNS)
+    if any(p.search(line) for p in SIGNAL_PATTERNS):
+        return True
+    return bool(_LOOSE_VERB_RE.search(line)) and not _is_prose_line(line)
+
+
+# A candidate bridge line (arbitrary filler between two confirmed signal lines) must never be
+# bridged over if it is prose, regardless of which vocabulary category — if any — it resembles.
+# Bridging exists for wrapped compiler diagnostics and source-context lines; a person's sentence
+# sandwiched inside a log is neither, so it gets the same hard-stop treatment as an error line.
+def _is_bridge_blocked(line: str) -> bool:
+    return _is_protected(line) or _is_prose_line(line)
 
 
 def _is_blank(line: str) -> bool:
     return line.strip() == ''
 
 
-# Max consecutive non-signal, non-blank, non-protected lines bridged inside an open run (handles
-# e.g. a compiler diagnostic's wrapped message / source-context lines between two matched header
-# lines). A run only ever starts and ends ON a matched signal line, never on bridged filler.
+# Max consecutive non-signal, non-blank, non-bridge-blocked lines bridged inside an open run
+# (handles e.g. a compiler diagnostic's wrapped message / source-context lines between two
+# matched header lines). A run only ever starts and ends ON a matched signal line, never on
+# bridged filler.
 BRIDGE_GAP = 3
 
 
@@ -131,11 +205,11 @@ def _find_build_log_blocks(lines: list, threshold: int = MIN_BLOCK_LINES) -> lis
             if _is_blank(lines[j]):
                 j += 1
                 continue
-            # bridge candidate: peek ahead up to BRIDGE_GAP non-signal/blank/protected lines
+            # bridge candidate: peek ahead up to BRIDGE_GAP non-signal/blank/bridge-blocked lines
             k = j
             gap = 0
             while (k < n and gap < BRIDGE_GAP and not _is_signal(lines[k])
-                   and not _is_blank(lines[k]) and not _is_protected(lines[k])):
+                   and not _is_blank(lines[k]) and not _is_bridge_blocked(lines[k])):
                 k += 1
                 gap += 1
             if k < n and _is_signal(lines[k]):
@@ -295,8 +369,7 @@ def measure_worst_file_coverage(md_files: list) -> dict:
     lines = text.splitlines()
     candidate_lines = [l for l in lines if l.strip() and not _is_protected(l)]
     narrow_hits = sum(1 for l in candidate_lines if NARROW_VOCAB_RE.match(l))
-    full_hits = sum(1 for l in candidate_lines if _is_signal(l) or any(
-        p.search(l) for p in SIGNAL_PATTERNS))
+    full_hits = sum(1 for l in candidate_lines if _is_signal(l))
     blocks = _find_build_log_blocks(lines, MIN_BLOCK_LINES)
     chars_removed = sum(sum(len(lines[i]) + 1 for i in range(s, e + 1)) for s, e in blocks)
     return {
