@@ -16,6 +16,8 @@ from src.github.get_issue_comments import get_issue_comments_workflow
 # From text_cleaning.py: generic image/data-URI/no-space strips + build/install log noise strip
 # (both additive, after issue-specific strips)
 from src.github.text_cleaning import strip_generic_noise, strip_build_logs
+# From raw_logging.py: unfiltered raw-fetch log, written before any strip touches the text
+from src.github.raw_logging import log_raw_issue
 # From config.py: shared RAG root path and default fetch/index limit
 from src.github.config import RAG_ROOT, DEFAULT_LIMIT
 
@@ -51,16 +53,19 @@ def index_issues_workflow(query: str, repo: str, limit: int = DEFAULT_LIMIT) -> 
     RAG_DOC_DIR.mkdir(parents=True, exist_ok=True)
     mds_written = 0
     for num in numbers:
+        filename = f"{repo_basename}__{num}.md"
         issue_text = get_issue_workflow(owner, repo_name, num)[0].text
+        comments_text = get_issue_comments_workflow(owner, repo_name, num)[0].text
+        log_raw_issue(filename, issue_text, comments_text)
+
         clean, title = strip_noise(issue_text)
         clean = strip_generic_noise(clean)
         clean = strip_build_logs(clean)
-        comments_text = get_issue_comments_workflow(owner, repo_name, num)[0].text
         clean_comments = strip_comments_noise(comments_text)
         clean_comments = strip_generic_noise(clean_comments)
         clean_comments = strip_build_logs(clean_comments)
         md = build_issue_md(num, title, clean, clean_comments)
-        (RAG_DOC_DIR / f"{repo_basename}__{num}.md").write_text(md, encoding="utf-8")
+        (RAG_DOC_DIR / filename).write_text(md, encoding="utf-8")
         mds_written += 1
 
     new_chunks = run_index()

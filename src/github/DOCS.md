@@ -2,7 +2,7 @@
 
 ## Role
 
-22 modules: 16 tool modules (14 visible CLI subcommands: 11 REST + 3 GraphQL; 1 internal REST helper `get_issue_comments`; 1 internal GraphQL helper `get_discussion`), 2 cleaning/utility modules (`text_cleaning`, `discussion_cleaning`), and 4 infrastructure modules (`client`, `graphql_client`, `repo_counts`, `config`). Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives; `config.py` holds shared RAG constants. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
+23 modules: 16 tool modules (14 visible CLI subcommands: 11 REST + 3 GraphQL; 1 internal REST helper `get_issue_comments`; 1 internal GraphQL helper `get_discussion`), 3 cleaning/utility modules (`text_cleaning`, `discussion_cleaning`, `raw_logging`), and 4 infrastructure modules (`client`, `graphql_client`, `repo_counts`, `config`). Each tool module follows INFRASTRUCTURE → ORCHESTRATOR → FUNCTIONS layout; the orchestrator (`<tool>_workflow()`) is the single entry point called by `cli.py` (or by `index_issues.py`/`index_discussions.py` for the internal helpers). Infrastructure modules provide shared auth and HTTP primitives; `config.py` holds shared RAG constants. Touch this package when adding, modifying, or debugging a tool; the only coupling to the delivery layer is the `list[TextContent]` return contract.
 
 ## Public Interface
 
@@ -137,13 +137,23 @@
 
 ---
 
-### index_issues.py (202 LOC)
+### index_issues.py (207 LOC)
 
 **Purpose:** Fetch GitHub issues matching a query, strip noise, write per-issue MDs, and index into the `github_issues` RAG collection. Keyword-fallback loop (3→2→1) ensures a non-empty result set.
 **Reads:** GitHub Search Issues API + `get_issue_workflow` + `get_issue_comments_workflow` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
-**Writes:** per-issue MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
+**Writes:** per-issue MDs to `RAG_DOC_DIR` as `<repo_basename>__<num>.md` (overwrite); the raw fetch (via `log_raw_issue`) before any strip touches it; invokes `rag-cli index` via subprocess; raises `RuntimeError` on non-zero exit (busy/locked detected via stderr, message includes recovery command); returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
-**Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`, `text_cleaning.py` (`strip_generic_noise` then `strip_build_logs`, both applied additively after `strip_noise`/`strip_comments_noise`, to body and comments separately — see `text_cleaning.py` entry for why separately is safe against a build log spanning the body/comments boundary), `config.py` (`RAG_ROOT`, `DEFAULT_LIMIT`).
+**Calls out:** `requests`, `mcp.types`; imports from `get_issue.py`, `get_issue_comments.py`, `text_cleaning.py` (`strip_generic_noise` then `strip_build_logs`, both applied additively after `strip_noise`/`strip_comments_noise`, to body and comments separately — see `text_cleaning.py` entry for why separately is safe against a build log spanning the body/comments boundary), `raw_logging.py` (`log_raw_issue`, called on the two raw fetch strings before either is cleaned), `config.py` (`RAG_ROOT`, `DEFAULT_LIMIT`).
+
+---
+
+### raw_logging.py (47 LOC)
+
+**Purpose:** Write the raw, unfiltered fetch text for every issue to disk before any cleaning strip runs, paired one-to-one by filename with the cleaned MD, so a `diff` between the two directories shows exactly what a given filter version removed. Exists because a strip is destructive and irreversible once applied — without a raw copy, no filter can ever be re-evaluated against what actually came off GitHub. Companion `_manifest.jsonl` records, per fetch, which `CLEANING_VERSION` produced (or will produce) the cleaned counterpart.
+**Reads:** nothing — receives already-fetched raw text from its caller.
+**Writes:** `logs/raw_issues/<repo_basename>__<num>.md` (raw issue text + raw comments text, exactly as fetched); appends one JSON line per fetch to `logs/raw_issues/_manifest.jsonl` (`file`, `fetched_at`, `cleaning_version`). `logs/` sits at the gh-cli repo root (computed relative to this file, not RAG-side) — outside the RAG documents tree entirely, and covered by the existing `logs/`/`*.log` entries in `.gitignore`. A write failure is caught, logged via `logger.warning`, and swallowed — never raises, so a disk/permission problem here cannot kill an index run.
+**Called by:** `index_issues.py` (`log_raw_issue`, called once per issue immediately after both raw fetch strings are available, before either is cleaned).
+**Calls out:** stdlib only (`json`, `logging`, `datetime`, `pathlib`).
 
 ---
 
@@ -207,13 +217,13 @@
 
 ---
 
-### text_cleaning.py (254 LOC)
+### text_cleaning.py (172 LOC)
 
 **Purpose:** Generic text noise-strip primitives shared across issue and discussion cleaning, plus build/install-tool log detection. No mcp dependency.
 
 Generic strips: exports `strip_generic_noise(text) -> str` (full-text entry point) and `_strip_line(line) -> str` (per-line helper). Also exports regexes: `IMG_RE` (any HTML `<img\b[^>]*>` tag), `MD_IMG_RE` (any markdown image with non-empty URL `!\[[^\]]*\]\([^)]+\)` — non-empty URL required to avoid matching literal `![]()` code examples in prose), `DATA_URI_RE` (bare base64 data-URIs not inside markdown syntax). Strip order: IMG → MD_IMG → DATA_URI → FAILED_UPLOAD (`!\[Uploading...\]\(\)` empty-URL form, explicit since not subsumed by MD_IMG_RE) → `\S{1000,}` no-space net.
 
-Build-log strip: exports `strip_build_logs(text) -> str`. Detects setuptools/distutils output, pip/conda install output, compiler invocations + diagnostics, and VCS clone output via a run-length threshold (`MIN_BLOCK_LINES = 10`) over a line-classified vocabulary (`SIGNAL_PATTERNS` for multi-word/structurally specific anchors; `_LOOSE_VERB_RE`/`_LOOSE_GERUND_RE` for single ambiguous words, additionally gated by a stopword-density prose check so a human sentence is never classified as signal nor bridged over — see `process-docs/content_cleaning/` for the full design trail and per-anchor cost measurements). `ERROR_RE`/`TRACE_RE`/`BACKTRACE_RE` hard-protect error/traceback/backtrace lines everywhere, unconditionally. A detected block is replaced with a one-line placeholder (`[build log output removed — N lines]`); non-matched content is untouched.
+Build-log strip: exports `strip_build_logs(text) -> str`. Detects setuptools/distutils output, pip/conda install output, compiler invocations + diagnostics, and VCS clone output via a run-length threshold (`MIN_BLOCK_LINES = 10`), a bounded bridge (`BRIDGE_GAP = 3`, for wrapped compiler diagnostic lines) over a line-classified vocabulary (`SIGNAL_PATTERNS`), and a hard error/traceback/backtrace exclusion (`ERROR_RE`/`TRACE_RE`/`BACKTRACE_RE`) applied everywhere, unconditionally. A detected block is replaced with a one-line placeholder (`[build log output removed — N lines]`); non-matched content is untouched. No prose guard: a stopword-density guard was built and measured against five invented adversarial fixtures, then reverted — none of the five occurred in the 844-file corpus, and the guard's real, measured cost (genuine noise no longer removed, one corpus file dropping out of the affected set entirely) was paid against an imagined risk. See `process-docs/content_cleaning/` for the full trail, including the accepted residual exposure this leaves.
 **Reads:** nothing — pure text transform.
 **Writes:** returns cleaned string (never mutates argument).
 **Called by:** `discussion_cleaning.py` (imports `strip_generic_noise`); `index_issues.py` (imports `strip_generic_noise` then `strip_build_logs`, both applied additively to body + comments — each stripped separately, not on the assembled MD).
