@@ -84,10 +84,6 @@ SIGNAL_PATTERNS = [
     re.compile(r'^\s*\S+\.(c|cc|cpp|cxx|m|mm|h|hpp|hh):\d+:\d+:\s*(warning|note):'),
     re.compile(r'^\d+ warnings? generated\.$'),
     re.compile(r'^\s*clang: warning:'),
-    # pip-list-style two-column package/version table row (e.g. "numpy    2.1.1")
-    re.compile(r'^[A-Za-z][\w.\-]*\s{2,}[\w.\-]+$'),
-    re.compile(r'^Package\s+Version$'),
-    re.compile(r'^-{5,}\s+-{5,}$'),
 ]
 
 
