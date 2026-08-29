@@ -21,7 +21,6 @@ In the listing, `blob` (file) entries show `language`, `lines`, and `size`; `tre
 Only use repo paths that appeared in `get_repo_tree` / `get_file_content` output. A 404 means the path is WRONG — re-run `get_repo_tree` to find the real one.
 
 **search_code returns zero for code that EXISTS — know the cases.**
-- The exclusions below come from GitHub's official limitations docs and staff-confirmed reports.
 - Files over 350 KiB are not indexed.
 - Empty files, binary files, and non-UTF-8 files are not indexed.
 - A file with more than one line over 4096 bytes is excluded.
