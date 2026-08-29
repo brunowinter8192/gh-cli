@@ -34,7 +34,6 @@ Only use repo paths that appeared in `get_repo_tree` / `get_file_content` output
 - Fresh or inactive repos wait for on-demand indexing.
 - Only the default branch is searchable.
 - Identical files across repos are SHA-deduplicated.
-- Results cap at 100.
 
 **Zero-result escalation: clone to /tmp and grep.**
 - A file listed by `get_repo_tree` where `search_code` found nothing proves an index gap, not absence.
