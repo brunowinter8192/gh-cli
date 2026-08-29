@@ -21,15 +21,26 @@ In the listing, `blob` (file) entries show `language`, `lines`, and `size`; `tre
 Only use repo paths that appeared in `get_repo_tree` / `get_file_content` output. A 404 means the path is WRONG — re-run `get_repo_tree` to find the real one.
 
 **search_code returns zero for code that EXISTS — know the cases.**
-GitHub's code-search index (official docs + staff-confirmed) excludes:
-- Files over 350 KiB, empty files, binaries, non-UTF-8 files. A file with more than one line over 4096 bytes is excluded; lines over 1024 chars are truncated, so matches beyond that are invisible.
-- Vendored/generated heuristic: a path ancestor named `external`, `third_party`, or `node_modules`, and minified JS. Confirmed false positives on first-party code.
-- Data files (CSV, TSV, etc. per GitHub Linguist `type: data`); the tool shows a NOTE on 0 results.
-- Very large repos may not be indexed at all; fresh or inactive repos wait for on-demand indexing.
-- Only the default branch is searchable; identical files are SHA-deduplicated; results cap at 100.
+- The exclusions below come from GitHub's official limitations docs and staff-confirmed reports.
+- Files over 350 KiB are not indexed.
+- Empty files, binary files, and non-UTF-8 files are not indexed.
+- A file with more than one line over 4096 bytes is excluded.
+- Lines over 1024 characters are truncated.
+   - A match beyond the truncation point is invisible.
+- A path ancestor named `external`, `third_party`, or `node_modules` triggers the vendored/generated exclusion.
+   - That heuristic has confirmed false positives on first-party code.
+- Data files (CSV, TSV, per Linguist `type: data`) are never indexed.
+   - The tool shows a NOTE on 0 results for this case.
+- Very large repos may not be indexed at all.
+- Fresh or inactive repos wait for on-demand indexing.
+- Only the default branch is searchable.
+- Identical files across repos are SHA-deduplicated.
+- Results cap at 100.
 
 **Zero-result escalation: confirm the path, then download + grep locally.**
-`get_repo_tree` the directory — a listed file where `search_code` found nothing proves an index gap, not absence. Then `download_files owner repo <path> --dest /tmp/<repo>/` and grep the local copy. Never page through a large file with blind `get_file_content --offset` reads.
+- A file listed by `get_repo_tree` where `search_code` found nothing proves an index gap, not absence.
+- Download it with `download_files owner repo <path> --dest /tmp/<repo>/` and grep the local copy.
+- Never page through a large file with blind `get_file_content --offset` reads.
 
 ## Commands
 
