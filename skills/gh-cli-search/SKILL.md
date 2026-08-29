@@ -20,11 +20,16 @@ In the listing, `blob` (file) entries show `language`, `lines`, and `size`; `tre
 **Paths only from previous tool output — never constructed.**
 Only use repo paths that appeared in `get_repo_tree` / `get_file_content` output. A 404 means the path is WRONG — re-run `get_repo_tree` to find the real one.
 
-**search_code does not index CSV/data files.**
-GitHub Code Search skips `type: data` files (CSV, TSV, etc. per GitHub Linguist); the tool shows a NOTE on 0 results. Fallback: read a known file path directly with `get_file_content`.
+**search_code returns zero for code that EXISTS — know the cases.**
+GitHub's code-search index (official docs + staff-confirmed) excludes:
+- Files over 350 KiB, empty files, binaries, non-UTF-8 files. A file with more than one line over 4096 bytes is excluded; lines over 1024 chars are truncated, so matches beyond that are invisible.
+- Vendored/generated heuristic: a path ancestor named `external`, `third_party`, or `node_modules`, and minified JS. Confirmed false positives on first-party code.
+- Data files (CSV, TSV, etc. per GitHub Linguist `type: data`); the tool shows a NOTE on 0 results.
+- Very large repos may not be indexed at all; fresh or inactive repos wait for on-demand indexing.
+- Only the default branch is searchable; identical files are SHA-deduplicated; results cap at 100.
 
-**Zero results are not evidence of absence — escalate across tools.**
-`search_code` empty → traverse with `get_repo_tree` and read the exact path with `get_file_content`; still empty → vary the term (synonym, shorter substring, different casing), never re-run the identical term in the identical tool. Only TWO different tools both returning nothing counts as absence. (`search_code` needs a free-text content term — a qualifier alone is rejected.)
+**Zero-result escalation: confirm the path, then download + grep locally.**
+`get_repo_tree` the directory — a listed file where `search_code` found nothing proves an index gap, not absence. Then `download_files owner repo <path> --dest /tmp/<repo>/` and grep the local copy. Never page through a large file with blind `get_file_content --offset` reads.
 
 ## Commands
 
