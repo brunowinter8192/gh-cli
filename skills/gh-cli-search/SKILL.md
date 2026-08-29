@@ -37,9 +37,11 @@ Only use repo paths that appeared in `get_repo_tree` / `get_file_content` output
 - Identical files across repos are SHA-deduplicated.
 - Results cap at 100.
 
-**Zero-result escalation: confirm the path, then download + grep locally.**
+**Zero-result escalation: get the code local and grep it.**
 - A file listed by `get_repo_tree` where `search_code` found nothing proves an index gap, not absence.
-- Download it with `download_files owner repo <path> --dest /tmp/<repo>/` and grep the local copy.
+- Location unknown → shallow-clone and grep repo-wide: `git clone --depth 1 https://github.com/<owner>/<repo> /tmp/<repo>` then `grep -rn`.
+   - On a giant repo, clone only the relevant subtree: `git clone --depth 1 --sparse ... && git -C /tmp/<repo> sparse-checkout set <subdir>`.
+- Location known → `download_files owner repo <path> --dest /tmp/<repo>/` is the cheaper single-file route.
 - Never page through a large file with blind `get_file_content --offset` reads.
 
 ## Commands
