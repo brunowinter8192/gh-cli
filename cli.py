@@ -22,10 +22,25 @@ from src.github.delete_issue import delete_issue_workflow
 from src.github.repo_freshness import repo_freshness_workflow
 from src.github.download_files import download_files_workflow
 
+HELP_TEXT = (
+    "This CLI has no help text. Invoke the skill gh-cli-search via "
+    "the Skill tool and follow it exactly. Do not guess flags."
+)
+
+
+# Parser that redirects all help/usage/error output to the skill pointer
+class NoHelpParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.exit(2, HELP_TEXT + "\n")
+
+    def print_help(self, file=None):
+        print(HELP_TEXT, file=file or sys.stderr)
+        self.exit(2)
+
 
 # Build argparse parser with all 14 subcommands
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = NoHelpParser(
         prog="cli.py",
         description="GitHub Research CLI — 14 tools for searching, browsing, and managing repos, code, issues, discussions, releases."
     )
