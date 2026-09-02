@@ -14,7 +14,7 @@ No package `__init__` — `cli.py` is a standalone script. Entry path: `~/.local
 
 ## Modules
 
-### cli.py (209 LOC)
+### cli.py (224 LOC)
 
 **Purpose:** Argparse CLI entry — build parser (14 subparsers), dispatch to workflows, central error handling.
 **Reads:** `sys.argv` (argparse); prepends its own dir to `sys.path` at import so `src.github.*` resolves from any cwd.
@@ -25,3 +25,4 @@ No package `__init__` — `cli.py` is a standalone script. Entry path: `~/.local
 ## Gotchas
 - `sys.path.insert(0, ...)` at line 6 runs before the `src.github.*` imports — required so the CLI works regardless of invocation cwd. Do not reorder.
 - `BrokenPipeError` is caught first and swallowed (devnull dup2 + exit 0) so `gh-cli ... | head` stays clean; `SystemExit`/`KeyboardInterrupt` pass through unhandled.
+- Help/usage output is deliberately disabled. `_build_parser()` uses a `NoHelpParser(argparse.ArgumentParser)` subclass overriding `error()` and `print_help()`; both print a fixed sentence pointing at the `gh-cli-search` skill and exit 2, never argparse's usage/flag listing. `add_subparsers()` propagates `parser_class=type(self)` automatically, so all 14 subcommands (and any future one) inherit the same behavior with no per-subcommand wiring. `_dispatch`'s own `parser.error(...)` call for an unknown `args.cmd` also lands on the fixed sentence for the same reason — it receives the same `NoHelpParser` instance.
