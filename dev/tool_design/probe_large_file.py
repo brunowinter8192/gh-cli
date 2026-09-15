@@ -1,17 +1,3 @@
-"""
-Smoke test: get_file_content large-file tier handling.
-
-Covers all three size tiers via CLI subprocess (hook forbids 'from src.' in dev/ files):
-
-  Tier 1 (<=1 MB)   — octocat/Hello-World README    (tiny, base64 inline)
-  Tier 2 (1-100 MB) — MuRongPIG/Proxy-Master http.txt (1.8 MB, streams to /tmp)
-  Tier 3 (>100 MB)  — simulated via format_toolarge_response with a fake response dict
-                       (no live >100 MB GitHub file used; GitHub API hard limit means the
-                        branch is trivial: return error text when size > _SIZE_API_MAX)
-
-Usage (from project root):
-  python3 dev/tool_design/probe_large_file.py
-"""
 # INFRASTRUCTURE
 import os
 import sys
@@ -41,7 +27,6 @@ def main():
 
 # FUNCTIONS
 
-# Invoke cli.py as a subprocess and capture combined stdout+stderr
 def run_cli(*args):
     result = subprocess.run(
         [sys.executable, "cli.py"] + list(args),
@@ -50,7 +35,6 @@ def run_cli(*args):
     return result.stdout + result.stderr
 
 
-# Simulate the >100 MB branch via format_toolarge_response with a fake response dict
 def check_tier3_error():
     code = (
         "import sys; sys.path.insert(0, '.'); "
@@ -66,7 +50,6 @@ def check_tier3_error():
     return result.stdout + result.stderr
 
 
-# Tier 1 (<=1 MB): expect inline content block
 def run_tier1(sections, passed, failed):
     out = run_cli("get_file_content", "octocat", "Hello-World", "README")
     ok = "Content:" in out and "Lines:" in out
@@ -75,7 +58,6 @@ def run_tier1(sections, passed, failed):
     return (passed + 1, failed) if ok else (passed, failed + 1)
 
 
-# Tier 2 (1-100 MB): expect stream-to-/tmp with file present on disk
 def run_tier2(sections, passed, failed):
     out = run_cli("get_file_content", "MuRongPIG", "Proxy-Master", "http.txt")
     tmp_path = "/tmp/gh-cli_MuRongPIG_Proxy-Master_http.txt"
@@ -92,7 +74,6 @@ def run_tier2(sections, passed, failed):
     return (passed + 1, failed) if ok else (passed, failed + 1)
 
 
-# Tier 3 (>100 MB): expect explicit error, no content
 def run_tier3(sections, passed, failed):
     out = check_tier3_error()
     ok = "Error: file exceeds 100 MB" in out and "No content returned." in out
@@ -101,7 +82,6 @@ def run_tier3(sections, passed, failed):
     return (passed + 1, failed) if ok else (passed, failed + 1)
 
 
-# Write the tier-by-tier report to md/
 def write_report(sections, passed, failed):
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

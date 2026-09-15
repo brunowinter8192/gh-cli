@@ -1,24 +1,4 @@
 #!/usr/bin/env python3
-# Measure junk class B (DEBUG_STREAM — app debug/log lines pasted from a terminal, NOT
-# build/install output, which is class A / strip_build_logs) on the current github_issues corpus.
-# Read-only: never modifies the corpus, never writes anything but its own report. No detector, no
-# strip — this milestone is measurement + a written proposal only.
-#
-# Vocabulary (derived by reading real corpus files, not from the inventory's 3 examples alone —
-# see process-docs/content_cleaning/):
-#   - ghostty_debug:    ^(debug|info|warning)\([a-zA-Z_]+\):        e.g. "debug(app): mailbox message=redraw_surface"
-#   - playwright_pw:    ^\s*pw:[a-z:]+                              e.g. "pw:channel:event {", "pw:browser [pid=N][out] ..."
-#   - loguru_narration: TIMESTAMP | LEVEL | module:func:line - msg, LEVEL in {TRACE,DEBUG,INFO,SUCCESS,WARNING}
-#                       ERROR/CRITICAL levels deliberately excluded — those are the retrieval target.
-#
-# Protection baseline (verbatim copy of src/github/text_cleaning.py's hard exclusions — the
-# "currently protected" set) plus a PROPOSED, measurement-only extension found while reading
-# ghostty__10406.md/ghostty__10379.md: real crash indicators (panic/segfault/SIG*/aborted, and
-# unresolved "???:?:?:" backtrace frames) that match none of ERROR_RE/TRACE_RE/BACKTRACE_RE. The
-# proposed regexes are never wired into any strip; whether they belong in text_cleaning.py is a
-# later decision made on this milestone's dump, per the process this area's earlier work follows.
-#
-# Usage: python3 dev/content_cleaning/08_audit_debug_stream.py [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -36,29 +16,19 @@ DEFAULT_SOURCE_DIR = Path(
 )
 REPORT_DIR = Path(__file__).parent / "md"
 
-# Minimum occurrence count for a line (literal or normalized) to count as "repeated" — matches the
-# inventory's cross-cutting "J" detector threshold.
 REPEAT_THRESHOLD = 5
-# Adjacency windows (lines) checked around each candidate for a protected line nearby.
 ADJACENCY_WINDOWS = [0, 3, 10]
 
-# --- verbatim copy of src/github/text_cleaning.py's hard exclusions ("currently protected") -----
 ERROR_RE = re.compile(r'error|fatal|traceback|exception|failed', re.IGNORECASE)
 TRACE_RE = re.compile(r'^\s*File "[^"]+", line \d+, in ')
 BACKTRACE_RE = re.compile(r':\d+:\d+:.*0x[0-9a-fA-F]+ in ')
 
-# --- proposed additional protection — measurement-only, not wired into any strip ----------------
-# Found reading ghostty__10406.md (line 615: "Segmentation fault at address 0x...", followed by
-# unresolved "???:?:?: 0x... in ??? (lib.so)" frames) and ghostty__10379.md (line 606: "thread
-# 34041 panic: ..." sitting one line after the last debug(app) narration line, zero-line gap).
-# None of these match ERROR_RE/TRACE_RE/BACKTRACE_RE.
 PROPOSED_CRASH_RE = re.compile(
     r'panic:|Segmentation fault|SIG(ABRT|SEGV|ILL|BUS|FPE)\b|Aborted \(core dumped\)',
     re.IGNORECASE,
 )
 PROPOSED_UNRESOLVED_FRAME_RE = re.compile(r'^\?\?\?:\?:\?:.*0x[0-9a-fA-F]+ in ')
 
-# --- candidate class-B vocabulary -----------------------------------------------------------
 SHAPES = {
     "ghostty_debug": re.compile(r'^(debug|info|warning)\([a-zA-Z_]+\):'),
     "playwright_pw": re.compile(r'^\s*pw:[a-z:]+'),
@@ -67,7 +37,6 @@ SHAPES = {
     ),
 }
 
-# --- fingerprint normalization: numbers, hex addresses, UUIDs, timestamps -> placeholders -------
 _UUID_RE = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', re.IGNORECASE)
 _HEX_RE = re.compile(r'0x[0-9a-fA-F]+')
 _TIMESTAMP_RE = re.compile(r'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?')
@@ -79,27 +48,24 @@ class FileResult:
     filename: str
     repo: str
     file_chars: int
-    shape_lines: dict = field(default_factory=dict)       # shape -> matched line count
-    shape_chars: dict = field(default_factory=dict)       # shape -> matched char count
-    shape_runs: dict = field(default_factory=dict)        # shape -> list[(start,end) 0-idx]
-    literal_repeats: dict = field(default_factory=dict)   # line -> count (>=threshold)
-    fingerprint_repeats: dict = field(default_factory=dict)  # norm -> (count, example_line)
+    shape_lines: dict = field(default_factory=dict)
+    shape_chars: dict = field(default_factory=dict)
+    shape_runs: dict = field(default_factory=dict)
+    literal_repeats: dict = field(default_factory=dict)
+    fingerprint_repeats: dict = field(default_factory=dict)
 
 
 # FUNCTIONS
 
-# True if line matches any of the existing, currently-shipped hard exclusions
 def _is_protected_existing(line: str) -> bool:
     return bool(ERROR_RE.search(line) or TRACE_RE.search(line) or BACKTRACE_RE.search(line))
 
 
-# True under the existing exclusions OR the proposed, measurement-only extension
 def _is_protected_proposed(line: str) -> bool:
     return (_is_protected_existing(line) or bool(PROPOSED_CRASH_RE.search(line))
             or bool(PROPOSED_UNRESOLVED_FRAME_RE.match(line)))
 
 
-# Replace UUIDs, hex addresses, timestamps, and bare digit runs with placeholders
 def _normalize_fingerprint(line: str) -> str:
     l = _UUID_RE.sub('<UUID>', line)
     l = _HEX_RE.sub('<HEX>', l)
@@ -108,9 +74,6 @@ def _normalize_fingerprint(line: str) -> str:
     return l
 
 
-# Group shape-matched lines (that are not currently/proposed protected, per protected_fn) into
-# maximal (start, end) runs, 0-indexed inclusive; blank lines bridge a run but never extend or
-# confirm it alone — mirrors _find_build_log_blocks's bridging discipline at single-vocabulary scale
 def _find_shape_runs(lines: list, shape_re: "re.Pattern", protected_fn) -> list:
     def is_signal(line: str) -> bool:
         return bool(shape_re.match(line)) and not protected_fn(line)
@@ -139,7 +102,6 @@ def _find_shape_runs(lines: list, shape_re: "re.Pattern", protected_fn) -> list:
     return runs
 
 
-# Bucket run lengths for the report's histogram
 def _run_length_bucket(length: int) -> str:
     if length <= 2:
         return "1-2"
@@ -154,7 +116,6 @@ def _run_length_bucket(length: int) -> str:
     return "50+"
 
 
-# Count of shape-matched lines with a protected line within +/-window (0 = the line itself)
 def _adjacency_count(lines: list, shape_re: "re.Pattern", protected_fn, window: int) -> int:
     n = len(lines)
     count = 0
@@ -167,7 +128,6 @@ def _adjacency_count(lines: list, shape_re: "re.Pattern", protected_fn, window: 
     return count
 
 
-# Measure everything for one file: per-shape lines/chars/runs, literal repeats, fingerprint repeats
 def measure_file(fp: Path) -> FileResult:
     text = fp.read_text(errors='replace')
     lines = text.splitlines()
@@ -203,7 +163,6 @@ def measure_all(md_files: list) -> list:
     return [measure_file(fp) for fp in md_files]
 
 
-# Corpus-wide adjacency numbers (existing vs. existing+proposed protection), for the stdout summary
 def measure_adjacency(md_files: list) -> dict:
     rows = {}
     for shape_name, shape_re in SHAPES.items():

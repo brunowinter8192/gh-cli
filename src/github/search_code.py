@@ -2,9 +2,7 @@
 import logging
 import requests
 from mcp.types import TextContent
-# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
-# From repo_counts.py: batch-fetch star/issue/discussion counts, format per-repo summary line
 from src.github.repo_counts import fetch_repo_counts, format_count_line
 
 logger = logging.getLogger(__name__)
@@ -28,7 +26,6 @@ def search_code_workflow(query: str) -> list[TextContent]:
 
 # FUNCTIONS
 
-# Fetch code search results with text match metadata
 def fetch_code_search(query: str) -> dict:
     url = f"{GITHUB_API_BASE}/search/code"
     logger.debug("Fetching from %s", url)
@@ -38,7 +35,6 @@ def fetch_code_search(query: str) -> dict:
     return response.json()
 
 
-# Collect unique repo full_names from code hits, in first-seen order
 def collect_unique_repos(items: list) -> list:
     seen = set()
     order = []
@@ -50,7 +46,6 @@ def collect_unique_repos(items: list) -> list:
     return order
 
 
-# Emit repo summary block then per-hit locator + fragments
 def format_code_results(items: list, repo_order: list, counts: dict) -> str:
     lines = []
     lines.append(f"## Repos ({len(repo_order)} unique)")
@@ -75,7 +70,6 @@ def format_code_results(items: list, repo_order: list, counts: dict) -> str:
     return "\n".join(lines).rstrip()
 
 
-# Extract code fragments from text match metadata
 def extract_text_matches(matches: list) -> list:
     fragments = []
     for match in matches:

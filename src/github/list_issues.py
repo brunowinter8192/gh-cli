@@ -1,7 +1,6 @@
 # INFRASTRUCTURE
 import logging
 from mcp.types import TextContent
-# From client.py: authenticated REST call (method, path, optional json/params) -> response dict
 from src.github.client import request
 
 logger = logging.getLogger(__name__)
@@ -43,7 +42,6 @@ def fetch_issues(
         page_data = request("GET", f"/repos/{owner}/{repo}/issues", params=params)
         if not page_data:
             break
-        # REST list also returns PRs — filter them out
         real_issues = [i for i in page_data if "pull_request" not in i]
         issues.extend(real_issues)
         if len(page_data) < params["per_page"]:

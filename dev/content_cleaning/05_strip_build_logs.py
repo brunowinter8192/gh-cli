@@ -1,18 +1,4 @@
 #!/usr/bin/env python3
-# Detect + (dry-run) strip build/install-tool log noise from issue MDs (setuptools/distutils
-# output, pip/conda install output, compiler invocations + diagnostics, VCS clone output).
-# This dev script stays dry-run only (no --apply exercised, corpus never modified via this file);
-# production re-cleaning of the existing corpus is a separate script (06_reclean_build_logs.py).
-#
-# Intentional verbatim copy of src/github/text_cleaning.py (strip_build_logs() + everything it
-# needs: ERROR_RE/TRACE_RE/BACKTRACE_RE, SIGNAL_PATTERNS, _find_build_log_blocks). Vocabulary,
-# run-length threshold, bridge, and the hard error/traceback/backtrace exclusion only — see
-# process-docs/content_cleaning/ for why a stopword-based prose guard was tried and reverted.
-# dev/ may not import src/ (hook: block_dev_imports_src) — intentional duplication, not drift,
-# per the convention in 03/04's DOCS.md entry. Update this copy if the source changes.
-# Source of truth: src/github/text_cleaning.py.
-#
-# Usage: python3 dev/content_cleaning/05_strip_build_logs.py [--source-dir PATH] [--threshold N]
 
 # INFRASTRUCTURE
 
@@ -29,43 +15,20 @@ DEFAULT_SOURCE_DIR = Path(
 )
 REPORT_DIR = Path(__file__).parent / "md"
 
-# Run-length threshold: minimum consecutive block length (lines) to qualify as a removable
-# build log. See "Run-Length Sensitivity" in the generated report for the measurement behind
-# this default.
 MIN_BLOCK_LINES = 10
 SENSITIVITY_THRESHOLDS = [5, 8, 10, 15, 20, 30]
 
 
-# ============================================================================================
-# --- verbatim copy of src/github/text_cleaning.py (keep in sync) ---------------------------
-# stdlib-only (re). No dev-specific logic.
 
-# Hard safety exclusion — a line matching any of these is NEVER classified as removable and
-# NEVER bridged over. These are the retrieval target of the document (the actual failure) — or,
-# for "warning", genuine content the reporter/maintainer wrote. Project premise: content and
-# context have absolute priority, we only ever remove pure noise, and a warning is content, never
-# noise, even sitting inside an otherwise-disposable pip/build run. Added 2026-09-05 after
-# MinerU__1418.md's "WARNING: magic-pdf 0.6.1 does not provide the extra 'full'" was found bridged
-# over between Downloading/Requirement-already-satisfied lines — see process-docs/content_cleaning/.
 ERROR_RE = re.compile(r'error|fatal|traceback|exception|failed|warning', re.IGNORECASE)
-# Python traceback frame ("File "...", line N, in func") and native/gdb backtrace frame
-# ("path:line:col: 0xADDR in func") — protected even though they don't literally contain an
-# error-indicator word. Without this, caret/underline diagnostic markers (below) can bridge
-# straight across real traceback frames and delete the crash location. See process notes.
 TRACE_RE = re.compile(r'^\s*File "[^"]+", line \d+, in ')
 BACKTRACE_RE = re.compile(r':\d+:\d+:.*0x[0-9a-fA-F]+ in ')
 
-# Vocabulary: line-start / structural anchors for machine-generated build & install output.
-# Deliberately loose (single verbs, generic phrases) — safety comes from the run-length gate
-# in _find_build_log_blocks, not from vocabulary precision. See report for corpus-grep
-# justification (these verbs also occur in ordinary prose, but never in long unbroken runs).
 SIGNAL_PATTERNS = [
-    # distutils/setuptools verb lines (running install, creating build/, copying X -> Y, ...)
     re.compile(r'^\s*(running|creating|copying|writing|reading|installing|removing|deleting|'
                r'generating|skipping|cleaning|overriding|byte-compiling|moving)\s+\S'),
     re.compile(r"^Use '.*' instead of '.*' as the compiler$"),
     re.compile(r"^\s*building '.*' extension$"),
-    # pip / conda package-manager output
     re.compile(r'^\s*(Collecting|Downloading|Using cached|Requirement already satisfied|'
                r'Installing collected packages|Successfully installed|Successfully built|'
                r'Building wheel for|Building wheels for collected packages|'
@@ -75,35 +38,26 @@ SIGNAL_PATTERNS = [
                r'Collecting package metadata|Preparing transaction|Verifying transaction|'
                r'Executing transaction|Downloading and Extracting Packages|Channels:|'
                r'Platform:)\b'),
-    re.compile(r'━{5,}'),                                            # pip/conda progress bar
+    re.compile(r'━{5,}'),
     re.compile(r'^## Package Plan ##$'),
     re.compile(r'^\s*The following (NEW )?packages will be (downloaded|INSTALLED):$'),
     re.compile(r'^\s*-\s+(conda-forge|defaults)\s*$'),
-    re.compile(r'^\s*[\w.+-]+\s+(conda-forge|pkgs/main)[\w/.:+-]*::'),  # conda install spec row
+    re.compile(r'^\s*[\w.+-]+\s+(conda-forge|pkgs/main)[\w/.:+-]*::'),
     re.compile(r'^\s*\$\s+conda (activate|deactivate|update)'),
-    # VCS clone/pull output (git/hg)
     re.compile(r'^\s*(Cloning into|remote:|Receiving objects|Resolving deltas|Updating files|'
                r'requesting all changes|adding changesets|adding manifests|adding file changes|'
                r'updating to branch)\b'),
     re.compile(r'^\d+ files updated, \d+ files (merged|removed)'),
     re.compile(r'^added \d+ changesets with \d+ changes to \d+ files'),
-    # compiler invocation + diagnostics — the "warning" branch of the diagnostic-header pattern
-    # and the two warning-only entries below (warning: no ... found matching / clang: warning: /
-    # N warnings generated) are removed: any such line already contains "warning" and is now
-    # protected by ERROR_RE before SIGNAL_PATTERNS is even checked, so they were dead weight that
-    # would have contradicted the protection. "note:" is unaffected (a compiler note is not a
-    # warning) and stays live.
     re.compile(r"^\s*(/\S+/)?([a-zA-Z0-9_.-]*-)?(clang|gcc|g\+\+|cc1|cc)\s+-\S"),
     re.compile(r'^\s*\S+\.(c|cc|cpp|cxx|m|mm|h|hpp|hh):\d+:\d+:\s*note:'),
 ]
 
 
-# Hard-excluded: never signal, never bridgeable, always breaks a run.
 def _is_protected(line: str) -> bool:
     return bool(ERROR_RE.search(line) or TRACE_RE.search(line) or BACKTRACE_RE.search(line))
 
 
-# Line matches the build-log vocabulary and is not hard-excluded
 def _is_signal(line: str) -> bool:
     if _is_protected(line):
         return False
@@ -114,13 +68,9 @@ def _is_blank(line: str) -> bool:
     return line.strip() == ''
 
 
-# Max consecutive non-signal, non-blank, non-protected lines bridged inside an open run (handles
-# e.g. a compiler diagnostic's wrapped message / source-context lines between two matched header
-# lines). A run only ever starts and ends ON a matched signal line, never on bridged filler.
 BRIDGE_GAP = 3
 
 
-# Group signal lines into removable (start, end) line-index spans (0-indexed, inclusive)
 def _find_build_log_blocks(lines: list, threshold: int = MIN_BLOCK_LINES) -> list:
     n = len(lines)
     blocks = []
@@ -142,7 +92,6 @@ def _find_build_log_blocks(lines: list, threshold: int = MIN_BLOCK_LINES) -> lis
             if _is_blank(lines[j]):
                 j += 1
                 continue
-            # bridge candidate: peek ahead up to BRIDGE_GAP non-signal/blank/protected lines
             k = j
             gap = 0
             while (k < n and gap < BRIDGE_GAP and not _is_signal(lines[k])
@@ -164,7 +113,6 @@ def _placeholder(n_lines: int) -> str:
     return f"[build log output removed — {n_lines} lines]"
 
 
-# Strip build/install-tool log noise from the full text of one issue MD
 def strip_build_logs(text: str) -> str:
     lines = text.splitlines()
     blocks = _find_build_log_blocks(lines, MIN_BLOCK_LINES)
@@ -182,15 +130,13 @@ def strip_build_logs(text: str) -> str:
         result += '\n'
     return result
 
-# --- end verbatim copy -------------------------------------------------------------------------
-# ============================================================================================
 
 
 @dataclass
 class Block:
     filename: str
-    start_line: int   # 1-indexed
-    end_line: int      # 1-indexed
+    start_line: int
+    end_line: int
     length: int
     before: str
     first: str
@@ -223,8 +169,6 @@ def strip_build_logs_workflow(source_dir: Path, threshold: int, apply: bool) -> 
     report_path = REPORT_DIR / f"05_strip_build_logs_dryrun_{ts}.md"
     write_dump(report_path, results)
 
-    # All measurement/summary output goes to stdout (for the calling agent's chat message),
-    # never into the artifact itself — the artifact is the removed content, nothing else.
     total_blocks = sum(len(fr.blocks) for fr in results)
     total_lines = sum(b.length for fr in results for b in fr.blocks)
     total_chars = sum(fr.chars_removed for fr in results)
@@ -242,14 +186,11 @@ def strip_build_logs_workflow(source_dir: Path, threshold: int, apply: bool) -> 
           f"full_hits={wf['full_hits']} chars_removed={wf['chars_removed']}")
 
     if apply:
-        # Not exercised in this milestone (negative scope: no --apply run). Present only for
-        # convention-parity with 04_reclean_issues.py; production integration is a later step.
         raise RuntimeError("--apply is not enabled in this milestone (dry-run only).")
 
 
 # FUNCTIONS
 
-# Compute per-file block detail (context lines + full removed text) at the given threshold
 def measure_all(md_files: list, threshold: int) -> list:
     results = []
     for fp in md_files:
@@ -276,7 +217,6 @@ def measure_all(md_files: list, threshold: int) -> list:
     return results
 
 
-# Explicit assertion: no removed line contains an error indicator. Returns (pass, lines_checked).
 def assert_safety(results: list) -> tuple:
     violations = 0
     total_lines = 0
@@ -291,15 +231,11 @@ def assert_safety(results: list) -> tuple:
     return violations == 0, total_lines
 
 
-# Narrow 7-verb baseline vocabulary (setuptools verbs only) — used only to re-measure the
-# prior "34% of the worst file" coverage claim against the actual corpus, not part of detection.
 NARROW_VOCAB_RE = re.compile(
     r'^\s*(copying|creating|running|writing|reading|installing|byte-compiling)\s+\S'
 )
 
 
-# Re-measure narrow-vocab vs. full-vocab vs. final-detector coverage on the corpus's largest
-# file, for the report's vocabulary section. Computed fresh each run (no hardcoded numbers).
 def measure_worst_file_coverage(md_files: list) -> dict:
     largest = max(md_files, key=lambda p: len(p.read_text(errors='replace')))
     text = largest.read_text(errors='replace')
@@ -319,7 +255,6 @@ def measure_worst_file_coverage(md_files: list) -> dict:
     }
 
 
-# Sweep MIN_BLOCK_LINES across SENSITIVITY_THRESHOLDS for the report's sensitivity table
 def measure_sensitivity(md_files: list) -> list:
     rows = []
     for threshold in SENSITIVITY_THRESHOLDS:
@@ -347,10 +282,6 @@ def measure_sensitivity(md_files: list) -> list:
     return rows
 
 
-# Write the dump: nothing but the removed content. One identification line per block (source
-# file + line range, nothing else on that line), then the removed text verbatim and unmodified,
-# then the next block. No summary, no tables, no vocabulary discussion, no context lines, no
-# per-block commentary. All measurement belongs in the caller's chat output, not in this file.
 def write_dump(path: Path, results: list) -> None:
     o = []
     for fr in sorted(results, key=lambda x: x.filename):

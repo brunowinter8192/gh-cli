@@ -4,7 +4,6 @@ import os
 
 from mcp.types import TextContent
 
-# From get_file_content.py: fetch file metadata/content, stream-download to path, 100 MB API size limit
 from src.github.get_file_content import fetch_file_content, _stream_download, _SIZE_API_MAX
 
 logger = logging.getLogger(__name__)
@@ -20,7 +19,6 @@ def download_files_workflow(owner: str, repo: str, paths: list[str], dest: str) 
 
 # FUNCTIONS
 
-# Fetch and stream each path; collect written and failed results
 def _download_paths(owner: str, repo: str, paths: list[str], dest: str) -> tuple[list, list]:
     written = []
     failed = []
@@ -52,7 +50,6 @@ def _download_paths(owner: str, repo: str, paths: list[str], dest: str) -> tuple
     return written, failed
 
 
-# Format per-path written/failed report
 def format_download_report(written: list, failed: list, dest: str) -> str:
     lines = [f"Downloaded to: {os.path.abspath(dest)}/", ""]
 

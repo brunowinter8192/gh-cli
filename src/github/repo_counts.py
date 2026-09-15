@@ -1,6 +1,5 @@
 # INFRASTRUCTURE
 import logging
-# From graphql_client.py: execute GraphQL query against GitHub API
 from src.github.graphql_client import graphql_query
 
 logger = logging.getLogger(__name__)
@@ -8,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 # FUNCTIONS
 
-# Batch-fetch star/issue/discussion counts for multiple repos in one aliased GraphQL call
 def fetch_repo_counts(repos: list) -> dict:
     if not repos:
         return {}
@@ -41,7 +39,6 @@ def fetch_repo_counts(repos: list) -> dict:
     return result
 
 
-# Format one repo summary line; counts=None when repo is deleted/renamed between search and enrichment
 def format_count_line(full_name: str, stars: int, counts) -> str:
     if counts is None:
         return f"{full_name} · ⭐{stars} · issues:? · discussions:?"

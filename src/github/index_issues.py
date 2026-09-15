@@ -7,18 +7,11 @@ from pathlib import Path
 import requests
 from mcp.types import TextContent
 
-# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
-# From get_issue.py: fetch and format a single GitHub issue
 from src.github.get_issue import get_issue_workflow
-# From get_issue_comments.py: fetch and format comments for a single issue
 from src.github.get_issue_comments import get_issue_comments_workflow
-# From text_cleaning.py: generic image/data-URI/no-space strips + build/install log noise strip
-# (both additive, after issue-specific strips)
 from src.github.text_cleaning import strip_generic_noise, strip_build_logs
-# From raw_logging.py: unfiltered raw-fetch log, written before any strip touches the text
 from src.github.raw_logging import log_raw_issue
-# From config.py: shared RAG root path and default fetch/index limit
 from src.github.config import RAG_ROOT, DEFAULT_LIMIT
 
 logger = logging.getLogger(__name__)
@@ -26,30 +19,15 @@ logger = logging.getLogger(__name__)
 RAG_DOC_DIR = RAG_ROOT / "data" / "documents" / "github_issues"
 COLLECTION  = "github_issues"
 
-# Tracker-migration attribution header (junk class F): a bold line — either
-# "**[Original report](bitbucket_url) by NAME (Bitbucket: [..](..), GitHub: [..](..)).**" (issue
-# body, first content) or "**Original comment by NAME (...).**" (each migrated comment) —
-# followed by a blank line then exactly 40 dashes. A script wrote this into every issue/comment
-# migrated from Bitbucket to GitHub; observed only in the pyobjc repo (7 issues) as of 2026-08-28,
-# see process-docs/content_cleaning/. Anonymous/GitHub-less variants ("by Anonymous.**",
-# "(Bitbucket: [..](..), ).**") both still end in ").**"/"s.**", so the trailing ".**" anchor
-# covers them without widening past what the corpus shows.
 MIGRATION_REPORT_RE = re.compile(r'^\*\*\[Original report\]\([^)]*\) by .+\.\*\*$')
 MIGRATION_COMMENT_RE = re.compile(r'^\*\*Original comment by .+\.\*\*$')
 MIGRATION_RULE_RE = re.compile(r'^-{40}$')
 
-# Automated version-removal comment (junk class G): a comment whose entire body is one line,
-# "Removing version: X (automated comment)" (X = 2.4, 2.5, 3.0, 3.1 observed) — Bitbucket
-# generated these when a version field was removed, and the migration copied them under the
-# maintainer's human account, so the existing '[bot]' author check cannot see them. Anchored on
-# the literal "(automated comment)" marker as the corpus shows it. Observed in 5 of the 7 migrated
-# pyobjc issues (one occurrence each) as of 2026-09-05, see process-docs/content_cleaning/.
 AUTOMATED_COMMENT_RE = re.compile(r'^Removing version: .+ \(automated comment\)$')
 
 
 # ORCHESTRATOR
 
-# Fetch GitHub issues matching query + repo, write per-issue MDs, index into RAG
 def index_issues_workflow(query: str, repo: str, limit: int = DEFAULT_LIMIT) -> list[TextContent]:
     logger.info("index_issues query=%s repo=%s limit=%s", query, repo, limit)
     owner, repo_name = repo.split("/", 1)
@@ -77,7 +55,6 @@ def index_issues_workflow(query: str, repo: str, limit: int = DEFAULT_LIMIT) -> 
 
 # FUNCTIONS
 
-# Search issues via GitHub Search Issues API; return (total_count, numbers[:limit])
 def search_raw(query: str, repo: str, limit: int) -> tuple[int, list[int]]:
     built_query = f"{query} repo:{repo} is:issue"
     params = {"q": built_query, "per_page": min(limit, 100), "order": "desc"}
@@ -92,7 +69,6 @@ def search_raw(query: str, repo: str, limit: int) -> tuple[int, list[int]]:
     return raw["total_count"], numbers
 
 
-# Run search_raw with 3->2->1 keyword fallback; return (total, numbers, kw_level actually used)
 def search_issues_with_fallback(keywords: list[str], repo: str, limit: int) -> tuple[int, list[int], int]:
     total = 0
     numbers: list[int] = []
@@ -106,7 +82,6 @@ def search_issues_with_fallback(keywords: list[str], repo: str, limit: int) -> t
     return total, numbers, kw_level
 
 
-# Fetch, clean, and write one issue's MD (fetch -> raw-log -> strip -> build -> write)
 def write_one_issue_md(owner: str, repo_name: str, repo_basename: str, num: int) -> None:
     filename = f"{repo_basename}__{num}.md"
     issue_text = get_issue_workflow(owner, repo_name, num)[0].text
@@ -123,7 +98,6 @@ def write_one_issue_md(owner: str, repo_name: str, repo_basename: str, num: int)
     (RAG_DOC_DIR / filename).write_text(md, encoding="utf-8")
 
 
-# Write MDs for every issue number; return count written
 def write_issue_mds(owner: str, repo_name: str, repo_basename: str, numbers: list[int]) -> int:
     mds_written = 0
     for num in numbers:
@@ -132,7 +106,6 @@ def write_issue_mds(owner: str, repo_name: str, repo_basename: str, numbers: lis
     return mds_written
 
 
-# Build the final summary text, including the keyword-fallback note
 def build_index_summary(
     mds_written: int, repo: str, query: str, kw_level: int, keywords: list[str],
     new_chunks: int, total_mds: int, total_chunks: int,
@@ -149,11 +122,7 @@ def build_index_summary(
     )
 
 
-# Strip indexing noise from a formatted issue text; return (filtered_text, extracted_title)
 def strip_noise(text: str) -> tuple[str, str]:
-    # Author and Created carry attribution/date context and are kept — content and context have
-    # priority, only pure noise is stripped. Author now also carries the GitHub role
-    # (author_association) next to the login, e.g. "Author: octocat (OWNER)" — see get_issue.py.
     METADATA_PREFIXES = (
         "Updated:", "Branch:",
         "Commits:", "Changed Files:", "Mergeable:", "URL:", "Comments:",
@@ -173,7 +142,6 @@ def strip_noise(text: str) -> tuple[str, str]:
             title = line[2:].strip()
             title_extracted = True
             continue
-        # TRACKER_MIGRATION (class F): header line + blank + 40-dash rule, all dropped together
         if (MIGRATION_REPORT_RE.match(line) and i + 2 < len(lines)
                 and lines[i + 1].strip() == '' and MIGRATION_RULE_RE.match(lines[i + 2])):
             skip_until = i + 2
@@ -189,9 +157,6 @@ def strip_noise(text: str) -> tuple[str, str]:
     return "\n".join(out), title
 
 
-# True if a comment's body (the lines between its separator and the next one, or end of text)
-# reduces to solely the automated version-removal marker once Author/Date metadata and a nested
-# class-F migration header (if present) are excluded
 def _is_automated_only_comment(block: list) -> bool:
     content = []
     i = 0
@@ -210,10 +175,6 @@ def _is_automated_only_comment(block: list) -> bool:
     return len(content) == 1 and bool(AUTOMATED_COMMENT_RE.match(content[0]))
 
 
-# Clean comments text: drop bot comments, keep Author/Date metadata (context has priority — see
-# get_issue_comments.py for the Author line's "login (ROLE)" format), strip quoted-reply lines,
-# strip tracker-migration attribution header + rule (class F), drop whole automated
-# version-removal comments (class G)
 def strip_comments_noise(comments_text: str) -> str:
     SEP_RE = re.compile(r'^--- Comment \d+ ---$')
     lines = comments_text.split('\n')
@@ -231,9 +192,6 @@ def strip_comments_noise(comments_text: str) -> str:
                 if lines[j].startswith('Author:'):
                     author_line = lines[j]
                     break
-            # login ends with "[bot]" — checked as "[bot] (" since Author now carries the role
-            # in a trailing "(ROLE)" parenthetical (see get_issue_comments.py), so the line no
-            # longer ends with "[bot]" itself
             if '[bot] (' in author_line:
                 in_bot_block = True
                 in_automated_block = False
@@ -247,10 +205,8 @@ def strip_comments_noise(comments_text: str) -> str:
                     out.append(line)
         elif in_bot_block:
             continue
-        # AUTOMATED_COMMENT (class G): whole comment (separator through body) dropped together
         elif in_automated_block:
             continue
-        # TRACKER_MIGRATION (class F): header line + blank + 40-dash rule, all dropped together
         elif (MIGRATION_COMMENT_RE.match(line) and i + 2 < len(lines)
                 and lines[i + 1].strip() == '' and MIGRATION_RULE_RE.match(lines[i + 2])):
             skip_until = i + 2
@@ -263,13 +219,11 @@ def strip_comments_noise(comments_text: str) -> str:
     return '\n'.join(out)
 
 
-# Render one issue as a standalone MD with H1 title
 def build_issue_md(issue_num: int, title: str, issue_text: str, comments_text: str) -> str:
     header = f"# {title}" if title else f"# Issue #{issue_num}"
     return f"{header}\n\n{issue_text}\n\n{comments_text}\n"
 
 
-# Run rag-cli index (incremental); return new chunk count from stdout
 def run_index() -> int:
     rag_cli = Path.home() / ".local" / "bin" / "rag-cli"
     result = subprocess.run(
@@ -287,13 +241,11 @@ def run_index() -> int:
     return parse_chunk_count(result.stdout)
 
 
-# Parse new chunk count from rag-cli index stdout
 def parse_chunk_count(stdout: str) -> int:
     m = re.search(r"Done: \d+ files indexed \((\d+) chunks\)", stdout)
     return int(m.group(1)) if m else 0
 
 
-# Return (md_count, total_chunks) for github_issues collection
 def get_collection_stats() -> tuple[int, int]:
     md_count = len(list(RAG_DOC_DIR.glob("*.md")))
     rag_cli = Path.home() / ".local" / "bin" / "rag-cli"
