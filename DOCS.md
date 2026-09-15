@@ -14,7 +14,7 @@ No package `__init__` — `cli.py` is a standalone script. Entry path: `~/.local
 
 ## Modules
 
-### cli.py (224 LOC)
+### cli.py (300 LOC)
 
 **Purpose:** Argparse CLI entry — build parser (14 subparsers), dispatch to workflows, central error handling.
 **Reads:** `sys.argv` (argparse); prepends its own dir to `sys.path` at import so `src.github.*` resolves from any cwd.

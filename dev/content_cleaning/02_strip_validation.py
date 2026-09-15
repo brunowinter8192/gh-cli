@@ -240,7 +240,7 @@ def spot_check(source_dir: Path, filenames: list[str]) -> list[dict]:
     return checks
 
 
-def write_report(path: Path, results: list[dict], spot: list[dict], total_files: int) -> None:
+def _render_summary_section(results: list[dict], total_files: int) -> tuple[list, list, list]:
     before_over = [r for r in results if r["before_max"] > THRESHOLD]
     after_over  = [r for r in results if r["after_max"]  > THRESHOLD]
     corpus_before_peak = max(r["before_max"] for r in results)
@@ -248,7 +248,7 @@ def write_report(path: Path, results: list[dict], spot: list[dict], total_files:
     total_removed = sum(r["chars_removed"] for r in results)
     files_changed = sum(1 for r in results if r["chars_removed"] > 0)
 
-    o = [
+    section = [
         f"# Strip Validation Report — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         f"\nCorpus: {total_files} files · `data/documents/github_discussions/`",
         "\n## Summary\n",
@@ -259,47 +259,64 @@ def write_report(path: Path, results: list[dict], spot: list[dict], total_files:
         f"| Total chars removed | — | {total_removed:,} |",
         f"| Files changed | — | {files_changed} / {total_files} |",
     ]
+    return section, before_over, after_over
 
+
+def _render_pass_criterion_section(before_over: list[dict], after_over: list[dict]) -> list:
     pass_ok = len(after_over) == 0
     status = "✅ PASS" if pass_ok else f"❌ FAIL — {len(after_over)} file(s) still exceed {THRESHOLD} chars"
-    o += [
+    section = [
         "\n## Pass Criterion\n",
         f"All {len(before_over)} files with no-space run > {THRESHOLD} chars must drop below threshold: **{status}**",
     ]
     if after_over:
-        o.append("\n**Remaining offenders:**")
+        section.append("\n**Remaining offenders:**")
         for r in sorted(after_over, key=lambda x: -x["after_max"])[:10]:
-            o.append(f"- `{r['filename']}`: {r['after_max']:,} chars")
+            section.append(f"- `{r['filename']}`: {r['after_max']:,} chars")
+    return section
 
+
+def _render_per_file_section(results: list[dict]) -> list:
     changed = sorted([r for r in results if r["chars_removed"] > 0], key=lambda x: -x["before_max"])
-    o += [
+    section = [
         "\n## Per-File Results (changed files only)\n",
         "| File | Before max (chars) | After max (chars) | Chars removed |",
         "|---|---|---|---|",
     ]
     for r in changed:
-        o.append(f"| `{r['filename']}` | {r['before_max']:,} | {r['after_max']:,} | {r['chars_removed']:,} |")
+        section.append(f"| `{r['filename']}` | {r['before_max']:,} | {r['after_max']:,} | {r['chars_removed']:,} |")
+    return section
 
-    o.append("\n## Content Preservation Spot-Check\n")
+
+def _render_spot_check_section(spot: list[dict]) -> list:
+    section = ["\n## Content Preservation Spot-Check\n"]
     for c in spot:
         if not c["found"]:
-            o.append(f"\n### `{c['filename']}` — FILE NOT FOUND\n")
+            section.append(f"\n### `{c['filename']}` — FILE NOT FOUND\n")
             continue
-        o.append(f"\n### `{c['filename']}`\n")
-        o.append(
+        section.append(f"\n### `{c['filename']}`\n")
+        section.append(
             f"No-space run: {c['before_max']:,} → {c['after_max']:,} | "
             f"Chars removed: {c['chars_removed']:,}\n"
         )
-        o.append("| Pattern | Before | After | Preserved |")
-        o.append("|---|---|---|---|")
+        section.append("| Pattern | Before | After | Preserved |")
+        section.append("|---|---|---|---|")
         for p in c["patterns"]:
             tick = "✅" if p["ok"] else "⚠️"
-            o.append(f"| {p['label']} | {p['before']} | {p['after']} | {tick} |")
+            section.append(f"| {p['label']} | {p['before']} | {p['after']} | {tick} |")
         if c["sample"]:
-            o.append("\nSample lines from after-text (first 3 non-trivial):\n```")
+            section.append("\nSample lines from after-text (first 3 non-trivial):\n```")
             for line in c["sample"]:
-                o.append(line[:120])
-            o.append("```")
+                section.append(line[:120])
+            section.append("```")
+    return section
+
+
+def write_report(path: Path, results: list[dict], spot: list[dict], total_files: int) -> None:
+    o, before_over, after_over = _render_summary_section(results, total_files)
+    o += _render_pass_criterion_section(before_over, after_over)
+    o += _render_per_file_section(results)
+    o += _render_spot_check_section(spot)
 
     path.write_text('\n'.join(o) + '\n')
 

@@ -58,48 +58,19 @@ def index_issues_workflow(query: str, repo: str, limit: int = DEFAULT_LIMIT) -> 
     keywords = query.split()[:3]
     if not keywords:
         return [TextContent(type="text", text="Empty query — provide 1-3 keywords.")]
-    total = 0
-    numbers: list[int] = []
-    kw_level = 0
-    for k in range(len(keywords), 0, -1):
-        sub_q = " ".join(keywords[:k])
-        total, numbers = search_raw(sub_q, repo, limit)
-        if total > 0:
-            kw_level = k
-            break
+
+    total, numbers, kw_level = search_issues_with_fallback(keywords, repo, limit)
     if total == 0:
         return [TextContent(type="text", text=f"No issues found for '{keywords[0]}' in {repo}.")]
 
     RAG_DOC_DIR.mkdir(parents=True, exist_ok=True)
-    mds_written = 0
-    for num in numbers:
-        filename = f"{repo_basename}__{num}.md"
-        issue_text = get_issue_workflow(owner, repo_name, num)[0].text
-        comments_text = get_issue_comments_workflow(owner, repo_name, num)[0].text
-        log_raw_issue(filename, issue_text, comments_text)
-
-        clean, title = strip_noise(issue_text)
-        clean = strip_generic_noise(clean)
-        clean = strip_build_logs(clean)
-        clean_comments = strip_comments_noise(comments_text)
-        clean_comments = strip_generic_noise(clean_comments)
-        clean_comments = strip_build_logs(clean_comments)
-        md = build_issue_md(num, title, clean, clean_comments)
-        (RAG_DOC_DIR / filename).write_text(md, encoding="utf-8")
-        mds_written += 1
+    mds_written = write_issue_mds(owner, repo_name, repo_basename, numbers)
 
     new_chunks = run_index()
     total_mds, total_chunks = get_collection_stats()
 
-    fallback_note = (
-        f" (fell back to {kw_level} keyword{'s' if kw_level != 1 else ''})"
-        if kw_level < len(keywords) else ""
-    )
-    summary = (
-        f"Indexed {mds_written} issues from {repo}.\n"
-        f"Query: '{query}'{fallback_note}\n"
-        f"New chunks added this run: {new_chunks}\n"
-        f"Collection now: {total_mds} MDs, {total_chunks} chunks total."
+    summary = build_index_summary(
+        mds_written, repo, query, kw_level, keywords, new_chunks, total_mds, total_chunks
     )
     return [TextContent(type="text", text=summary)]
 
@@ -119,6 +90,63 @@ def search_raw(query: str, repo: str, limit: int) -> tuple[int, list[int]]:
     raw = response.json()
     numbers = [item["number"] for item in raw["items"][:limit]]
     return raw["total_count"], numbers
+
+
+# Run search_raw with 3->2->1 keyword fallback; return (total, numbers, kw_level actually used)
+def search_issues_with_fallback(keywords: list[str], repo: str, limit: int) -> tuple[int, list[int], int]:
+    total = 0
+    numbers: list[int] = []
+    kw_level = 0
+    for k in range(len(keywords), 0, -1):
+        sub_q = " ".join(keywords[:k])
+        total, numbers = search_raw(sub_q, repo, limit)
+        if total > 0:
+            kw_level = k
+            break
+    return total, numbers, kw_level
+
+
+# Fetch, clean, and write one issue's MD (fetch -> raw-log -> strip -> build -> write)
+def write_one_issue_md(owner: str, repo_name: str, repo_basename: str, num: int) -> None:
+    filename = f"{repo_basename}__{num}.md"
+    issue_text = get_issue_workflow(owner, repo_name, num)[0].text
+    comments_text = get_issue_comments_workflow(owner, repo_name, num)[0].text
+    log_raw_issue(filename, issue_text, comments_text)
+
+    clean, title = strip_noise(issue_text)
+    clean = strip_generic_noise(clean)
+    clean = strip_build_logs(clean)
+    clean_comments = strip_comments_noise(comments_text)
+    clean_comments = strip_generic_noise(clean_comments)
+    clean_comments = strip_build_logs(clean_comments)
+    md = build_issue_md(num, title, clean, clean_comments)
+    (RAG_DOC_DIR / filename).write_text(md, encoding="utf-8")
+
+
+# Write MDs for every issue number; return count written
+def write_issue_mds(owner: str, repo_name: str, repo_basename: str, numbers: list[int]) -> int:
+    mds_written = 0
+    for num in numbers:
+        write_one_issue_md(owner, repo_name, repo_basename, num)
+        mds_written += 1
+    return mds_written
+
+
+# Build the final summary text, including the keyword-fallback note
+def build_index_summary(
+    mds_written: int, repo: str, query: str, kw_level: int, keywords: list[str],
+    new_chunks: int, total_mds: int, total_chunks: int,
+) -> str:
+    fallback_note = (
+        f" (fell back to {kw_level} keyword{'s' if kw_level != 1 else ''})"
+        if kw_level < len(keywords) else ""
+    )
+    return (
+        f"Indexed {mds_written} issues from {repo}.\n"
+        f"Query: '{query}'{fallback_note}\n"
+        f"New chunks added this run: {new_chunks}\n"
+        f"Collection now: {total_mds} MDs, {total_chunks} chunks total."
+    )
 
 
 # Strip indexing noise from a formatted issue text; return (filtered_text, extracted_title)
