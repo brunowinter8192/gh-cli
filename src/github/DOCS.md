@@ -137,7 +137,7 @@
 
 ---
 
-### index_issues.py (282 LOC)
+### index_issues.py (310 LOC)
 
 **Purpose:** Fetch GitHub issues matching a query, strip noise, write per-issue MDs, and index into the `github_issues` RAG collection. Keyword-fallback loop (3→2→1) ensures a non-empty result set.
 **Reads:** GitHub Search Issues API + `get_issue_workflow` + `get_issue_comments_workflow` in-process; globs `RAG_DOC_DIR/*.md` for MD count; `rag-cli list_collections` for chunk total.
@@ -237,7 +237,7 @@ Build-log strip: exports `strip_build_logs(text) -> str`. Detects setuptools/dis
 
 ---
 
-### discussion_cleaning.py (121 LOC)
+### discussion_cleaning.py (139 LOC)
 
 **Purpose:** Dosu-specific noise-strip module — no mcp dependency. Exports `strip_noise(text) -> str`: 12 sub-categories — DOSU_FOOTER block, DOSU_GREETING 2-line standalone, ISSUE_TEMPLATE_CHECKLIST block, STANDALONE_BADGE_LINE, DOSU_FOOTER_TEXT (blockquoted/email-rendered prose: `'To reply, just mention'` / `'Docs are dead.'` / `'Share context…'` + dosu ref; Chinese: `回复时只需提及` / `已经过时`), DOSU_MARKERLESS_GREETING (`_is_dosu_markerless_greeting()`: after `^[\s>_*]+` + `&nbsp;→space` strip, line starts with `Hi @` / `你好@` / `你好 @` AND contains `Dosu` AND contains `helping`+`team` or `帮助`+`团队`; user-quoted attribution blocks preserved), DOSU_ANSWER_MARKER inline sub, DOSU_GREETING_INLINE sub (`<!-- Answer|Greeting -->` unified); generic image+no-space strips delegated to `strip_generic_noise()` from `text_cleaning.py`. Private helpers `_bare()`, `_is_badge_line()`, `_is_dosu_footer_text_line()`, `_is_dosu_markerless_greeting()` and constants (`FOOTER_LOOKAHEAD`, `_BADGE_DOMAINS`, `_FOOTER_TEXT_PHRASES`, `ISSUE_HEADING_RE`). Safe on raw `get_discussion` output and already-built MDs (does not touch `## ` headings, attribution headers, or metadata lines).
 **Reads:** nothing — pure text transform.

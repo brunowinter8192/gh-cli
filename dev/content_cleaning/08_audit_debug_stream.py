@@ -219,6 +219,64 @@ def measure_adjacency(md_files: list) -> dict:
     return rows
 
 
+def _render_shape_section(shape_name: str, results: list) -> list:
+    affected = [r for r in results if r.shape_lines.get(shape_name)]
+    total_lines = sum(r.shape_lines.get(shape_name, 0) for r in results)
+    total_chars = sum(r.shape_chars.get(shape_name, 0) for r in results)
+    by_repo = Counter()
+    for r in affected:
+        by_repo[r.repo] += r.shape_lines[shape_name]
+    run_buckets = Counter()
+    for r in affected:
+        for start, end in r.shape_runs.get(shape_name, []):
+            run_buckets[_run_length_bucket(end - start + 1)] += 1
+
+    section = [
+        f"\n## Shape: `{shape_name}`\n",
+        f"Files: {len(affected)} · Lines: {total_lines} · Chars: {total_chars:,}",
+        f"\nBy repo: {dict(by_repo)}",
+        f"\nRun-length histogram (bucket -> run count): "
+        f"{ {k: run_buckets[k] for k in ['1-2','3-5','6-9','10-19','20-49','50+'] if run_buckets[k]} }",
+        "\n### Per-file evidence (top 15 by matched lines)\n",
+    ]
+    for r in sorted(affected, key=lambda x: -x.shape_lines[shape_name])[:15]:
+        lines = (DEFAULT_SOURCE_DIR / r.filename).read_text(errors='replace').splitlines()
+        example = next((l for l in lines if SHAPES[shape_name].match(l)), "")
+        section.append(f"- `{r.filename}`: {r.shape_lines[shape_name]} lines, "
+                  f"{len(r.shape_runs.get(shape_name, []))} run(s) — e.g. `{example[:140]}`")
+    return section
+
+
+def _render_repeat_comparison_section(results: list) -> list:
+    section = ["\n## Literal-repeat vs. normalized-fingerprint repeats (corpus-wide)\n"]
+    literal_files = [r for r in results if r.literal_repeats]
+    fp_files = [r for r in results if r.fingerprint_repeats]
+    literal_instances = sum(sum(r.literal_repeats.values()) for r in results)
+    fp_instances = sum(sum(n for n, _ in r.fingerprint_repeats.values()) for r in results)
+    section.append(f"Literal repeats (>= {REPEAT_THRESHOLD}x, exact line): {len(literal_files)} files, "
+              f"{literal_instances} repeated-line instances.")
+    section.append(f"Normalized-fingerprint repeats (>= {REPEAT_THRESHOLD}x, digits/hex/UUID/timestamp "
+              f"collapsed): {len(fp_files)} files, {fp_instances} repeated-line instances.")
+    section.append(f"Delta (instances the fingerprint measure surfaces that literal repeat misses): "
+              f"{fp_instances - literal_instances}.")
+    return section
+
+
+def _render_fingerprint_delta_section(results: list) -> list:
+    section = ["\n### Files where fingerprinting surfaces materially more than literal repeat\n"]
+    for r in sorted(results, key=lambda x: -(sum(n for n, _ in x.fingerprint_repeats.values())
+                                              - sum(x.literal_repeats.values())))[:15]:
+        lit = sum(r.literal_repeats.values())
+        fp = sum(n for n, _ in r.fingerprint_repeats.values())
+        if fp - lit <= 0:
+            continue
+        section.append(f"- `{r.filename}`: literal={lit}, fingerprint={fp} (+{fp - lit})")
+        top_fp = sorted(r.fingerprint_repeats.items(), key=lambda x: -x[1][0])[:2]
+        for norm, (n, example) in top_fp:
+            section.append(f"    {n}x normalized: `{norm[:120]}` — e.g. `{example[:120]}`")
+    return section
+
+
 def write_report(path: Path, results: list, total_files: int) -> None:
     o = [
         f"# Class B (DEBUG_STREAM) Audit Report — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
@@ -226,54 +284,10 @@ def write_report(path: Path, results: list, total_files: int) -> None:
     ]
 
     for shape_name in SHAPES:
-        affected = [r for r in results if r.shape_lines.get(shape_name)]
-        total_lines = sum(r.shape_lines.get(shape_name, 0) for r in results)
-        total_chars = sum(r.shape_chars.get(shape_name, 0) for r in results)
-        by_repo = Counter()
-        for r in affected:
-            by_repo[r.repo] += r.shape_lines[shape_name]
-        run_buckets = Counter()
-        for r in affected:
-            for start, end in r.shape_runs.get(shape_name, []):
-                run_buckets[_run_length_bucket(end - start + 1)] += 1
+        o += _render_shape_section(shape_name, results)
 
-        o += [
-            f"\n## Shape: `{shape_name}`\n",
-            f"Files: {len(affected)} · Lines: {total_lines} · Chars: {total_chars:,}",
-            f"\nBy repo: {dict(by_repo)}",
-            f"\nRun-length histogram (bucket -> run count): "
-            f"{ {k: run_buckets[k] for k in ['1-2','3-5','6-9','10-19','20-49','50+'] if run_buckets[k]} }",
-            "\n### Per-file evidence (top 15 by matched lines)\n",
-        ]
-        for r in sorted(affected, key=lambda x: -x.shape_lines[shape_name])[:15]:
-            lines = (DEFAULT_SOURCE_DIR / r.filename).read_text(errors='replace').splitlines()
-            example = next((l for l in lines if SHAPES[shape_name].match(l)), "")
-            o.append(f"- `{r.filename}`: {r.shape_lines[shape_name]} lines, "
-                      f"{len(r.shape_runs.get(shape_name, []))} run(s) — e.g. `{example[:140]}`")
-
-    o += ["\n## Literal-repeat vs. normalized-fingerprint repeats (corpus-wide)\n"]
-    literal_files = [r for r in results if r.literal_repeats]
-    fp_files = [r for r in results if r.fingerprint_repeats]
-    literal_instances = sum(sum(r.literal_repeats.values()) for r in results)
-    fp_instances = sum(sum(n for n, _ in r.fingerprint_repeats.values()) for r in results)
-    o.append(f"Literal repeats (>= {REPEAT_THRESHOLD}x, exact line): {len(literal_files)} files, "
-              f"{literal_instances} repeated-line instances.")
-    o.append(f"Normalized-fingerprint repeats (>= {REPEAT_THRESHOLD}x, digits/hex/UUID/timestamp "
-              f"collapsed): {len(fp_files)} files, {fp_instances} repeated-line instances.")
-    o.append(f"Delta (instances the fingerprint measure surfaces that literal repeat misses): "
-              f"{fp_instances - literal_instances}.")
-
-    o += ["\n### Files where fingerprinting surfaces materially more than literal repeat\n"]
-    for r in sorted(results, key=lambda x: -(sum(n for n, _ in x.fingerprint_repeats.values())
-                                              - sum(x.literal_repeats.values())))[:15]:
-        lit = sum(r.literal_repeats.values())
-        fp = sum(n for n, _ in r.fingerprint_repeats.values())
-        if fp - lit <= 0:
-            continue
-        o.append(f"- `{r.filename}`: literal={lit}, fingerprint={fp} (+{fp - lit})")
-        top_fp = sorted(r.fingerprint_repeats.items(), key=lambda x: -x[1][0])[:2]
-        for norm, (n, example) in top_fp:
-            o.append(f"    {n}x normalized: `{norm[:120]}` — e.g. `{example[:120]}`")
+    o += _render_repeat_comparison_section(results)
+    o += _render_fingerprint_delta_section(results)
 
     path.write_text('\n'.join(o) + '\n')
 

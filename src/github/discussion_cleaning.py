@@ -58,6 +58,44 @@ def _is_dosu_footer_text_line(line: str) -> bool:
     return False
 
 
+# DOSU_FOOTER: try to skip <!-- Dosu Comment Footer --> ... badge line (incl.); None if no match
+def _try_skip_dosu_footer(lines: list, i: int, bare: str) -> int | None:
+    if bare != '<!-- Dosu Comment Footer -->':
+        return None
+    badge_idx = next(
+        (j for j in range(i + 1, min(i + FOOTER_LOOKAHEAD, len(lines)))
+         if _is_badge_line(lines[j])), None
+    )
+    if badge_idx is None:
+        return None
+    block = lines[i:badge_idx + 1]
+    if any(re.search(r'^\s*>\s*\*\*@', l) for l in block):
+        return None
+    return badge_idx + 1
+
+
+# DOSU_GREETING: try to skip <!-- Greeting --> + next non-blank line; None if no match
+def _try_skip_dosu_greeting(lines: list, i: int, bare: str) -> int | None:
+    if bare != '<!-- Greeting -->':
+        return None
+    greet_idx = next(
+        (j for j in range(i + 1, min(i + 5, len(lines))) if lines[j].strip()), None
+    )
+    if greet_idx is None:
+        return None
+    return greet_idx + 1
+
+
+# ISSUE_TEMPLATE_CHECKLIST: try to skip heading + consecutive checkbox/blank lines; None if no match
+def _try_skip_issue_template_checklist(lines: list, i: int) -> int | None:
+    if not ISSUE_HEADING_RE.match(lines[i].strip()):
+        return None
+    j = i + 1
+    while j < len(lines) and (lines[j].strip().startswith('- [') or not lines[j].strip()):
+        j += 1
+    return j
+
+
 # Strip bot-generated noise from text; safe on raw get_discussion output or pre-built MDs
 def strip_noise(text: str) -> str:
     lines = text.splitlines()
@@ -67,33 +105,13 @@ def strip_noise(text: str) -> str:
         line = lines[i]
         bare = _bare(line)
 
-        # DOSU_FOOTER: strip <!-- Dosu Comment Footer --> ... badge line (incl.)
-        if bare == '<!-- Dosu Comment Footer -->':
-            badge_idx = next(
-                (j for j in range(i + 1, min(i + FOOTER_LOOKAHEAD, len(lines)))
-                 if _is_badge_line(lines[j])), None
-            )
-            if badge_idx is not None:
-                block = lines[i:badge_idx + 1]
-                if not any(re.search(r'^\s*>\s*\*\*@', l) for l in block):
-                    i = badge_idx + 1
-                    continue
-
-        # DOSU_GREETING: strip <!-- Greeting --> + next non-blank line
-        if bare == '<!-- Greeting -->':
-            greet_idx = next(
-                (j for j in range(i + 1, min(i + 5, len(lines))) if lines[j].strip()), None
-            )
-            if greet_idx is not None:
-                i = greet_idx + 1
-                continue
-
-        # ISSUE_TEMPLATE_CHECKLIST: strip heading + consecutive checkbox/blank lines
-        if ISSUE_HEADING_RE.match(line.strip()):
-            j = i + 1
-            while j < len(lines) and (lines[j].strip().startswith('- [') or not lines[j].strip()):
-                j += 1
-            i = j
+        new_i = _try_skip_dosu_footer(lines, i, bare)
+        if new_i is None:
+            new_i = _try_skip_dosu_greeting(lines, i, bare)
+        if new_i is None:
+            new_i = _try_skip_issue_template_checklist(lines, i)
+        if new_i is not None:
+            i = new_i
             continue
 
         # STANDALONE BADGE LINE: markerless/blockquoted/orphaned dosu badges
