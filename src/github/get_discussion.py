@@ -1,7 +1,6 @@
 # INFRASTRUCTURE
 import logging
 from mcp.types import TextContent
-# From graphql_client.py: execute GraphQL query against GitHub API
 from src.github.graphql_client import graphql_query
 
 logger = logging.getLogger(__name__)
@@ -65,7 +64,6 @@ def get_discussion_workflow(
 
 # FUNCTIONS
 
-# Fetch single discussion with comments
 def fetch_discussion(owner: str, repo: str, number: int, comment_limit: int) -> dict:
     logger.debug("Fetching discussion owner=%s repo=%s number=%s", owner, repo, number)
     variables = {
@@ -77,7 +75,6 @@ def fetch_discussion(owner: str, repo: str, number: int, comment_limit: int) -> 
     return graphql_query(DISCUSSION_QUERY, variables)
 
 
-# Format discussion for display
 def format_discussion(data: dict, comment_limit: int) -> str:
     d = data["repository"]["discussion"]
     if not d:

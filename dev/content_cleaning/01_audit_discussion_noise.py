@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# Audit noise classes in GitHub discussion MDs. Read-only — never modifies source files.
-# Usage: python3 dev/content_cleaning/01_audit_discussion_noise.py [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -111,7 +109,6 @@ def _add_hit(cls: Class, h: Hit, tc: int, al: int, pr: int, risk: bool = False) 
         cls.risk_hits += 1
 
 
-# Detect dosu footer block: <!-- Dosu Comment Footer --> through badge line (HARD INVARIANT: no > **@ in range)
 def audit_dosu_footer(md_files: list) -> Class:
     cls = Class(
         name="DOSU_FOOTER",
@@ -154,7 +151,6 @@ def audit_dosu_footer(md_files: list) -> Class:
     return cls
 
 
-# Detect dosu greeting: <!-- Greeting --> + next non-blank line (2-line boundary, no overrun)
 def audit_dosu_greeting(md_files: list) -> Class:
     cls = Class(
         name="DOSU_GREETING",
@@ -187,7 +183,6 @@ def audit_dosu_greeting(md_files: list) -> Class:
     return cls
 
 
-# Generic single-token regex class detector (for DOSU_ANSWER_MARKER and FAILED_UPLOAD)
 def _audit_token_class(md_files: list, cls: Class, pat: re.Pattern) -> Class:
     files_hit: set = set()
     for fp in md_files:
@@ -211,7 +206,6 @@ def _audit_token_class(md_files: list, cls: Class, pat: re.Pattern) -> Class:
     return cls
 
 
-# Detect user-uploaded screenshot img tags — ALL hits shown for alt-text classification
 def audit_gh_screenshot_img(md_files: list) -> Class:
     cls = Class(
         name="GH_SCREENSHOT_IMG",
@@ -248,7 +242,6 @@ def audit_gh_screenshot_img(md_files: list) -> Class:
     return cls
 
 
-# Detect MinerU issue-template boilerplate sections
 def audit_issue_template(md_files: list) -> Class:
     cls = Class(
         name="ISSUE_TEMPLATE_CHECKLIST",
@@ -293,7 +286,6 @@ def audit_issue_template(md_files: list) -> Class:
     return cls
 
 
-# Format a single hit as a list of markdown lines
 def _fmt_hit(h: Hit, idx: int, max_text: int = 400) -> List[str]:
     o = [f"\n**Hit {idx} — `{h.filename}` L{h.start_line}–{h.end_line}**"]
     if h.content_risk:
@@ -309,7 +301,6 @@ def _fmt_hit(h: Hit, idx: int, max_text: int = 400) -> List[str]:
     return o
 
 
-# Write the audit report MD
 def write_report(path: Path, classes: list, total_files: int) -> None:
     o: List[str] = [
         f"# Discussion Noise Audit — {datetime.now().strftime('%Y-%m-%d')}",

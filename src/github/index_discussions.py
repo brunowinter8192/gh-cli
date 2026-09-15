@@ -6,13 +6,9 @@ from pathlib import Path
 
 from mcp.types import TextContent
 
-# From discussion_cleaning.py: strip dosu-bot footers/greetings, template checklists, badges from discussion text
 from src.github.discussion_cleaning import strip_noise
-# From graphql_client.py: execute GraphQL query against GitHub API
 from src.github.graphql_client import graphql_query
-# From get_discussion.py: fetch and format a single GitHub discussion with comments
 from src.github.get_discussion import get_discussion_workflow
-# From config.py: shared RAG root path and default fetch/index limit
 from src.github.config import RAG_ROOT, DEFAULT_LIMIT
 
 logger = logging.getLogger(__name__)
@@ -36,7 +32,6 @@ query($query: String!, $first: Int!) {
 
 # ORCHESTRATOR
 
-# Fetch GitHub discussions matching query + repo, write per-discussion MDs, index into RAG
 def index_discussions_workflow(query: str, repo: str, limit: int = DEFAULT_LIMIT) -> list[TextContent]:
     logger.info("index_discussions query=%s repo=%s limit=%s", query, repo, limit)
     owner, repo_name = repo.split("/", 1)
@@ -85,7 +80,6 @@ def index_discussions_workflow(query: str, repo: str, limit: int = DEFAULT_LIMIT
 
 # FUNCTIONS
 
-# Search discussions via GitHub GraphQL Search API; return (discussionCount, numbers[:limit])
 def search_discussions_raw(query: str, repo: str, limit: int) -> tuple[int, list[int]]:
     scoped_query = f"{query} repo:{repo}"
     variables = {"query": scoped_query, "first": min(limit, 100)}
@@ -95,7 +89,6 @@ def search_discussions_raw(query: str, repo: str, limit: int) -> tuple[int, list
     return search["discussionCount"], numbers
 
 
-# Strip raw get_discussion output: noise pass then title/metadata/[ANSWER] format pass
 def strip_discussion_noise(text: str) -> tuple[str, str]:
     METADATA_PREFIXES = (
         "**Category:**", "**Author:**", "**Created:**", "**Upvotes:**", "**Status:**",
@@ -112,9 +105,7 @@ def strip_discussion_noise(text: str) -> tuple[str, str]:
     in_answer_comment = False
     out = []
 
-    # split('\n') not splitlines() — preserves trailing '' from strip_noise output
     for line in strip_noise(text).split('\n'):
-        # [ANSWER] comment dedup
         if ANSWER_COMMENT_HDR_RE.match(line):
             in_answer_comment = True
             continue
@@ -124,13 +115,11 @@ def strip_discussion_noise(text: str) -> tuple[str, str]:
                 out.append(line)
             continue
 
-        # Title extraction: get_discussion emits "## title", promote to H1 via build_discussion_md
         if not title_extracted and line.startswith("## "):
             title = line[3:].strip()
             title_extracted = True
             continue
 
-        # Metadata block drop
         if any(line.startswith(p) for p in METADATA_PREFIXES):
             continue
 
@@ -139,20 +128,17 @@ def strip_discussion_noise(text: str) -> tuple[str, str]:
     return "\n".join(out), title
 
 
-# Redact GitHub tokens before writing MDs to disk
 def redact_tokens(text: str) -> str:
     text = re.sub(r'ghp_[A-Za-z0-9]+', '[REDACTED]', text)
     text = re.sub(r'github_pat_[A-Za-z0-9_]+', '[REDACTED]', text)
     return text
 
 
-# Render one discussion as a standalone MD with H1 title
 def build_discussion_md(disc_num: int, title: str, body_text: str) -> str:
     header = f"# {title}" if title else f"# Discussion #{disc_num}"
     return f"{header}\n\n{body_text}\n"
 
 
-# Run rag-cli index (incremental); return new chunk count from stdout
 def run_index() -> int:
     rag_cli = Path.home() / ".local" / "bin" / "rag-cli"
     result = subprocess.run(
@@ -170,13 +156,11 @@ def run_index() -> int:
     return parse_chunk_count(result.stdout)
 
 
-# Parse new chunk count from rag-cli index stdout
 def parse_chunk_count(stdout: str) -> int:
     m = re.search(r"Done: \d+ files indexed \((\d+) chunks\)", stdout)
     return int(m.group(1)) if m else 0
 
 
-# Return (md_count, total_chunks) for github_discussions collection
 def get_collection_stats() -> tuple[int, int]:
     md_count = len(list(RAG_DOC_DIR.glob("*.md")))
     rag_cli = Path.home() / ".local" / "bin" / "rag-cli"

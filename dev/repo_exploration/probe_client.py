@@ -1,7 +1,3 @@
-# Intentional verbatim copy of src/github/client.py (token resolution + build_headers)
-# and src/github/graphql_client.py (graphql_query) for dev/-self-containment.
-# dev/ probes may not import from src/ (hook: block_dev_imports_src). Update this file
-# if the source changes materially (token resolution logic, API base URL).
 
 # INFRASTRUCTURE
 import logging
@@ -15,8 +11,6 @@ GITHUB_GRAPHQL = "https://api.github.com/graphql"
 
 logger = logging.getLogger(__name__)
 
-# Matches: export GH_TOKEN=value | export GH_TOKEN="value" | export GH_TOKEN='value'
-# Ignores leading `#` comments. Last assignment wins (mimics zsh source order).
 _ZSHRC_TOKEN_RE = re.compile(
     r'^\s*export\s+GH_TOKEN\s*=\s*["\']?([^"\'\s#]+)["\']?',
     re.MULTILINE,
@@ -25,7 +19,6 @@ _ZSHRC_TOKEN_RE = re.compile(
 
 # FUNCTIONS
 
-# Parse ~/.zshrc for the last `export GH_TOKEN=...` line.
 def _read_zshrc_token() -> str:
     path = Path.home() / ".zshrc"
     if not path.is_file():
@@ -38,7 +31,6 @@ def _read_zshrc_token() -> str:
     return matches[-1] if matches else ""
 
 
-# Resolve in canonical order: zshrc wins, then env GH_TOKEN, then env GITHUB_TOKEN.
 def _resolve_token() -> str:
     return (
         _read_zshrc_token()
@@ -50,7 +42,6 @@ def _resolve_token() -> str:
 GITHUB_TOKEN = _resolve_token()
 
 
-# Build headers with optional auth token
 def build_headers(accept: str = "application/vnd.github+json") -> dict:
     headers = {
         "Accept": accept,
@@ -61,7 +52,6 @@ def build_headers(accept: str = "application/vnd.github+json") -> dict:
     return headers
 
 
-# Execute GraphQL query against GitHub API
 def graphql_query(query: str, variables: dict) -> dict:
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",

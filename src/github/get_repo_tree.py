@@ -1,7 +1,6 @@
 # INFRASTRUCTURE
 import logging
 from mcp.types import TextContent
-# From graphql_client.py: execute GraphQL query against GitHub API
 from src.github.graphql_client import graphql_query
 
 logger = logging.getLogger(__name__)
@@ -49,14 +48,12 @@ def get_repo_tree_workflow(owner: str, repo: str, path: str = "") -> list[TextCo
 
 # FUNCTIONS
 
-# Build GraphQL expression from --path argument
 def build_expression(path: str) -> str:
     if not path:
         return "HEAD:"
     return "HEAD:" + path.strip("/") + "/"
 
 
-# Execute GraphQL query and return formatted string
 def fetch_and_format(owner: str, repo: str, path: str) -> str:
     expression = build_expression(path)
     data = graphql_query(_QUERY, {"owner": owner, "name": repo, "expression": expression})
@@ -96,7 +93,6 @@ def fetch_and_format(owner: str, repo: str, path: str) -> str:
     return "\n".join(lines)
 
 
-# Format tree entries as a table
 def format_tree(entries: list) -> str:
     if not entries:
         return "(empty tree)"

@@ -1,67 +1,4 @@
 #!/usr/bin/env python3
-# Detect + dry-run strip junk class B (DEBUG_STREAM — app debug/log lines pasted from a terminal,
-# not build/install output, which is class A / strip_build_logs) from issue MDs. Dry-run only: no
-# --apply, never modifies the corpus. Shaped like strip_build_logs (vocabulary + run-length floor +
-# per-line hard exclusion, block starts/ends only on a confirmed signal line), but see the
-# decisions below — this detector deliberately has no bridge, unlike strip_build_logs's BRIDGE_GAP.
-#
-# Vocabulary (unchanged from dev/content_cleaning/08_audit_debug_stream.py, derived by reading real
-# corpus files — see process-docs/content_cleaning/):
-#   - ghostty_debug:    ^(debug|info|warning)\([a-zA-Z_]+\):
-#   - playwright_pw:    ^\s*pw:[a-z:]+
-#   - loguru_narration: TIMESTAMP | LEVEL | module:func:line - msg, LEVEL in {TRACE,DEBUG,INFO,SUCCESS,WARNING}
-#
-# MIN_RUN_LINES = 3, RAISED from an initially-accepted 2 after the precision read of the first
-# dry-run dump (2026-09-05) surfaced two real, corpus-observed signal lines the first pass would
-# have removed — both `pw:browser <process did exit: ..., signal=SIG*>` process-exit lines, sitting
-# in exactly length-2 runs: `playwright__31950.md:236` (signal=SIGBUS) and `playwright__14689.md:75`
-# (signal=SIGTRAP, in an issue titled "[BUG] ... browser crashes when running it headed or debug
-# mode" — the SIGTRAP is the direct technical explanation). Floor 3 excludes both for free, and a
-# direct floor-sensitivity re-check confirmed no other floor-3-vs-floor-2 difference introduces any
-# new risk. Every length-1/2 run read at floor 2 in the other two shapes was already safe.
-#
-# No bridge: gaps between same-shape runs were read directly (window <= 3 non-blank lines) and are
-# overwhelmingly either genuinely protected ERROR:/FATAL: lines (playwright__33515.md,
-# playwright__16168.md, playwright__27997.md — dozens of cases) or meaningful non-filler content
-# (test names, config-read lines, JS console warnings) — never a harmless wrapped continuation like
-# strip_build_logs's compiler-diagnostic line-wrap case. A bridge here would routinely jump across
-# real, protected error content, so none is used; a block starts and ends only on a signal line or
-# an intervening blank line.
-#
-# Protected set: ERROR_RE/TRACE_RE/BACKTRACE_RE (existing, verbatim from src/github/text_cleaning.py)
-# plus CRASH_RE (decided IN, evidence below). The unresolved-backtrace-frame pattern proposed in the
-# M1 measurement (`???:?:?: 0x... in ???`) is decided OUT: it never co-occurs with any B-vocabulary
-# match anywhere in the corpus (0 cases), and with no bridge it has no bridging role to defend
-# either — including it would be complexity against a hypothetical, not an observed failure.
-#
-# CRASH_RE evidence and history: an initial narrow enumeration (`SIG(ABRT|SEGV|ILL|BUS|FPE)`) was
-# built from the single SIGBUS case found before the first dry-run. The precision read of that
-# dry-run's dump found a second case (SIGTRAP, above) the enumeration missed, plus a third:
-# `playwright__33515.md:600-604`/`606-616`/`641-643`, a genuine native crash (qemu emulation hitting
-# a trap: "qemu: uncaught target signal 5 (Trace/breakpoint trap) - core dumped") wrapped in a
-# 33-line `pw:browser` block — too long for any reasonable floor to exclude, so this one is not a
-# "raise the floor" case; the protected set itself had to close it. CRASH_RE was rebuilt on this
-# evidence as a general pattern instead of a per-signal-name enumeration: `signal=SIG\w+` (catches
-# any named-signal process-exit line, not just the two names observed) and `core dumped` (catches
-# both `Aborted (core dumped)` and the qemu message, without requiring the word "Aborted"). A second
-# precision pass on the re-run dump found a fourth, distinct case: `playwright__27363.md:117-165`
-# and `playwright__27997.md` carry native macOS/Windows Chromium crash dumps (`#FailureMessage
-# Object: ...`, `Crash keys: ...`) whose own numbered/hex-address backtrace frames (`ChromeMain
-# [0x...+N]`, `GetHandleVerifier [0x...+N]`, etc.) match none of ERROR_RE/CRASH_RE either. Added
-# `#FailureMessage` and `Crash keys:` (6 occurrences, 3 files total) as the two Chromium-specific
-# crash markers, narrowly scoped like the qemu case. The generic internal function-name+hex-address
-# frame lines themselves (not the markers) are NOT separately protected — see the process-docs
-# entry for why this residue is accepted rather than chased with a broader native-frame pattern.
-# A third precision pass, re-reading the file that produced the SIGBUS case, found a fifth: macOS's
-# own in-process signal handler ("Received signal 10 BUS_ADRALN 00000bad4007", `playwright__31950.md`,
-# 12 occurrences across 5 files) and a sixth: Windows NTSTATUS crash exit codes ("exitCode=3221225477"
-# = STATUS_ACCESS_VIOLATION, "exitCode=3221226519", 3 occurrences in 2 files) — every corpus exit
-# code is either 0-255 (normal) or one of these >= 5-digit NTSTATUS values (checked exhaustively:
-# `exitCode=` takes exactly 6 distinct values corpus-wide, 3 normal and 3 crash codes), so
-# `exitCode=\d{5,}` cleanly separates the two with no ambiguity. `Received signal \d+` and
-# `exitCode=\d{5,}` added on this evidence.
-#
-# Usage: python3 dev/content_cleaning/09_strip_debug_stream.py [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -78,25 +15,18 @@ DEFAULT_SOURCE_DIR = Path(
 )
 REPORT_DIR = Path(__file__).parent / "md"
 
-# Minimum consecutive (or blank-bridged) matching-shape lines to qualify as a removable block —
-# see the header comment for the corpus evidence behind this number.
 MIN_RUN_LINES = 3
 
-# --- verbatim copy of src/github/text_cleaning.py's hard exclusions ("currently protected") -----
 ERROR_RE = re.compile(r'error|fatal|traceback|exception|failed', re.IGNORECASE)
 TRACE_RE = re.compile(r'^\s*File "[^"]+", line \d+, in ')
 BACKTRACE_RE = re.compile(r':\d+:\d+:.*0x[0-9a-fA-F]+ in ')
 
-# --- decided-in extension: real crash/signal indicators absent from ERROR_RE's vocabulary --------
-# See header comment for the evidence (SIGBUS, SIGTRAP, qemu core-dump, Chromium crash markers)
-# behind this decision and why it is a general pattern, not a per-signal-name enumeration.
 CRASH_RE = re.compile(
     r'panic:|Segmentation fault|signal=SIG\w+|core dumped|#FailureMessage|Crash keys:|'
     r'Received signal \d+|exitCode=\d{5,}',
     re.IGNORECASE,
 )
 
-# --- class-B vocabulary (unchanged from 08_audit_debug_stream.py) -------------------------------
 SHAPES = {
     "ghostty_debug": re.compile(r'^(debug|info|warning)\([a-zA-Z_]+\):'),
     "playwright_pw": re.compile(r'^\s*pw:[a-z:]+'),
@@ -110,8 +40,8 @@ SHAPES = {
 class Block:
     filename: str
     shape: str
-    start_line: int   # 1-indexed
-    end_line: int      # 1-indexed
+    start_line: int
+    end_line: int
     length: int
     text: str
 
@@ -122,22 +52,18 @@ class FileResult:
     filepath: Path
     file_chars: int
     blocks: list = field(default_factory=list)
-    gross_chars_removed: int = 0   # size of the text cut out
-    net_chars_removed: int = 0     # file shrinkage, accounting for the placeholder written back
+    gross_chars_removed: int = 0
+    net_chars_removed: int = 0
     changed: bool = False
 
 
 # FUNCTIONS
 
-# Hard-excluded: never signal, always breaks a run — existing hard exclusions plus CRASH_RE
 def _is_protected(line: str) -> bool:
     return bool(ERROR_RE.search(line) or TRACE_RE.search(line) or BACKTRACE_RE.search(line)
                 or CRASH_RE.search(line))
 
 
-# Group one shape's matched, non-protected lines into removable (start, end) line-index spans
-# (0-indexed, inclusive) at or above MIN_RUN_LINES. Blank lines bridge a run but never extend or
-# confirm it alone — no other bridging exists (see header comment for why).
 def _find_shape_blocks(lines: list, shape_re: "re.Pattern") -> list:
     def is_signal(line: str) -> bool:
         return bool(shape_re.match(line)) and not _is_protected(line)
@@ -167,9 +93,6 @@ def _find_shape_blocks(lines: list, shape_re: "re.Pattern") -> list:
     return blocks
 
 
-# Combine all three shapes' blocks into one sorted list. The three vocabulary anchors are mutually
-# exclusive by first-character prefix (debug(/info(/warning( vs. pw: vs. a digit timestamp), so no
-# line can ever match two shapes and no two shapes' blocks can ever overlap.
 def _find_all_blocks(lines: list) -> list:
     all_blocks = []
     for shape_name, shape_re in SHAPES.items():
@@ -182,7 +105,6 @@ def _placeholder(n_lines: int) -> str:
     return f"[debug-stream output removed — {n_lines} lines]"
 
 
-# Strip class-B debug-stream blocks from the full text of one issue MD
 def strip_debug_stream(text: str) -> str:
     lines = text.splitlines()
     blocks = _find_all_blocks(lines)
@@ -201,7 +123,6 @@ def strip_debug_stream(text: str) -> str:
     return result
 
 
-# Compute per-file block detail (verbatim removed text) + gross/net chars removed
 def measure_all(md_files: list) -> list:
     results = []
     for fp in md_files:
@@ -228,8 +149,6 @@ def measure_all(md_files: list) -> list:
     return results
 
 
-# Explicit assertion: no removed line matches any protected regex. Returns lines_checked; exits
-# (writes nothing) on failure — mirrors 06_reclean_build_logs.py's safety gate.
 def assert_safety(results: list) -> int:
     violations = []
     total_checked = 0
@@ -248,9 +167,6 @@ def assert_safety(results: list) -> int:
     return total_checked
 
 
-# Write the dump: nothing but the removed content. One identification line per block (source file
-# + line range + shape, nothing else on that line), then the removed text verbatim and unmodified,
-# then the next block. No summary, no tables — all measurement belongs in stdout.
 def write_dump(path: Path, results: list) -> None:
     o = []
     for fr in sorted(results, key=lambda x: x.filename):

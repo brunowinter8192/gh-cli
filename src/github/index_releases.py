@@ -8,9 +8,7 @@ from pathlib import Path
 import requests
 from mcp.types import TextContent
 
-# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
-# From config.py: shared RAG root path
 from src.github.config import RAG_ROOT
 
 logger = logging.getLogger(__name__)
@@ -20,7 +18,6 @@ COLLECTION = "github_releases"
 
 # ORCHESTRATOR
 
-# Fetch all releases for a repo, write per-release MDs, index into RAG
 def index_releases_workflow(repo: str) -> list[TextContent]:
     logger.info("index_releases repo=%s", repo)
     owner, repo_name = repo.split("/", 1)
@@ -48,7 +45,6 @@ def index_releases_workflow(repo: str) -> list[TextContent]:
 
 # FUNCTIONS
 
-# Delete RAG collection and doc dir before re-indexing; raise before rmtree on failure so old state stays intact
 def janitor_clean(collection: str, doc_dir: Path) -> None:
     rag_cli = Path.home() / ".local" / "bin" / "rag-cli"
     result = subprocess.run(
@@ -66,7 +62,6 @@ def janitor_clean(collection: str, doc_dir: Path) -> None:
     shutil.rmtree(doc_dir, ignore_errors=True)
 
 
-# Fetch up to 100 releases newest-first from GitHub REST API
 def fetch_releases(owner: str, repo: str) -> list:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/releases"
     response = requests.get(url, params={"per_page": 100}, headers=build_headers())
@@ -74,7 +69,6 @@ def fetch_releases(owner: str, repo: str) -> list:
     return response.json()
 
 
-# Remove changelog boilerplate from release body
 def strip_release_noise(body: str) -> str:
     out = []
     skip_section = False
@@ -96,7 +90,6 @@ def strip_release_noise(body: str) -> str:
     return "\n".join(out).strip()
 
 
-# Write one release as a standalone MD file
 def write_release_md(r: dict, doc_dir: Path) -> None:
     tag = (r.get("tag_name") or "untagged").strip() or "untagged"
     published = (r.get("published_at") or "")[:10] or "unknown"
@@ -106,12 +99,10 @@ def write_release_md(r: dict, doc_dir: Path) -> None:
     (doc_dir / filename).write_text(md, encoding="utf-8")
 
 
-# Replace filename-unsafe chars with hyphens
 def sanitize_filename(tag: str) -> str:
     return re.sub(r'[/\\:*?"<>|]', "-", tag).strip("- ")
 
 
-# Run rag-cli index (incremental); return new chunk count from stdout
 def run_index(collection: str) -> int:
     rag_cli = Path.home() / ".local" / "bin" / "rag-cli"
     result = subprocess.run(
@@ -129,13 +120,11 @@ def run_index(collection: str) -> int:
     return parse_chunk_count(result.stdout)
 
 
-# Parse new chunk count from rag-cli index stdout
 def parse_chunk_count(stdout: str) -> int:
     m = re.search(r"Done: \d+ files indexed \((\d+) chunks\)", stdout)
     return int(m.group(1)) if m else 0
 
 
-# Return (md_count, total_chunks) for the releases collection
 def get_collection_stats(collection: str, doc_dir: Path) -> tuple[int, int]:
     md_count = len(list(doc_dir.glob("*.md")))
     rag_cli = Path.home() / ".local" / "bin" / "rag-cli"

@@ -1,15 +1,3 @@
-"""
-Probe: GitHub GraphQL API — repo tree traversal in one round-trip.
-
-Tree-only, depth=1. Fetches per-entry: name, type, language, lineCount, size.
-Repository metadata (description, primaryLanguage, languages) printed only for root
-expressions (path component after ":" is empty, e.g. "HEAD:").
-If expression resolves to a Blob, prints a redirect message — does NOT read content.
-
-Usage (from project root):
-  .venv/bin/python dev/repo_exploration/01_probe_graphql_explore.py <owner> <repo> [expression]
-  # expression examples: "HEAD:" (root), "HEAD:plugins/" (subtree)
-"""
 # INFRASTRUCTURE
 import argparse
 from pathlib import Path
@@ -54,7 +42,9 @@ query ExploreRepo($owner: String!, $name: String!, $expression: String!) {
 
 # ORCHESTRATOR
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=(
+        '\nProbe: GitHub GraphQL API — repo tree traversal in one round-trip.\n\nTree-only, depth=1. Fetches per-entry: name, type, language, lineCount, size.\nRepository metadata (description, primaryLanguage, languages) printed only for root\nexpressions (path component after ":" is empty, e.g. "HEAD:").\nIf expression resolves to a Blob, prints a redirect message — does NOT read content.\n\nUsage (from project root):\n  .venv/bin/python dev/repo_exploration/01_probe_graphql_explore.py <owner> <repo> [expression]\n  # expression examples: "HEAD:" (root), "HEAD:plugins/" (subtree)\n'
+    ))
     parser.add_argument("owner")
     parser.add_argument("repo")
     parser.add_argument("expression", nargs="?", default="HEAD:",
@@ -68,7 +58,6 @@ def main():
 
 # FUNCTIONS
 
-# Execute GraphQL query and return formatted string
 def fetch_and_print(owner: str, repo: str, expression: str) -> str:
     data = graphql_query(_QUERY, {"owner": owner, "name": repo, "expression": expression})
     repo_data = data["repository"]
@@ -108,7 +97,6 @@ def fetch_and_print(owner: str, repo: str, expression: str) -> str:
     return "\n".join(lines)
 
 
-# Write probe output to the report dir — root call vs sub-path call get distinct filenames
 def write_report(output: str, expression: str) -> Path:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     is_root = expression.split(":", 1)[1] == ""
@@ -118,7 +106,6 @@ def write_report(output: str, expression: str) -> Path:
     return report_path
 
 
-# Format tree entries as a table
 def format_tree(entries: list) -> str:
     if not entries:
         return "(empty tree)"

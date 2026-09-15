@@ -4,13 +4,10 @@ import re
 import requests
 import base64
 from mcp.types import TextContent
-# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
 
 logger = logging.getLogger(__name__)
 
-# _SIZE_INLINE_MAX: GitHub Contents API inlines base64 content up to 1 MB
-# _SIZE_API_MAX: GitHub API hard limit at 100 MB — beyond this, no download supported
 _SIZE_INLINE_MAX = 1_048_576
 _SIZE_API_MAX    = 104_857_600
 
@@ -40,7 +37,6 @@ def get_file_content_workflow(owner: str, repo: str, path: str, metadata_only: b
 
 # FUNCTIONS
 
-# Fetch file content from GitHub Contents API
 def fetch_file_content(owner: str, repo: str, path: str) -> dict:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
     logger.debug("Fetching from %s", url)
@@ -49,13 +45,11 @@ def fetch_file_content(owner: str, repo: str, path: str) -> dict:
     return response.json()
 
 
-# Build a collision-resistant /tmp path for a downloaded large file
 def _tmp_path(owner: str, repo: str, path: str) -> str:
     safe = re.sub(r"[^A-Za-z0-9._-]", "_", path)
     return f"/tmp/gh-cli_{owner}_{repo}_{safe}"
 
 
-# Stream-download url to dest_path; raises on HTTP or network error
 def _stream_download(url: str, dest_path: str) -> None:
     resp = requests.get(url, stream=True, timeout=30)
     resp.raise_for_status()
@@ -64,7 +58,6 @@ def _stream_download(url: str, dest_path: str) -> None:
             f.write(chunk)
 
 
-# Format response for files in the 1–100 MB tier (downloaded to /tmp)
 def format_large_file_response(raw_response: dict, tmp_path: str) -> str:
     path = raw_response["path"]
     name = raw_response["name"]
@@ -83,7 +76,6 @@ def format_large_file_response(raw_response: dict, tmp_path: str) -> str:
     return "\n".join(lines)
 
 
-# Format response for files larger than 100 MB (GitHub API limit — no download possible)
 def format_toolarge_response(raw_response: dict) -> str:
     path = raw_response["path"]
     name = raw_response["name"]
@@ -101,7 +93,6 @@ def format_toolarge_response(raw_response: dict) -> str:
     return "\n".join(lines)
 
 
-# Format directory metadata from Contents API list response
 def format_dir_metadata(raw_response: list, path: str) -> str:
     dirs = [e for e in raw_response if e["type"] == "dir"]
     files = [e for e in raw_response if e["type"] == "file"]
@@ -112,7 +103,6 @@ def format_dir_metadata(raw_response: list, path: str) -> str:
     return "\n".join(lines)
 
 
-# Format metadata without content decoding
 def format_metadata(raw_response: dict) -> str:
     lines = []
     lines.append(f"File: {raw_response['path']}")
@@ -124,7 +114,6 @@ def format_metadata(raw_response: dict) -> str:
     return "\n".join(lines)
 
 
-# Decode base64 content and format response with optional line range
 def format_file_response(raw_response: dict, offset: int = 0, limit: int = 0) -> str:
     if raw_response.get("type") != "file":
         raise ValueError(f"Path is not a file, got type: {raw_response.get('type')}")
@@ -160,7 +149,6 @@ def format_file_response(raw_response: dict, offset: int = 0, limit: int = 0) ->
     return "\n".join(lines)
 
 
-# Decode base64 file content to UTF-8 string
 def decode_content(raw_response: dict) -> str:
     content = raw_response.get("content", "")
     encoding = raw_response.get("encoding", "")

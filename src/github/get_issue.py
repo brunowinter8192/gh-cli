@@ -2,7 +2,6 @@
 import logging
 import requests
 from mcp.types import TextContent
-# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
 
 logger = logging.getLogger(__name__)
@@ -18,7 +17,6 @@ def get_issue_workflow(owner: str, repo: str, issue_number: int) -> list[TextCon
 
 # FUNCTIONS
 
-# Fetch single issue from GitHub API
 def fetch_issue(owner: str, repo: str, issue_number: int) -> dict:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues/{issue_number}"
     logger.debug("Fetching from %s", url)
@@ -27,7 +25,6 @@ def fetch_issue(owner: str, repo: str, issue_number: int) -> dict:
     return response.json()
 
 
-# Format issue for display
 def format_issue(issue: dict, owner: str, repo: str) -> str:
     lines = []
 

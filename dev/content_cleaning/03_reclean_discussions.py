@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-# Re-clean 78 existing discussion MDs using strip_noise() — noise-only pass, safe on built MDs.
-# strip_noise does NOT touch ## headings, metadata lines, or comment attribution headers;
-# it only removes dosu footers/greetings, img tags, failed uploads, checklist blocks, badge lines,
-# and caps no-space runs >= 1000 chars.
-# Intentional verbatim copy of src/github/discussion_cleaning.py strip_noise() (+ _bare,
-# _is_badge_line, constants). dev/ may not import src/ (hook: block_dev_imports_src) —
-# intentional duplication, not drift. Update if the source changes.
-# Dry-run by default (no writes). Use --apply to overwrite files (creates timestamped backup first).
-# Usage: python3 dev/content_cleaning/03_reclean_discussions.py [--apply] [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -25,7 +16,6 @@ DEFAULT_SOURCE_DIR = Path(
 REPORT_DIR = Path(__file__).parent / "md"
 NO_SPACE_LIMIT = 1000
 
-# --- verbatim copy of src/github/discussion_cleaning.py (keep in sync) ---
 FOOTER_LOOKAHEAD = 20
 _BADGE_DOMAINS = frozenset([
     'shields.io/badge', 'camo.githubusercontent.com',
@@ -41,7 +31,6 @@ MD_IMG_RE = re.compile(r'!\[[^\]]*\]\([^)]+\)', re.IGNORECASE)
 ISSUE_HEADING_RE = re.compile(
     r'^### (?:🔎 Search before asking|🤖 Consult the online AI assistant)'
 )
-# --------------------------------------------------------------------------------------------
 
 
 # ORCHESTRATOR
@@ -163,10 +152,8 @@ def measure_all(md_files: list) -> list[dict]:
     for fp in md_files:
         before = fp.read_text(errors='replace')
         after = strip_noise(before)
-        # Preserve original trailing whitespace form for writes (don't introduce whitespace diffs).
         if before.endswith('\n') and not after.endswith('\n'):
             after += '\n'
-        # Changed only when content differs beyond trailing whitespace (ignore \n vs \n\n endings).
         results.append({
             "filename": fp.name,
             "filepath": fp,

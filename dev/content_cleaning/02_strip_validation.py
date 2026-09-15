@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-# Validate strip_discussion_noise() on the 78-MD corpus. Read-only — never writes source files.
-# Intentional verbatim copy of src/github/discussion_cleaning.py strip_noise() (+ _bare,
-# _is_badge_line, constants). dev/ may not import src/ (hook: block_dev_imports_src) —
-# intentional duplication, not drift. Update if the source changes.
-# strip_discussion_noise() is kept as a thin local wrapper (full version in index_discussions.py
-# which pulls mcp — not importable in dev/).
-# Usage: python3 dev/content_cleaning/02_strip_validation.py [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -22,7 +15,6 @@ DEFAULT_SOURCE_DIR = Path(
 REPORT_DIR = Path(__file__).parent / "md"
 THRESHOLD = 1500
 
-# --- verbatim copy of src/github/discussion_cleaning.py (keep in sync) ---
 FOOTER_LOOKAHEAD = 20
 _BADGE_DOMAINS = frozenset([
     'shields.io/badge', 'camo.githubusercontent.com',
@@ -38,13 +30,12 @@ MD_IMG_RE = re.compile(r'!\[[^\]]*\]\([^)]+\)', re.IGNORECASE)
 ISSUE_HEADING_RE = re.compile(
     r'^### (?:🔎 Search before asking|🤖 Consult the online AI assistant)'
 )
-# ------------------------------------------------------------------
 
 SPOT_CHECK_FILES = [
-    "MinerU__2961.md",   # footer-heavy: 5+ footers, greeting, answer-markers, issue-template
-    "MinerU__3304.md",   # footer + failed-upload
-    "MinerU__3185.md",   # greeting + img
-    "MinerU__4279.md",   # 2 img tags
+    "MinerU__2961.md",
+    "MinerU__3304.md",
+    "MinerU__3185.md",
+    "MinerU__4279.md",
 ]
 SPOT_CHECK_PATTERNS = [
     (r'^\*\*@\w', "comment attribution headers"),

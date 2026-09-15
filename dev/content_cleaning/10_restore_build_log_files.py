@@ -1,20 +1,4 @@
 #!/usr/bin/env python3
-# Restore the 8 build-log-stripped files to what they would be under the fixed (warning-protected)
-# strip_build_logs(): backup version -> fixed strip_build_logs -> class F+G strip (needed for the
-# 3 pyobjc files, which predate the 2026-09-05 F/G milestone and so still carry that noise in the
-# backup) -> diff against the live file. Dry-run by default: never modifies anything. Report per
-# file the lines that would be added back (the newly-protected warning content) and any other
-# difference — expected to be none; if anything else differs, the report says so and --apply
-# refuses to run.
-#
-# Intentional verbatim copy of two independent pieces of logic, kept in sync with their sources:
-#   - src/github/text_cleaning.py's strip_build_logs() (post-warning-protection-fix) — see
-#     05_strip_build_logs.py / 06_reclean_build_logs.py for the other two copies.
-#   - src/github/index_issues.py's class-F/G anchors + removal, verbatim from
-#     dev/content_cleaning/07_reclean_migration_headers.py.
-# dev/ may not import src/ (hook: block_dev_imports_src) — intentional duplication, not drift.
-#
-# Usage: python3 dev/content_cleaning/10_restore_build_log_files.py [--apply]
 
 # INFRASTRUCTURE
 
@@ -37,13 +21,11 @@ LIVE_DIR = Path(
 )
 REPORT_DIR = Path(__file__).parent / "md"
 
-# The 8 files the 2026-08-28 build-log strip touched (see process-docs/content_cleaning/)
 FILE_BASENAMES = [
     "MinerU__1418", "MinerU__2262", "MinerU__826", "curl_cffi__74",
     "ghostty__2210", "pyobjc__175", "pyobjc__176", "pyobjc__34",
 ]
 
-# --- verbatim copy of src/github/text_cleaning.py (post-warning-protection-fix, keep in sync) ---
 MIN_BLOCK_LINES = 10
 BRIDGE_GAP = 3
 
@@ -153,9 +135,7 @@ def strip_build_logs(text: str) -> str:
     if text.endswith('\n') and not result.endswith('\n'):
         result += '\n'
     return result
-# --- end verbatim copy (text_cleaning.py) -------------------------------------------------------
 
-# --- verbatim copy of dev/content_cleaning/07_reclean_migration_headers.py (class F/G) -----------
 MIGRATION_REPORT_RE = re.compile(r'^\*\*\[Original report\]\([^)]*\) by .+\.\*\*$')
 MIGRATION_COMMENT_RE = re.compile(r'^\*\*Original comment by .+\.\*\*$')
 MIGRATION_RULE_RE = re.compile(r'^-{40}$')
@@ -238,7 +218,6 @@ def strip_migration_and_automated(text: str) -> str:
     if text.endswith('\n') and not result.endswith('\n'):
         result += '\n'
     return result
-# --- end verbatim copy (07_reclean_migration_headers.py) -----------------------------------------
 
 PLACEHOLDER_RE = re.compile(r'^\[build log output removed — \d+ lines\]$')
 
@@ -257,15 +236,10 @@ class FileResult:
 
 # FUNCTIONS
 
-# Strip placeholder lines out before diffing — a placeholder's wording/count is expected to change
-# under the fix (fewer lines removed per block, or a block splitting around a newly-protected
-# line) and is not "content" that could regress; only the real, non-placeholder lines are checked.
 def _strip_placeholders(lines: list) -> list:
     return [l for l in lines if not PLACEHOLDER_RE.match(l)]
 
 
-# Reconstruct one file's expected live state under the fix, and diff it against the actual live
-# file. Returns (added_back_lines, unexpected_diffs) where unexpected is empty in the clean case.
 def reconstruct_and_diff(filename: str) -> FileResult:
     backup_text = (BACKUP_DIR / filename).read_text(errors='replace')
     live_text = (LIVE_DIR / filename).read_text(errors='replace')
@@ -286,7 +260,7 @@ def reconstruct_and_diff(filename: str) -> FileResult:
             continue
         elif tag == 'insert':
             added_back.extend(recon_content[j1:j2])
-        else:  # 'delete' or 'replace' — real content missing or changed, never expected
+        else:
             unexpected.append((tag, live_content[i1:i2], recon_content[j1:j2]))
 
     return FileResult(
@@ -347,7 +321,6 @@ def write_report(path: Path, results: list) -> None:
     path.write_text('\n'.join(o) + '\n')
 
 
-# Backup the whole live corpus dir, then overwrite only the 8 restored files
 def apply_changes(results: list, ts: str) -> Path:
     backup_dir = LIVE_DIR.parent / f"{LIVE_DIR.name}_PRE_WARNING_RESTORE_BACKUP_{ts}"
     shutil.copytree(LIVE_DIR, backup_dir)

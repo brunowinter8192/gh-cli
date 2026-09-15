@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-# Re-clean existing issue MDs using strip_generic_noise() — image/data-URI/no-space pass only.
-# The existing MDs were already built with strip_noise+strip_comments_noise (format logic done);
-# this pass applies only the generic strips (IMG, MD_IMG, DATA_URI, \S{1000,} net) which are
-# additive and safe on already-formatted MDs.
-# Intentional verbatim copy of src/github/text_cleaning.py strip_generic_noise() (+ regexes).
-# dev/ may not import src/ (hook: block_dev_imports_src) — intentional duplication, not drift.
-# Update if the source changes. Source of truth: src/github/text_cleaning.py
-# Dry-run by default (no writes). Use --apply to overwrite files (creates timestamped backup first).
-# Usage: python3 dev/content_cleaning/04_reclean_issues.py [--apply] [--source-dir PATH]
 
 # INFRASTRUCTURE
 
@@ -25,7 +16,6 @@ DEFAULT_SOURCE_DIR = Path(
 REPORT_DIR = Path(__file__).parent / "md"
 NO_SPACE_LIMIT = 1000
 
-# --- verbatim copy of src/github/text_cleaning.py (keep in sync) ---
 IMG_RE = re.compile(r'<img\b[^>]*>', re.IGNORECASE)
 MD_IMG_RE = re.compile(r'!\[[^\]]*\]\([^)]+\)', re.IGNORECASE)
 DATA_URI_RE = re.compile(
@@ -45,7 +35,6 @@ def _strip_line(line: str) -> str:
 
 def strip_generic_noise(text: str) -> str:
     return '\n'.join(_strip_line(line) for line in text.splitlines())
-# --------------------------------------------------------------------------------------------
 
 
 # ORCHESTRATOR

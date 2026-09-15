@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 import requests
 from mcp.types import TextContent
 
-# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,6 @@ def repo_freshness_workflow(owner: str, repo: str) -> list[TextContent]:
 
 # FUNCTIONS
 
-# Fetch repo metadata from GitHub API
 def fetch_repo_freshness(owner: str, repo: str) -> dict:
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}"
     logger.debug("Fetching from %s", url)
@@ -30,7 +28,6 @@ def fetch_repo_freshness(owner: str, repo: str) -> dict:
     return response.json()
 
 
-# Format repo freshness for display
 def format_repo_freshness(repo_data: dict) -> str:
     pushed_at = repo_data["pushed_at"]
     pushed_dt = datetime.fromisoformat(pushed_at.replace("Z", "+00:00"))

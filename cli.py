@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
+# INFRASTRUCTURE
 import os
 import sys
 
-# Ensure src.github.* imports resolve regardless of working directory
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import argparse
@@ -28,7 +28,6 @@ HELP_TEXT = (
 )
 
 
-# Parser that redirects all help/usage/error output to the skill pointer
 class NoHelpParser(argparse.ArgumentParser):
     def error(self, message):
         self.exit(2, HELP_TEXT + "\n")
@@ -38,7 +37,22 @@ class NoHelpParser(argparse.ArgumentParser):
         self.exit(2)
 
 
-# ── search_repos ──────────────────────────────────────────────────────────
+# ORCHESTRATOR
+def main():
+    parser = _build_parser()
+    args = parser.parse_args()
+    try:
+        result = _dispatch(args, parser)
+        print(result[0].text)
+    except BrokenPipeError:
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(0)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+# FUNCTIONS
 def _add_search_repos_parser(sub):
     p = sub.add_parser("search_repos", help="Search GitHub repositories.")
     p.add_argument("query", help="Search query (max 2-3 words; GitHub returns 0 for longer queries)")
@@ -47,13 +61,11 @@ def _add_search_repos_parser(sub):
                    default="best_match")
 
 
-# ── search_code ───────────────────────────────────────────────────────────
 def _add_search_code_parser(sub):
     p = sub.add_parser("search_code", help="Search code across GitHub.")
     p.add_argument("query", help="Code search query with qualifiers (e.g. 'def workflow language:python')")
 
 
-# ── get_repo_tree ─────────────────────────────────────────────────────────
 def _add_get_repo_tree_parser(sub):
     p = sub.add_parser("get_repo_tree", help="Browse repository file tree (one level).")
     p.add_argument("owner")
@@ -61,7 +73,6 @@ def _add_get_repo_tree_parser(sub):
     p.add_argument("--path", default="", help="Directory to list (default: repo root)")
 
 
-# ── get_file_content ──────────────────────────────────────────────────────
 def _add_get_file_content_parser(sub):
     p = sub.add_parser("get_file_content", help="Read file from GitHub repo.")
     p.add_argument("owner")
@@ -72,7 +83,6 @@ def _add_get_file_content_parser(sub):
     p.add_argument("--limit", type=int, default=0, help="Number of lines to return (0=all)")
 
 
-# ── index_issues ──────────────────────────────────────────────────────────
 def _add_index_issues_parser(sub):
     p = sub.add_parser("index_issues", help="Fetch issues matching a query and index into RAG.")
     p.add_argument("query", help="Search keywords (max 3; most distinctive first)")
@@ -81,7 +91,6 @@ def _add_index_issues_parser(sub):
                    help="Max issues to fetch and index (default 30)")
 
 
-# ── index_discussions ─────────────────────────────────────────────────────
 def _add_index_discussions_parser(sub):
     p = sub.add_parser("index_discussions", help="Fetch discussions matching a query and index into RAG.")
     p.add_argument("query", help="Search keywords (max 3; most distinctive first)")
@@ -90,13 +99,11 @@ def _add_index_discussions_parser(sub):
                    help="Max discussions to fetch and index (default 30)")
 
 
-# ── index_releases ────────────────────────────────────────────────────────
 def _add_index_releases_parser(sub):
     p = sub.add_parser("index_releases", help="Fetch all releases and index into RAG.")
     p.add_argument("repo", help="Repository as owner/repo")
 
 
-# ── create_issue ──────────────────────────────────────────────────────────
 def _add_create_issue_parser(sub):
     p = sub.add_parser("create_issue", help="Create a new issue.")
     p.add_argument("owner")
@@ -107,7 +114,6 @@ def _add_create_issue_parser(sub):
     p.add_argument("--assignees", default=None, help="Comma-separated GitHub usernames")
 
 
-# ── update_issue ──────────────────────────────────────────────────────────
 def _add_update_issue_parser(sub):
     p = sub.add_parser("update_issue", help="Update an existing issue (also closes/reopens).")
     p.add_argument("owner")
@@ -121,7 +127,6 @@ def _add_update_issue_parser(sub):
                    choices=["completed", "not_planned", "reopened"], default=None)
 
 
-# ── list_issues ───────────────────────────────────────────────────────────
 def _add_list_issues_parser(sub):
     p = sub.add_parser("list_issues", help="List repository issues (default: open only).")
     p.add_argument("owner")
@@ -132,7 +137,6 @@ def _add_list_issues_parser(sub):
     p.add_argument("--limit", type=int, default=30, help="Max issues to return (default 30)")
 
 
-# ── get_issue ─────────────────────────────────────────────────────────────
 def _add_get_issue_parser(sub):
     p = sub.add_parser("get_issue", help="Read a single issue (title, state, body).")
     p.add_argument("owner")
@@ -140,7 +144,6 @@ def _add_get_issue_parser(sub):
     p.add_argument("number", type=int)
 
 
-# ── delete_issue ──────────────────────────────────────────────────────────
 def _add_delete_issue_parser(sub):
     p = sub.add_parser("delete_issue", help="Permanently delete an issue via GraphQL (irreversible).")
     p.add_argument("owner")
@@ -150,14 +153,12 @@ def _add_delete_issue_parser(sub):
                    help="Required: actually perform the deletion (irreversible)")
 
 
-# ── repo_freshness ────────────────────────────────────────────────────────
 def _add_repo_freshness_parser(sub):
     p = sub.add_parser("repo_freshness", help="Show how recently a repo was pushed to.")
     p.add_argument("owner")
     p.add_argument("repo")
 
 
-# ── download_files ────────────────────────────────────────────────────────
 def _add_download_files_parser(sub):
     p = sub.add_parser("download_files", help="Download specific repo files to a local directory.")
     p.add_argument("owner")
@@ -166,7 +167,6 @@ def _add_download_files_parser(sub):
     p.add_argument("--dest", default=".", help="Local destination directory (default: current dir)")
 
 
-# Build argparse parser with all 14 subcommands
 def _build_parser() -> argparse.ArgumentParser:
     parser = NoHelpParser(
         prog="cli.py",
@@ -257,7 +257,6 @@ def _dispatch_download_files(args):
     return download_files_workflow(args.owner, args.repo, args.paths, args.dest)
 
 
-# Dispatch parsed args to the matching workflow function
 def _dispatch(args, parser):
     handlers = {
         "search_repos": _dispatch_search_repos,
@@ -280,20 +279,6 @@ def _dispatch(args, parser):
         parser.error(f"Unknown command: {args.cmd}")
         return
     return handler(args)
-
-
-def main():
-    parser = _build_parser()
-    args = parser.parse_args()
-    try:
-        result = _dispatch(args, parser)
-        print(result[0].text)
-    except BrokenPipeError:
-        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
-        sys.exit(0)
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
 
 
 if __name__ == "__main__":

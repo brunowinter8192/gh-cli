@@ -3,9 +3,7 @@ import logging
 import requests
 from typing import Literal
 from mcp.types import TextContent
-# From client.py: base API URL and header builder with auth token
 from src.github.client import GITHUB_API_BASE, build_headers
-# From repo_counts.py: batch-fetch star/issue/discussion counts, format per-repo summary line
 from src.github.repo_counts import fetch_repo_counts, format_count_line
 
 logger = logging.getLogger(__name__)
@@ -39,7 +37,6 @@ def search_repos_workflow(
 
 # FUNCTIONS
 
-# Fetch repositories from GitHub Search API
 def fetch_repositories(query: str, sort_by: str) -> dict:
     url = f"{GITHUB_API_BASE}/search/repositories"
     logger.debug("Fetching from %s", url)
@@ -51,7 +48,6 @@ def fetch_repositories(query: str, sort_by: str) -> dict:
     return response.json()
 
 
-# Emit one line per repo: full_name · ⭐stars · issues:N · discussions:M
 def format_repo_results(items: list, counts: dict) -> str:
     lines = []
     for repo in items:
