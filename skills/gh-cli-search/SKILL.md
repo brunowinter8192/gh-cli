@@ -5,70 +5,70 @@ description:
 
 # GitHub Search — Skill
 
-**Code & repo content → direct CLI.**
-Everything INSIDE a repo: `search_repos`, `search_code`, `get_repo_tree`, `get_file_content`. Direct `gh-cli` calls — read the output.
+**Code und Repo-Inhalte laufen direkt über die CLI.**
+Alles was INNERHALB eines Repos liegt, holst du mit `search_repos`, `search_code`, `get_repo_tree` und `get_file_content`. Das sind direkte `gh-cli`-Aufrufe, und du liest deren Ausgabe.
 
-**The conversation & release layer → query-driven RAG indexing.**
-Issues: `gh-cli index_issues "<1-3 kw>" <owner/repo>` → then `rag-cli search "<terms>" github_issues`. Discussions: `gh-cli index_discussions "<1-3 kw>" <owner/repo>` → then `rag-cli search "<terms>" github_discussions`. Releases: `gh-cli index_releases <owner/repo>` → then `rag-cli search "<feature>" github_releases`.
+**Die Konversations- und Release-Schicht läuft über query-getriebene RAG-Indexierung.**
+Bei Issues rufst du `gh-cli index_issues "<1-3 kw>" <owner/repo>` auf und danach `rag-cli search "<terms>" github_issues`. Bei Discussions rufst du `gh-cli index_discussions "<1-3 kw>" <owner/repo>` auf und danach `rag-cli search "<terms>" github_discussions`. Bei Releases rufst du `gh-cli index_releases <owner/repo>` auf und danach `rag-cli search "<feature>" github_releases`.
 
-**`get_repo_tree` is one level deep — descend, don't dump.**
-Each call lists exactly one directory level. To go deeper, call again with `--path <subdir>` using a directory name from the previous output. There is no recursive/full-tree mode and no truncation — you walk the tree top-down, one level per call.
+**`get_repo_tree` geht genau eine Ebene tief, du steigst also ab und dumpst nicht.**
+Jeder Aufruf listet exakt eine Verzeichnisebene. Um tiefer zu kommen, rufst du erneut auf, mit `--path <subdir>` und einem Verzeichnisnamen aus der vorherigen Ausgabe. Es gibt keinen rekursiven Modus und keinen Voll-Baum, und es gibt auch keine Kürzung. Du läufst den Baum von oben nach unten ab, eine Ebene pro Aufruf.
 
-**Directories carry no line/size signal.**
-In the listing, `blob` (file) entries show `language`, `lines`, and `size`; `tree` (directory) entries show `-`. To judge what is inside a directory, descend into it with `--path`. There is no glob/name-pattern search — to find a file you either traverse to it or use `search_code` with a content term.
+**Verzeichnisse tragen kein Signal über Zeilen oder Größe.**
+In der Auflistung zeigen `blob`-Einträge, also Dateien, die Felder `language`, `lines` und `size`. `tree`-Einträge, also Verzeichnisse, zeigen dort nur `-`. Um zu beurteilen was in einem Verzeichnis liegt, steigst du mit `--path` hinein. Eine Suche über Glob oder Namensmuster gibt es nicht. Um eine Datei zu finden, läufst du entweder zu ihr hin oder du nutzt `search_code` mit einem inhaltlichen Begriff.
 
-**Paths only from previous tool output — never constructed.**
-Only use repo paths that appeared in `get_repo_tree` / `get_file_content` output. A 404 means the path is WRONG — re-run `get_repo_tree` to find the real one.
+**Pfade stammen ausschließlich aus vorheriger Tool-Ausgabe und werden nie selbst konstruiert.**
+Nutze nur Repo-Pfade, die in der Ausgabe von `get_repo_tree` oder `get_file_content` aufgetaucht sind. Ein 404 bedeutet, dass der Pfad FALSCH ist, und dann rufst du `get_repo_tree` erneut auf, um den echten zu finden.
 
-**search_code returns zero for code that EXISTS — know the cases.**
-- Files over 350 KiB are not indexed.
-- Empty files, binary files, and non-UTF-8 files are not indexed.
-- A file with more than one line over 4096 bytes is excluded.
-- Lines over 1024 characters are truncated.
-   - A match beyond the truncation point is invisible.
-- A path ancestor named `external`, `third_party`, or `node_modules` triggers the vendored/generated exclusion.
-   - That heuristic has confirmed false positives on first-party code.
-- Data files (CSV, TSV, per Linguist `type: data`) are never indexed.
-   - The tool shows a NOTE on 0 results for this case.
-- Very large repos may not be indexed at all.
-- Fresh or inactive repos wait for on-demand indexing.
-- Only the default branch is searchable.
-- Identical files across repos are SHA-deduplicated.
+**`search_code` liefert null Treffer für Code, der EXISTIERT, und du kennst die Fälle.**
+- Dateien über 350 KiB werden nicht indexiert.
+- Leere Dateien, Binärdateien und Dateien ohne UTF-8 werden nicht indexiert.
+- Eine Datei mit mehr als einer Zeile über 4096 Bytes ist ausgeschlossen.
+- Zeilen über 1024 Zeichen werden abgeschnitten.
+   - Ein Treffer hinter dem Abschneidepunkt ist unsichtbar.
+- Ein Pfad-Vorfahre namens `external`, `third_party` oder `node_modules` löst den Ausschluss für Vendored- und Generated-Code aus.
+   - Diese Heuristik hat bestätigte Fehlalarme auf eigenem Code.
+- Datendateien wie CSV und TSV, laut Linguist mit `type: data`, werden nie indexiert.
+   - Das Tool zeigt bei null Treffern eine NOTE für diesen Fall.
+- Sehr große Repos sind unter Umständen gar nicht indexiert.
+- Frische oder inaktive Repos warten auf eine Indexierung bei Bedarf.
+- Durchsuchbar ist nur der Default-Branch.
+- Identische Dateien über mehrere Repos hinweg werden über ihren SHA dedupliziert.
 
-**Zero-result escalation: clone to /tmp and grep.**
-- A file listed by `get_repo_tree` where `search_code` found nothing proves an index gap, not absence.
-- Shallow-clone the repo and grep repo-wide: `git clone --depth 1 https://github.com/<owner>/<repo> /tmp/<repo>` then `grep -rn`.
-   - On a giant repo, clone only the relevant subtree: `git clone --depth 1 --sparse ... && git -C /tmp/<repo> sparse-checkout set <subdir>`.
-- Never page through a large file with blind `get_file_content --offset` reads.
+**Eskalation bei null Treffern: klone nach /tmp und greppe.**
+- Eine Datei, die `get_repo_tree` auflistet und in der `search_code` nichts findet, beweist eine Lücke im Index und keine Abwesenheit.
+- Klone das Repo flach und greppe über das ganze Repo, also `git clone --depth 1 https://github.com/<owner>/<repo> /tmp/<repo>` und danach `grep -rn`.
+   - Bei einem riesigen Repo klonst du nur den relevanten Teilbaum, also `git clone --depth 1 --sparse ... && git -C /tmp/<repo> sparse-checkout set <subdir>`.
+- Blättere niemals blind mit `get_file_content --offset` durch eine große Datei.
 
 ## Commands
 
-| Command | Args | Does |
+| Command | Argumente | Tut |
 |---|---|---|
-| search_repos | query (max 3 kw; qualifiers: stars:>N, topic:X) [--sort-by stars/forks/updated/best_match] | Find repos: landscape, "what exists for X" |
-| search_code | query + qualifiers (repo:owner/repo, language:X) | Find code patterns; default branch only |
-| get_repo_tree | owner repo [--path dir] | List ONE directory level; root call adds repo metadata |
-| get_file_content | owner repo path [--offset N] [--limit N] [--metadata-only] | Read a repo file |
-| repo_freshness | owner repo | pushed_at + age, updated_at/created_at — judge how current a repo is |
-| download_files | owner repo path... [--dest dir] | Write repo files to local disk (no clone, no RAG) |
-| index_issues | "query" owner/repo [--limit 30] | Fetch + index issues → RAG `github_issues` |
-| index_discussions | "query" owner/repo [--limit 30] | Fetch + index discussions → RAG `github_discussions` |
-| index_releases | owner/repo | Index last 100 releases → RAG `github_releases` (wipes + rebuilds) |
+| search_repos | query (max 3 kw; Qualifier: stars:>N, topic:X) [--sort-by stars/forks/updated/best_match] | Repos finden, Landschaft abstecken, was existiert für X |
+| search_code | query plus Qualifier (repo:owner/repo, language:X) | Code-Muster finden, nur auf dem Default-Branch |
+| get_repo_tree | owner repo [--path dir] | EINE Verzeichnisebene listen, der Root-Aufruf ergänzt Repo-Metadaten |
+| get_file_content | owner repo path [--offset N] [--limit N] [--metadata-only] | Eine Datei aus dem Repo lesen |
+| repo_freshness | owner repo | pushed_at plus Alter, dazu updated_at und created_at, um die Aktualität zu beurteilen |
+| download_files | owner repo path... [--dest dir] | Repo-Dateien auf die lokale Platte schreiben, ohne Clone und ohne RAG |
+| index_issues | "query" owner/repo [--limit 30] | Issues holen und nach RAG `github_issues` indexieren |
+| index_discussions | "query" owner/repo [--limit 30] | Discussions holen und nach RAG `github_discussions` indexieren |
+| index_releases | owner/repo | Die letzten 100 Releases nach RAG `github_releases` indexieren, wobei die Collection geleert und neu aufgebaut wird |
 
-On error (import failure, missing GH_TOKEN, API error): the CLI prints to stderr and exits non-zero. Check `GH_TOKEN` env var is set.
+Bei einem Fehler, also einem fehlgeschlagenen Import, einem fehlenden GH_TOKEN oder einem API-Fehler, schreibt die CLI auf stderr und endet mit einem Exit-Code ungleich null. Prüfe dann, ob die Umgebungsvariable `GH_TOKEN` gesetzt ist.
 
-## RAG Usage in gh-cli
+## RAG-Nutzung in gh-cli
 
-**≥2 passes per problem.**
-One concrete (exact symptom: error string / signal code) plus one broader (component / feature / area). Both accumulate into the same collection; further angles optional, the broad pass is mandatory.
+**Mindestens zwei Durchgänge pro Problem.**
+Ein Durchgang ist konkret und nimmt das exakte Symptom, also den Fehlerstring oder den Signal-Code. Der zweite ist breiter und nimmt die Komponente, das Feature oder den Bereich. Beide sammeln sich in derselben Collection an. Weitere Blickwinkel sind optional, der breite Durchgang ist zwingend.
 
-**Index before search.**
-Run `rag-cli search` on `github_issues` / `github_discussions` only after indexing in this session. Index first, then search.
+**Indexieren kommt vor Suchen.**
+Führe `rag-cli search` auf `github_issues` oder `github_discussions` erst aus, nachdem du in dieser Session indexiert hast. Also erst indexieren, dann suchen.
 
-**MAX 3 keywords, fallback 3→2→1.**
-Mandatory; identical rule for `search_repos`, `index_issues`, `index_discussions` — the wrapper hard-caps at 3, extra words are silently dropped before the search call. Most distinctive keyword first: the fallback loop drops from the back (3→2→1), so if the 3-keyword query returns 0 it retries with 2, then 1.
+**MAXIMAL 3 Keywords, mit Rückfall von 3 auf 2 auf 1.**
+Das ist zwingend und gilt identisch für `search_repos`, `index_issues` und `index_discussions`. Der Wrapper deckelt hart bei 3, zusätzliche Wörter fallen vor dem Suchaufruf still weg. Das markanteste Keyword steht vorne, denn die Rückfallschleife wirft von hinten weg. Liefert die Query mit 3 Keywords null Treffer, versucht sie es mit 2 und danach mit 1.
 
-**After indexing, search via RAG:**
+**Nach dem Indexieren suchst du über RAG:**
   ```
   gh-cli index_issues "streaming" anthropics/claude-code --limit 30
   rag-cli search "streaming context window tool_use" github_issues
@@ -77,7 +77,5 @@ Mandatory; identical rule for `search_repos`, `index_issues`, `index_discussions
   rag-cli search "memory tracking workflow" github_discussions
   ```
 
-**Releases: recency questions → `read_document` from chunk 0, never vector search.**
-After `index_releases`, answer "what is the latest release / how active is this package" by reading the newest indexed release directly: `rag-cli list_documents github_releases` → `rag-cli read_document github_releases <newest-release>.md 0 --after 2`. Vector search on `github_releases` is for "since when does feature X exist"; index your target repo immediately before searching — each run wipes and rebuilds the collection to that ONE repo.
-
-
+**Bei Releases beantwortest du Aktualitätsfragen mit `read_document` ab Chunk 0, nie mit einer Vektorsuche.**
+Nach `index_releases` beantwortest du die Frage nach dem neuesten Release oder der Aktivität eines Pakets, indem du das neueste indexierte Release direkt liest. Der Weg ist `rag-cli list_documents github_releases` und danach `rag-cli read_document github_releases <newest-release>.md 0 --after 2`. Die Vektorsuche auf `github_releases` beantwortet dagegen die Frage, seit wann ein Feature X existiert. Indexiere dein Ziel-Repo unmittelbar vor der Suche, denn jeder Lauf leert die Collection und baut sie auf dieses EINE Repo neu auf.
