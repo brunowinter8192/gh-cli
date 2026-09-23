@@ -18,6 +18,7 @@ dev/*
 !dev/repo_exploration/
 !dev/content_cleaning/
 !dev/tool_design/
+!dev/trending/
 
 # macOS
 .DS_Store

@@ -1,7 +1,7 @@
 # src/github/
 
 ## Role
-GitHub API tool implementations behind `cli.py`'s 14 subcommands, plus the cleaning/utility and infrastructure modules they share. Each tool's `<tool>_workflow()` is its single entry point, returning `list[TextContent]`. Touch this package to add, modify, or debug a tool; infrastructure/cleaning modules are shared, not tool-specific.
+GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the cleaning/utility and infrastructure modules they share. Each tool's `<tool>_workflow()` is its single entry point, returning `list[TextContent]`. Touch this package to add, modify, or debug a tool; infrastructure/cleaning modules are shared, not tool-specific.
 
 ## Public Interface
 `__init__.py` is empty — no package-level exports. `cli.py` imports each tool directly: `from src.github.<module> import <module>_workflow`. Cross-module imports within `src/github/` are documented per module below.
@@ -121,6 +121,16 @@ GitHub API tool implementations behind `cli.py`'s 14 subcommands, plus the clean
 **Writes:** returns `list[TextContent]`.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`.
+
+---
+
+### trending.py (274 LOC)
+
+**Purpose:** List GitHub Trending repositories or developers by scraping the trending HTML page, with language, date-range and spoken-language filters.
+**Reads:** `https://github.com/trending[/developers][/<language>]` HTML (no API exists); unauthenticated.
+**Writes:** returns `list[TextContent]` — header line plus one entry per repo/developer; raises on zero entries or unmatched markup.
+**Called by:** `cli.py`.
+**Calls out:** `requests`, `mcp.types`; stdlib `html.parser`.
 
 ---
 

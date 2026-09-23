@@ -21,6 +21,7 @@ from src.github.get_issue import get_issue_workflow
 from src.github.delete_issue import delete_issue_workflow
 from src.github.repo_freshness import repo_freshness_workflow
 from src.github.download_files import download_files_workflow
+from src.github.trending import trending_workflow
 
 HELP_TEXT = (
     "This CLI has no help text. Invoke the skill gh-cli-search via "
@@ -167,10 +168,20 @@ def _add_download_files_parser(sub):
     p.add_argument("--dest", default=".", help="Local destination directory (default: current dir)")
 
 
+def _add_trending_parser(sub):
+    p = sub.add_parser("trending", help="List what is trending on GitHub.")
+    p.add_argument("--language", default=None, help="Language slug as in the trending URL (e.g. python, c++)")
+    p.add_argument("--since", choices=["daily", "weekly", "monthly"], default="daily",
+                   help="Date range: daily=today, weekly=this week, monthly=this month (default: daily)")
+    p.add_argument("--spoken", default=None, help="Spoken language code (e.g. en, de, zh); repositories only")
+    p.add_argument("--developers", action="store_true", default=False,
+                   help="Show the Developers tab instead of Repositories")
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = NoHelpParser(
         prog="cli.py",
-        description="GitHub Research CLI — 14 tools for searching, browsing, and managing repos, code, issues, discussions, releases."
+        description="GitHub Research CLI — 15 tools for searching, browsing, and managing repos, code, issues, discussions, releases."
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -188,6 +199,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_delete_issue_parser(sub)
     _add_repo_freshness_parser(sub)
     _add_download_files_parser(sub)
+    _add_trending_parser(sub)
 
     return parser
 
@@ -257,6 +269,10 @@ def _dispatch_download_files(args):
     return download_files_workflow(args.owner, args.repo, args.paths, args.dest)
 
 
+def _dispatch_trending(args):
+    return trending_workflow(args.language, args.since, args.spoken, args.developers)
+
+
 def _dispatch(args, parser):
     handlers = {
         "search_repos": _dispatch_search_repos,
@@ -273,6 +289,7 @@ def _dispatch(args, parser):
         "delete_issue": _dispatch_delete_issue,
         "repo_freshness": _dispatch_repo_freshness,
         "download_files": _dispatch_download_files,
+        "trending": _dispatch_trending,
     }
     handler = handlers.get(args.cmd)
     if handler is None:
