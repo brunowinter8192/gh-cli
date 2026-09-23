@@ -41,15 +41,6 @@ def validate_options(spoken: str | None, developers: bool) -> None:
         raise ValueError("--spoken applies to repositories only, not to --developers")
 
 
-def build_trending_url(language: str | None, developers: bool) -> str:
-    url = TRENDING_BASE_URL
-    if developers:
-        url += "/developers"
-    if language:
-        url += "/" + quote(language.strip().lower(), safe="+")
-    return url
-
-
 def fetch_trending_html(language: str | None, since: str, spoken: str | None, developers: bool) -> str:
     url = build_trending_url(language, developers)
     params = {"since": since}
@@ -64,6 +55,15 @@ def fetch_trending_html(language: str | None, since: str, spoken: str | None, de
     )
     response.raise_for_status()
     return response.text
+
+
+def build_trending_url(language: str | None, developers: bool) -> str:
+    url = TRENDING_BASE_URL
+    if developers:
+        url += "/developers"
+    if language:
+        url += "/" + quote(language.strip().lower(), safe="+")
+    return url
 
 
 def parse_trending(html: str, developers: bool) -> list[dict]:
@@ -141,43 +141,6 @@ class EntryCollector(HTMLParser):
             node["text"] += data
 
 
-def clean_text(text: str) -> str:
-    return " ".join(text.split())
-
-
-def find_node(nodes: list[dict], predicate) -> dict | None:
-    for node in nodes:
-        if predicate(node):
-            return node
-    return None
-
-
-def require_node(nodes: list[dict], predicate, index: int, what: str) -> dict:
-    node = find_node(nodes, predicate)
-    if node is None:
-        raise RuntimeError(f"trending entry {index}: {what} not found, page markup changed")
-    return node
-
-
-def parse_count(text: str, index: int, what: str) -> int:
-    cleaned = clean_text(text)
-    if not NUMBER_RE.match(cleaned):
-        raise RuntimeError(f"trending entry {index}: {what} '{cleaned}' is not a number, page markup changed")
-    return int(cleaned.replace(",", ""))
-
-
-def parse_period_stars(nodes: list[dict], index: int) -> tuple[int, str] | None:
-    node = find_node(nodes, lambda n: "float-sm-right" in n["classes"])
-    if node is None:
-        return None
-    match = PERIOD_RE.match(clean_text(node["text"]))
-    if match is None:
-        raise RuntimeError(
-            f"trending entry {index}: period stars '{clean_text(node['text'])}' unrecognised, page markup changed"
-        )
-    return int(match.group(1).replace(",", "")), match.group(2)
-
-
 def extract_repository(index: int, nodes: list[dict]) -> dict:
     link = require_node(nodes, lambda n: n["tag"] == "a" and n["in_title"], index, "repo link")
     full_name = (link["attrs"].get("href") or "").strip("/")
@@ -225,10 +188,49 @@ def extract_developer(index: int, nodes: list[dict]) -> dict:
     }
 
 
-def truncate(text: str) -> str:
-    if len(text) <= DESCRIPTION_MAX_CHARS:
-        return text
-    return text[: DESCRIPTION_MAX_CHARS - 3].rstrip() + "..."
+def require_node(nodes: list[dict], predicate, index: int, what: str) -> dict:
+    node = find_node(nodes, predicate)
+    if node is None:
+        raise RuntimeError(f"trending entry {index}: {what} not found, page markup changed")
+    return node
+
+
+def find_node(nodes: list[dict], predicate) -> dict | None:
+    for node in nodes:
+        if predicate(node):
+            return node
+    return None
+
+
+def clean_text(text: str) -> str:
+    return " ".join(text.split())
+
+
+def parse_count(text: str, index: int, what: str) -> int:
+    cleaned = clean_text(text)
+    if not NUMBER_RE.match(cleaned):
+        raise RuntimeError(f"trending entry {index}: {what} '{cleaned}' is not a number, page markup changed")
+    return int(cleaned.replace(",", ""))
+
+
+def parse_period_stars(nodes: list[dict], index: int) -> tuple[int, str] | None:
+    node = find_node(nodes, lambda n: "float-sm-right" in n["classes"])
+    if node is None:
+        return None
+    match = PERIOD_RE.match(clean_text(node["text"]))
+    if match is None:
+        raise RuntimeError(
+            f"trending entry {index}: period stars '{clean_text(node['text'])}' unrecognised, page markup changed"
+        )
+    return int(match.group(1).replace(",", "")), match.group(2)
+
+
+def format_trending(items: list[dict], language: str | None, since: str, spoken: str | None, developers: bool) -> str:
+    format_item = format_developer if developers else format_repository
+    lines = [format_header(language, since, spoken, developers)]
+    for item in items:
+        lines.extend(format_item(item))
+    return "\n".join(lines)
 
 
 def format_header(language: str | None, since: str, spoken: str | None, developers: bool) -> str:
@@ -266,9 +268,7 @@ def format_developer(item: dict) -> list[str]:
     return lines
 
 
-def format_trending(items: list[dict], language: str | None, since: str, spoken: str | None, developers: bool) -> str:
-    format_item = format_developer if developers else format_repository
-    lines = [format_header(language, since, spoken, developers)]
-    for item in items:
-        lines.extend(format_item(item))
-    return "\n".join(lines)
+def truncate(text: str) -> str:
+    if len(text) <= DESCRIPTION_MAX_CHARS:
+        return text
+    return text[: DESCRIPTION_MAX_CHARS - 3].rstrip() + "..."
