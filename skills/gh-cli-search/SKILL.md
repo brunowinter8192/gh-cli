@@ -51,6 +51,7 @@ Nutze nur Repo-Pfade, die in der Ausgabe von `get_repo_tree` oder `get_file_cont
 | get_file_content | owner repo path [--offset N] [--limit N] [--metadata-only] | Eine Datei aus dem Repo lesen |
 | repo_freshness | owner repo | pushed_at plus Alter, dazu updated_at und created_at, um die Aktualität zu beurteilen |
 | download_files | owner repo path... [--dest dir] | Repo-Dateien auf die lokale Platte schreiben, ohne Clone und ohne RAG |
+| trending | [--language slug] [--since daily/weekly/monthly] [--spoken code] [--developers] | Zeigt, was auf GitHub Trending gerade läuft (Seite github.com/trending, per HTML gelesen), mit Sprache, Gesamt-Sterne, Forks und Sterne im Zeitraum. Ohne `--language` alle Sprachen, `--since` ist standardmäßig daily, `--spoken` gilt nur für Repos, `--developers` liefert den Developers-Tab |
 | index_issues | "query" owner/repo [--limit 30] | Issues holen und nach RAG `github_issues` indexieren |
 | index_discussions | "query" owner/repo [--limit 30] | Discussions holen und nach RAG `github_discussions` indexieren |
 | index_releases | owner/repo | Die letzten 100 Releases nach RAG `github_releases` indexieren, wobei die Collection geleert und neu aufgebaut wird |
