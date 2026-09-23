@@ -59,3 +59,15 @@ Developers: `1. henrygd (hank) · popular: henrygd/beszel` plus description line
 - The Python environment with `mcp` installed lives in the main checkout of gh-cli (hidden dot-directory for the virtualenv, see the `~/.local/bin/gh-cli` wrapper); system `python3` lacks `mcp`.
 - zsh does not word-split unquoted variables; use `${=var}` when looping over argument strings.
 - A pre-commit-style hook rejects any Bash command whose text mentions the virtualenv directory name plus a slash; write docs with the Write tool.
+
+## Review follow-up: stepdown order (2026-09-24)
+
+The first version placed helpers above their callers (`build_trending_url` above `fetch_trending_html`, shared helpers above the extractors). Reordered so every caller stands above its callees, in call order:
+
+`validate_options`, `fetch_trending_html`, `build_trending_url`, `parse_trending`, `collect_entries`, `EntryCollector`, `extract_repository`, `extract_developer`, then the helpers used by both extractors (`require_node`, `find_node`, `clean_text`, `parse_count`, `parse_period_stars`), then `format_trending`, `format_header`, `format_repository`, `format_developer`, `truncate`.
+
+Rule of thumb applied: a helper shared by two callers goes below the last of them. Pure move, no behaviour change: offline test still passes and `trending --language rust --since weekly` returns the expected list live (first entry cloudflare/quiche).
+
+## Recap inventory
+
+Files changed versus `integration`: `.gitignore`, `DOCS.md`, `cli.py`, `skills/gh-cli-search/SKILL.md`, `src/github/DOCS.md`, `src/github/trending.py`, `dev/trending/*` (DOCS.md, test, two fixtures, report md), this file. DOCS.md LOC values (cli.py 302, trending.py 274, test_trending.py 68) were rechecked with `wc -l` after the reorder and are unchanged.
