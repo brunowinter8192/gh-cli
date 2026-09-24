@@ -1,4 +1,6 @@
+# INFRASTRUCTURE
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -8,6 +10,56 @@ from src.github.trending import format_trending, parse_trending, validate_option
 
 FIXTURES = HERE / "fixtures"
 REPORT = HERE / "md" / "test_trending.md"
+
+
+# ORCHESTRATOR
+def main():
+    results = run_strands()
+    write_report(results)
+    report_and_exit(results)
+
+
+# FUNCTIONS
+def run_strands():
+    strands = [
+        ("repositories", check_repositories),
+        ("developers", check_developers),
+        ("tripwires", check_tripwires),
+    ]
+    with ThreadPoolExecutor(max_workers=len(strands)) as pool:
+        futures = [pool.submit(run_strand, name, fn) for name, fn in strands]
+        return [f.result() for f in futures]
+
+
+def run_strand(name, fn):
+    try:
+        return name, fn(), None
+    except Exception as e:
+        return name, None, f"{type(e).__name__}: {e}"
+
+
+def write_report(results):
+    sections = [format_section(name, output, error) for name, output, error in results]
+    REPORT.write_text("# test_trending\n\n" + "\n".join(sections))
+
+
+def format_section(name, output, error):
+    status = "FAIL" if error else "PASS"
+    body = f"## {name}: {status}\n\n"
+    if error:
+        body += error + "\n"
+    if output:
+        body += "```\n" + output + "\n```\n"
+    return body
+
+
+def report_and_exit(results):
+    failed = [name for name, _, error in results if error]
+    for name in failed:
+        print(f"FAIL {name}")
+    if failed:
+        sys.exit(1)
+    print("PASS test_trending")
 
 
 def check_repositories():
@@ -51,17 +103,6 @@ def check_tripwires():
     raises(lambda: parse_trending(html.replace("/stargazers", "/x"), False), "stars link not found")
     raises(lambda: parse_trending(html.replace("stars this week", "sterne"), False), "unrecognised")
     raises(lambda: validate_options("de", True), "--spoken")
-
-
-def main():
-    repo_output = check_repositories()
-    dev_output = check_developers()
-    check_tripwires()
-    REPORT.write_text(
-        "# test_trending\n\nAll checks passed.\n\n## repositories\n\n```\n"
-        + repo_output + "\n```\n\n## developers\n\n```\n" + dev_output + "\n```\n"
-    )
-    print("PASS test_trending")
 
 
 if __name__ == "__main__":
