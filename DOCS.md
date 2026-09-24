@@ -8,8 +8,8 @@ No package `__init__` — `cli.py` is a standalone script. Entry path: `~/.local
 
 ## Flow
 1. `gh-cli <cmd> [args]` → wrapper runs `python cli.py <cmd> [args]`.
-2. `_build_parser()` parses args; `_dispatch()` routes to `<tool>_workflow(params)`.
-3. Workflow returns `list[TextContent]`; `main()` prints `result[0].text` to stdout.
+2. Args are parsed, then routed to the matching `<tool>_workflow`.
+3. Workflow returns `list[TextContent]`; the entry point prints `result[0].text` to stdout.
 4. `BrokenPipeError` → devnull dup2 + exit 0; any other `Exception` → `Error: {e}` to stderr + exit 1.
 
 ## Modules
@@ -23,4 +23,4 @@ No package `__init__` — `cli.py` is a standalone script. Entry path: `~/.local
 **Calls out:** all 15 `<tool>_workflow` functions from `src.github.*`; stdlib `argparse`, `os`, `sys`.
 
 ## State
-None — no module-level mutable state owned here; `main()` reads argv and dispatches, nothing persists between invocations.
+None — no module-level mutable state owned here; nothing persists between invocations.

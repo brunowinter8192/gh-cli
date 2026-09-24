@@ -15,9 +15,9 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 
 ### probe_client.py (69 LOC)
 
-**Purpose:** Shared auth/HTTP infrastructure for dev/-self-containment — token resolution and `graphql_query()`. Not a runnable probe.
+**Purpose:** Shared auth/HTTP infrastructure for dev/-self-containment — token resolution and the GraphQL HTTP call. Not a runnable probe.
 **Reads:** `~/.zshrc` / env for the GitHub token.
-**Writes:** exports headers + `graphql_query()` to the other probes.
+**Writes:** exports auth headers and the GraphQL call to the other probes.
 **Called by:** `01_probe_graphql_explore.py` (imports auth helpers).
 **Calls out:** `requests`; stdlib.
 

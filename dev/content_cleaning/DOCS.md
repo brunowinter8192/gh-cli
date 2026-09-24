@@ -26,7 +26,7 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 
 ### 02_strip_validation.py (319 LOC)
 
-**Purpose:** Validate `strip_discussion_noise()` against the discussion MD corpus. Read-only.
+**Purpose:** Validate the discussion noise strip against the discussion MD corpus. Read-only.
 **Reads:** discussion MD corpus (`--source-dir PATH` override); verbatim inline copy of `src/github/discussion_cleaning.py`'s strip logic.
 **Writes:** report MD to `md/02_validation_<timestamp>.md`; prints the report path.
 **Called by:** run manually (dev entry point).
@@ -36,7 +36,7 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 
 ### 03_reclean_discussions.py (273 LOC)
 
-**Purpose:** Re-clean existing discussion MDs with `strip_noise()` — noise-only pass, safe on built MDs. Dry-run by default.
+**Purpose:** Re-clean existing discussion MDs with the discussion noise strip — noise-only pass, safe on built MDs. Dry-run by default.
 **Reads:** discussion MD corpus (`--source-dir PATH` override); verbatim inline copy of `src/github/discussion_cleaning.py`'s strip logic.
 **Writes:** report MD; with `--apply`, overwrites corpus files after a timestamped backup.
 **Called by:** run manually (dev entry point).
@@ -46,7 +46,7 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 
 ### 04_reclean_issues.py (157 LOC)
 
-**Purpose:** Re-clean existing issue MDs with `strip_generic_noise()` — image/data-URI/no-space pass only. Dry-run by default.
+**Purpose:** Re-clean existing issue MDs with the generic noise strip — image/data-URI/no-space pass only. Dry-run by default.
 **Reads:** issue MD corpus (`--source-dir PATH` override); verbatim inline copy of `src/github/text_cleaning.py`'s strip logic.
 **Writes:** report MD; with `--apply`, overwrites corpus files after a timestamped backup.
 **Called by:** run manually (dev entry point).
@@ -66,7 +66,7 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 
 ### 06_reclean_build_logs.py (250 LOC)
 
-**Purpose:** Re-clean existing issue MDs with `strip_build_logs()` — the production re-cleaning counterpart to `05`. Dry-run by default.
+**Purpose:** Re-clean existing issue MDs with the build-log strip — the production re-cleaning counterpart to `05`. Dry-run by default.
 **Reads:** issue MD corpus (`--source-dir PATH` override); verbatim inline copy of `src/github/text_cleaning.py`'s strip logic.
 **Writes:** report MD; with `--apply`, backs up the full corpus first, then overwrites only changed files.
 **Called by:** run manually (dev entry point).
@@ -106,7 +106,7 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 
 ### 10_restore_build_log_files.py (373 LOC)
 
-**Purpose:** Restore the 8 build-log-stripped files to what they would be under the fixed, warning-protected `strip_build_logs()`. Dry-run by default, never modifies anything unless `--apply`.
+**Purpose:** Restore the 8 build-log-stripped files to what they would be under the fixed, warning-protected build-log strip. Dry-run by default, never modifies anything unless `--apply`.
 **Reads:** the pre-buildlog backup dir and the live issue MD corpus (fixed set of 8 files, no `--source-dir` override).
 **Writes:** report MD of per-file added-back lines and any unexpected diff; with `--apply`, backs up the live corpus then overwrites only the changed files.
 **Called by:** run manually (dev entry point).

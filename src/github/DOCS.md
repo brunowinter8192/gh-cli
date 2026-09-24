@@ -16,9 +16,9 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ### config.py (5 LOC)
 
-**Purpose:** Shared RAG-side constants (`RAG_ROOT`, `DEFAULT_LIMIT`) used across the three index modules.
+**Purpose:** Shared RAG-side constants used across the three index modules.
 **Reads:** nothing — pure constants.
-**Writes:** exports `RAG_ROOT` (Path), `DEFAULT_LIMIT` (int).
+**Writes:** exports the shared constants.
 **Called by:** `index_issues.py`, `index_discussions.py`, `index_releases.py`.
 **Calls out:** stdlib (`pathlib`).
 
@@ -27,9 +27,9 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 ### client.py (60 LOC)
 
 **Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers, generic HTTP helper.
-**Reads:** `~/.zshrc` and `GH_TOKEN`/`GITHUB_TOKEN` env vars, resolved at module-import time.
-**Writes:** exports `GITHUB_TOKEN`, `GITHUB_API_BASE`; `build_headers()`; `request()`.
-**Called by:** all REST tool modules; `graphql_client.py` (imports `GITHUB_TOKEN`); `repo_counts.py` (transitively).
+**Reads:** `~/.zshrc` and GitHub token env vars, resolved at module-import time.
+**Writes:** exports the token, API base URL, header builder and request helper.
+**Called by:** all REST tool modules; `graphql_client.py` (imports the token); `repo_counts.py` (transitively).
 **Calls out:** `requests`; stdlib (`os`, `re`, `pathlib`).
 
 ---
@@ -37,7 +37,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 ### graphql_client.py (29 LOC)
 
 **Purpose:** GraphQL infrastructure — single HTTP POST wrapper for GitHub GraphQL API v4.
-**Reads:** `GITHUB_TOKEN` from `client.py`; query string + variables from caller.
+**Reads:** the token from `client.py`; query string + variables from caller.
 **Writes:** returns response `data` dict; raises on HTTP errors or GraphQL `errors` key.
 **Called by:** `repo_counts.py`, `get_discussion.py`, `index_discussions.py`, `delete_issue.py`, `get_repo_tree.py`.
 **Calls out:** `requests`.
@@ -47,8 +47,8 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 ### repo_counts.py (49 LOC)
 
 **Purpose:** Shared GraphQL enrichment helper — batch star/issue/discussion counts for a list of repos in one call.
-**Reads:** GitHub GraphQL API via `graphql_query()`.
-**Writes:** `fetch_repo_counts()` returns a counts dict; `format_count_line()` returns a formatted summary line.
+**Reads:** GitHub GraphQL API via `graphql_client.py`.
+**Writes:** returns a counts dict and a formatted summary line.
 **Called by:** `search_repos.py`, `search_code.py`.
 **Calls out:** `graphql_client.py`.
 
@@ -89,7 +89,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 **Purpose:** Retrieve file content with optional line range and metadata-only mode across three file-size tiers.
 **Reads:** GitHub Contents API.
 **Writes:** returns `list[TextContent]` — inline content, a streamed `/tmp` path, or an error, depending on size.
-**Called by:** `cli.py`; `download_files.py` (imports `fetch_file_content`, `_stream_download`, `_SIZE_API_MAX`).
+**Called by:** `cli.py`; `download_files.py` (imports its fetch/stream helpers).
 **Calls out:** `requests`, `mcp.types`.
 
 ---
@@ -99,7 +99,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 **Purpose:** Retrieve full issue details including body.
 **Reads:** GitHub Issues API.
 **Writes:** returns `list[TextContent]`.
-**Called by:** `cli.py`; `index_issues.py` (imports `get_issue_workflow`).
+**Called by:** `cli.py`; `index_issues.py` (imports the workflow).
 **Calls out:** `requests`, `mcp.types`.
 
 ---
@@ -139,7 +139,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 **Purpose:** Retrieve all comments on a GitHub issue.
 **Reads:** GitHub Issue Comments API.
 **Writes:** returns `list[TextContent]`.
-**Called by:** `index_issues.py` (imports `get_issue_comments_workflow`). Internal-only helper — no CLI subcommand.
+**Called by:** `index_issues.py` (imports the workflow). Internal-only helper — no CLI subcommand.
 **Calls out:** `requests`, `mcp.types`.
 
 ---
@@ -147,7 +147,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 ### index_issues.py (262 LOC)
 
 **Purpose:** Fetch GitHub issues matching a query, strip noise, write per-issue MDs, and index into the `github_issues` RAG collection.
-**Reads:** GitHub Search Issues API; `get_issue_workflow`/`get_issue_comments_workflow` in-process; existing MD count; `rag-cli list_collections`.
+**Reads:** GitHub Search Issues API; the issue and comment workflows in-process; existing MD count; `rag-cli list_collections`.
 **Writes:** per-issue MDs; raw pre-strip fetch log; invokes `rag-cli index`; returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
 **Calls out:** `requests`, `mcp.types`; `get_issue.py`, `get_issue_comments.py`, `text_cleaning.py`, `raw_logging.py`, `config.py`.
@@ -159,7 +159,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 **Purpose:** Write each issue's raw, unfiltered fetch text before any cleaning strip runs, paired by filename with the cleaned MD.
 **Reads:** nothing — receives already-fetched raw text from its caller.
 **Writes:** `logs/raw_issues/<file>.md` plus a manifest line; never raises on write failure.
-**Called by:** `index_issues.py` (`log_raw_issue`).
+**Called by:** `index_issues.py`.
 **Calls out:** stdlib only (`json`, `logging`, `datetime`, `pathlib`).
 
 ---
@@ -219,7 +219,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 **Purpose:** Retrieve a full discussion with comments and accepted answer in chronological order.
 **Reads:** GitHub GraphQL API.
 **Writes:** returns `list[TextContent]`.
-**Called by:** `index_discussions.py` (imports `get_discussion_workflow`). Internal-only helper — no CLI subcommand.
+**Called by:** `index_discussions.py` (imports the workflow). Internal-only helper — no CLI subcommand.
 **Calls out:** `mcp.types`; `graphql_client.py`.
 
 ---
@@ -229,7 +229,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 **Purpose:** Generic text noise-strip primitives shared across issue and discussion cleaning, plus build/install-tool log detection.
 **Reads:** nothing — pure text transform.
 **Writes:** returns cleaned string (never mutates its argument).
-**Called by:** `discussion_cleaning.py` (imports `strip_generic_noise`); `index_issues.py` (imports `strip_generic_noise`, `strip_build_logs`).
+**Called by:** `discussion_cleaning.py` (imports the generic strip); `index_issues.py` (imports the generic and build-log strips).
 **Calls out:** stdlib only (`re`).
 
 ---
@@ -239,7 +239,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 **Purpose:** Dosu-bot noise-strip module for discussion text — footers, greetings, template checklists, badges.
 **Reads:** nothing — pure text transform.
 **Writes:** returns cleaned string (never mutates its argument).
-**Called by:** `index_discussions.py` (imports `strip_noise`). Dev copies exist in `dev/content_cleaning/`.
+**Called by:** `index_discussions.py` (imports the noise strip). Dev copies exist in `dev/content_cleaning/`.
 **Calls out:** stdlib only (`re`); `text_cleaning.py`.
 
 ---
@@ -247,7 +247,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 ### index_discussions.py (177 LOC)
 
 **Purpose:** Fetch GitHub discussions matching a query, strip noise, redact tokens, write per-discussion MDs, and index into the `github_discussions` RAG collection.
-**Reads:** GitHub GraphQL Search API; `get_discussion_workflow()` in-process; existing MD count; `rag-cli list_collections`.
+**Reads:** GitHub GraphQL Search API; the discussion workflow in-process; existing MD count; `rag-cli list_collections`.
 **Writes:** per-discussion MDs; invokes `rag-cli index`; returns `list[TextContent]` summary.
 **Called by:** `cli.py`.
 **Calls out:** `mcp.types`; `discussion_cleaning.py`, `graphql_client.py`, `get_discussion.py`, `config.py`.
@@ -255,4 +255,4 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 ---
 
 ## State
-`client.py` owns `GITHUB_TOKEN` (str, module-level) — resolved once at import via `_resolve_token()`. Never mutated after import. Read by all REST modules via `build_headers()`/`request()` and by `graphql_client.py` directly (`repo_counts.py` transitively). No other cross-module state.
+`client.py` owns the GitHub token, resolved once at import and never mutated. Read by all REST modules through the client helpers and by `graphql_client.py` directly (`repo_counts.py` transitively). No other cross-module state.
