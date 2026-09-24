@@ -21,5 +21,9 @@ Trending developers · all languages · today
    📚 A zero-dependency, git-backed micro-lesson library for AI Agents to asynchronously share and search verified debugging experience. | ht…
 ```
 
+## single_star: FAIL
+
+RuntimeError: trending entry 1: period stars '1 star today' unrecognised, page markup changed
+
 ## tripwires: PASS
 

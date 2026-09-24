@@ -29,6 +29,7 @@ def run_strands():
         ("tree_null_language_and_linecount", check_tree_null_language_and_linecount),
         ("discussion_without_answer", check_discussion_without_answer),
         ("empty_base64_file", check_empty_base64_file),
+        ("tree_repo_without_description", check_tree_repo_without_description),
     ]
     with ProcessPoolExecutor(max_workers=len(strands)) as pool:
         futures = [(name, pool.submit(fn)) for name, fn in strands]
@@ -143,6 +144,21 @@ def check_tree_null_language_and_linecount():
     rows = format_tree(entries).split("\n")
     assert rows[2].split() == ["README.md", "blob", "Markdown", "77", "6,530"], rows[2]
     assert rows[3].split() == ["plugins", "tree", "-", "-", "0"], rows[3]
+
+
+def check_tree_repo_without_description():
+    sys.path.insert(0, str(ROOT))
+    import src.github.get_repo_tree as grt
+    payload = {"repository": {
+        "description": None,
+        "primaryLanguage": {"name": "Go"},
+        "languages": {"edges": [{"size": 10, "node": {"name": "Go"}}]},
+        "object": {"__typename": "Tree", "entries": []},
+    }}
+    grt.graphql_query = lambda query, variables: payload
+    text = grt.fetch_and_format("o", "r", "")
+    assert "description:     (none)" in text, text
+    assert "primaryLanguage: Go" in text
 
 
 def check_discussion_without_answer():

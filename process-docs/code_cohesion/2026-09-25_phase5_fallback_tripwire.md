@@ -31,3 +31,8 @@ Discussion author/category/answer author/createdAt/upvoteCount/body/comments/nod
 
 ## Tests
 dev/tool_design/test_strict_access.py: 8 strands in separate processes (tokens need their own HOME and env). Deliberate break of one assertion: that strand FAIL, other 7 PASS, exit 1, restored. dev/trending/test_trending.py unchanged and passing.
+
+## Follow-up after review (2026-09-25)
+Corrections to the sections above:
+1. get_repo_tree root description: the probe observed repositories without a description (10 of 522 trending entries), so a missing description is an observed condition, not an unseen shape. It is now a logged fallback: `(none)` in the output plus `logger.info`. The statement above that a null description raises via require_present is superseded; require_present remains only for primaryLanguage (never observed missing). New strand `tree_repo_without_description` in dev/tool_design/test_strict_access.py.
+2. Trending "1 star today": PERIOD_RE now accepts `stars?`. Fixture dev/trending/fixtures/trending_single_star.html is one real article (nyldn/claude-octopus, daily shell page 2026-09-25) with the hydro attributes and svgs stripped, 2680 bytes. Strand `single_star` in test_trending.py. Proven: with the old regex the strand FAILs and the other three PASS; with the new regex all PASS. Live runs of trending daily for shell, markdown and all languages exit 0 (previously the first two raised).

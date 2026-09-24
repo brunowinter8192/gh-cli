@@ -15,7 +15,7 @@ TRENDING_TIMEOUT_SECONDS = 10
 DESCRIPTION_MAX_CHARS = 160
 SINCE_LABELS = {"daily": "today", "weekly": "this week", "monthly": "this month"}
 VOID_TAGS = {"img", "br", "hr", "input", "meta", "link", "source", "wbr"}
-PERIOD_RE = re.compile(r"^([\d,]+) stars (today|this week|this month)$")
+PERIOD_RE = re.compile(r"^([\d,]+) stars? (today|this week|this month)$")
 NUMBER_RE = re.compile(r"^\d[\d,]*$")
 
 

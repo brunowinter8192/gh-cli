@@ -23,7 +23,7 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 
 ---
 
-### test_strict_access.py (178 LOC)
+### test_strict_access.py (194 LOC)
 
 **Purpose:** Offline check that the strict-access rework keeps observed payload shapes working (null repo, null language, no answer, nothing to index, env-only token).
 **Reads:** nothing external; each strand runs in its own process with a temporary HOME and stubbed calls.

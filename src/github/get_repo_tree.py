@@ -62,7 +62,7 @@ def fetch_and_format(owner: str, repo: str, path: str) -> str:
 
     is_root = not path
     if is_root:
-        lines.append(f"description:     {require_present(repo_data['description'], 'description')}")
+        lines.append(f"description:     {format_description(repo_data['description'], owner, repo)}")
         lines.append(f"primaryLanguage: {require_present(repo_data['primaryLanguage'], 'primaryLanguage')['name']}")
         lang_edges = repo_data["languages"]["edges"]
         if lang_edges:
@@ -90,6 +90,13 @@ def fetch_and_format(owner: str, repo: str, path: str) -> str:
     lines.append(format_tree(obj["entries"]))
 
     return "\n".join(lines)
+
+
+def format_description(description: str | None, owner: str, repo: str) -> str:
+    if description is None:
+        logger.info("Repo %s/%s has no description", owner, repo)
+        return "(none)"
+    return description
 
 
 def require_present(value, field: str):

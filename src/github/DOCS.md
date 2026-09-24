@@ -74,7 +74,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ---
 
-### get_repo_tree.py (115 LOC)
+### get_repo_tree.py (122 LOC)
 
 **Purpose:** One-level directory traversal of a repository tree via a GraphQL one-shot query.
 **Reads:** GitHub GraphQL API (`repository.object(expression)`).

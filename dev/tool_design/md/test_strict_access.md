@@ -8,3 +8,4 @@
 - tree_null_language_and_linecount: PASS
 - discussion_without_answer: PASS
 - empty_base64_file: PASS
+- tree_repo_without_description: PASS
