@@ -43,7 +43,7 @@ def format_comments(comments: list, owner: str, repo: str, issue_number: int) ->
         lines.append(f"Author: {comment['user']['login']} ({comment['author_association']})")
         lines.append(f"Date: {comment['created_at']}")
         lines.append("")
-        lines.append(comment.get("body") or "(Empty comment)")
+        lines.append(comment["body"])
         lines.append("")
 
     return "\n".join(lines)

@@ -23,5 +23,15 @@ No package `__init__` — `test_trending.py` is a standalone, manually-run scrip
 
 ---
 
+### probe_optional_fields.py (74 LOC)
+
+**Purpose:** Live probe counting which optional trending fields are actually absent across 60 pages; evidence for which defaults are observed.
+**Reads:** live `github.com/trending` pages via `src.github.trending`.
+**Writes:** `md/probe_optional_fields.md`; prints the report path.
+**Called by:** manual run only.
+**Calls out:** `src.github.trending`.
+
+---
+
 ## State
 None.

@@ -8,7 +8,7 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 
 ## Flow
 1. Run the script directly (no arguments).
-2. Script drives `cli.py` as a subprocess per tier/case and checks the output.
+2. `probe_large_file.py` drives `cli.py` as a subprocess per tier/case; `test_strict_access.py` runs offline strands in parallel processes.
 3. Prints a pass/fail summary and writes a report MD to `md/`.
 
 ## Modules
@@ -20,6 +20,16 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 **Writes:** report MD to `md/probe_large_file_<timestamp>.md`; prints result summary + report path; exit code 1 on any failure.
 **Called by:** run manually (dev entry point).
 **Calls out:** stdlib (`subprocess`, `os`, `sys`) only.
+
+---
+
+### test_strict_access.py (178 LOC)
+
+**Purpose:** Offline check that the strict-access rework keeps observed payload shapes working (null repo, null language, no answer, nothing to index, env-only token).
+**Reads:** nothing external; each strand runs in its own process with a temporary HOME and stubbed calls.
+**Writes:** `md/test_strict_access.md`; exit code 1 on any failed strand.
+**Called by:** manual run only.
+**Calls out:** `src.github.*` modules under test.
 
 ---
 

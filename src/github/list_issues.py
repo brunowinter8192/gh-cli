@@ -57,7 +57,7 @@ def format_issues(issues: list[dict], owner: str, repo: str, state: str) -> str:
 
     lines = [f"{owner}/{repo} — {state.upper()} issues ({len(issues)} shown)\n"]
     for issue in issues:
-        labels = ", ".join(lbl["name"] for lbl in issue.get("labels", []))
+        labels = ", ".join(lbl["name"] for lbl in issue["labels"])
         label_str = f"  [{labels}]" if labels else ""
         lines.append(f"#{issue['number']:>4}  [{issue['state'].upper()}]  {issue['title']}{label_str}")
     return "\n".join(lines)

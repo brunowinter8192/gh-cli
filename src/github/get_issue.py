@@ -33,7 +33,7 @@ def format_issue(issue: dict, owner: str, repo: str) -> str:
     lines.append(f"Author: {issue['user']['login']} ({issue['author_association']})")
     lines.append(f"Created: {issue['created_at']} | Updated: {issue['updated_at']}")
 
-    labels = ", ".join(l["name"] for l in issue.get("labels", []))
+    labels = ", ".join(l["name"] for l in issue["labels"])
     if labels:
         lines.append(f"Labels: {labels}")
 
@@ -42,7 +42,10 @@ def format_issue(issue: dict, owner: str, repo: str) -> str:
 
     lines.append("\n---\n")
 
-    body = issue.get("body") or "(No description provided)"
+    body = issue["body"]
+    if body is None:
+        logger.info("Issue #%s has no description", issue["number"])
+        body = "(No description provided)"
     lines.append(body)
 
     return "\n".join(lines)

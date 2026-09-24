@@ -25,7 +25,7 @@ def get_file_content_workflow(owner: str, repo: str, path: str, metadata_only: b
     if metadata_only:
         return [TextContent(type="text", text=format_metadata(raw_response))]
 
-    size = raw_response.get("size", 0)
+    size = raw_response["size"]
     if size > _SIZE_API_MAX:
         return [TextContent(type="text", text=format_toolarge_response(raw_response))]
     if size > _SIZE_INLINE_MAX:
@@ -108,9 +108,9 @@ def format_metadata(raw_response: dict) -> str:
     lines.append(f"File: {raw_response['path']}")
     lines.append(f"Name: {raw_response['name']}")
     lines.append(f"Size: {raw_response['size']:,} bytes")
-    lines.append(f"Type: {raw_response.get('type', 'unknown')}")
-    lines.append(f"SHA: {raw_response.get('sha', 'N/A')}")
-    lines.append(f"URL: {raw_response.get('html_url', 'N/A')}")
+    lines.append(f"Type: {raw_response['type']}")
+    lines.append(f"SHA: {raw_response['sha']}")
+    lines.append(f"URL: {raw_response['html_url']}")
     return "\n".join(lines)
 
 
@@ -150,10 +150,10 @@ def format_file_response(raw_response: dict, offset: int = 0, limit: int = 0) ->
 
 
 def decode_content(raw_response: dict) -> str:
-    content = raw_response.get("content", "")
-    encoding = raw_response.get("encoding", "")
+    content = raw_response["content"]
+    encoding = raw_response["encoding"]
 
-    if encoding == "base64" and content:
-        content_clean = content.replace("\n", "")
-        return base64.b64decode(content_clean).decode("utf-8")
-    return content
+    if encoding != "base64":
+        raise ValueError(f"Unsupported content encoding: {encoding}")
+    content_clean = content.replace("\n", "")
+    return base64.b64decode(content_clean).decode("utf-8")

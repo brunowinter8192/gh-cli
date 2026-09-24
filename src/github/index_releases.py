@@ -59,7 +59,8 @@ def janitor_clean(collection: str, doc_dir: Path) -> None:
             f"{reason} — cannot wipe collection '{collection}' before re-index. "
             f"Details: {stderr[:300]}"
         )
-    shutil.rmtree(doc_dir, ignore_errors=True)
+    if doc_dir.exists():
+        shutil.rmtree(doc_dir)
 
 
 def fetch_releases(owner: str, repo: str) -> list:
@@ -91,9 +92,9 @@ def strip_release_noise(body: str) -> str:
 
 
 def write_release_md(r: dict, doc_dir: Path) -> None:
-    tag = (r.get("tag_name") or "untagged").strip() or "untagged"
-    published = (r.get("published_at") or "")[:10] or "unknown"
-    body = strip_release_noise((r.get("body") or "").strip())
+    tag = r["tag_name"].strip()
+    published = r["published_at"][:10]
+    body = strip_release_noise(r["body"].strip())
     md = f"# {tag} ({published})\n\n{body}\n"
     filename = sanitize_filename(tag) + ".md"
     (doc_dir / filename).write_text(md, encoding="utf-8")
@@ -121,21 +122,23 @@ def run_index(collection: str) -> int:
 
 
 def parse_chunk_count(stdout: str) -> int:
+    if "Nothing to index." in stdout:
+        logger.info("rag-cli index: nothing to index, all files unchanged")
+        return 0
     m = re.search(r"Done: \d+ files indexed \((\d+) chunks\)", stdout)
-    return int(m.group(1)) if m else 0
+    if m is None:
+        raise RuntimeError(f"Unrecognised rag-cli index output: {stdout[-300:]}")
+    return int(m.group(1))
 
 
 def get_collection_stats(collection: str, doc_dir: Path) -> tuple[int, int]:
     md_count = len(list(doc_dir.glob("*.md")))
     rag_cli = Path.home() / ".local" / "bin" / "rag-cli"
-    try:
-        result = subprocess.run(
-            [str(rag_cli), "list_collections"],
-            capture_output=True, text=True, cwd=str(RAG_ROOT),
-        )
-        m = re.search(rf"{re.escape(collection)}\s*\((\d+) chunks\)", result.stdout)
-        total_chunks = int(m.group(1)) if m else 0
-    except Exception as exc:
-        logger.warning("index_releases: rag-cli list_collections failed: %s", exc)
-        total_chunks = 0
-    return md_count, total_chunks
+    result = subprocess.run(
+        [str(rag_cli), "list_collections"],
+        capture_output=True, text=True, cwd=str(RAG_ROOT),
+    )
+    m = re.search(rf"{re.escape(collection)}\s*\((\d+) chunks\)", result.stdout)
+    if m is None:
+        raise RuntimeError(f"Collection {collection} not found in rag-cli list_collections output: {result.stdout[-300:]}")
+    return md_count, int(m.group(1))

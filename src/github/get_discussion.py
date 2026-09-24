@@ -80,46 +80,46 @@ def format_discussion(data: dict, comment_limit: int) -> str:
     if not d:
         return "Discussion not found."
 
-    category = d.get("category") or {}
-    author = (d.get("author") or {}).get("login", "unknown")
-    answered_status = "Answered" if d.get("isAnswered") else "Open"
+    category = d["category"]
+    author = d["author"]["login"]
+    answered_status = "Answered" if d["isAnswered"] else "Open"
 
     lines = [
         f"## {d['title']}\n",
-        f"**Category:** {category.get('emoji', '')} {category.get('name', '')}",
+        f"**Category:** {category['emoji']} {category['name']}",
         f"**Author:** @{author}",
-        f"**Created:** {d.get('createdAt', '')[:10]}",
-        f"**Upvotes:** {d.get('upvoteCount', 0)}",
+        f"**Created:** {d['createdAt'][:10]}",
+        f"**Upvotes:** {d['upvoteCount']}",
         f"**Status:** {answered_status}\n",
         "### Body",
-        d.get("body", ""),
+        d["body"],
         "\n---\n"
     ]
 
-    answer = d.get("answer")
+    answer = d["answer"]
     if answer:
-        ans_author = (answer.get("author") or {}).get("login", "unknown")
+        ans_author = answer["author"]["login"]
         lines.append("### Accepted Answer")
-        lines.append(f"**@{ans_author}** ({answer.get('createdAt', '')[:10]}) - {answer.get('upvoteCount', 0)} upvotes")
-        lines.append(answer.get("body", ""))
+        lines.append(f"**@{ans_author}** ({answer['createdAt'][:10]}) - {answer['upvoteCount']} upvotes")
+        lines.append(answer["body"])
         lines.append("\n---\n")
 
-    comments_data = d.get("comments") or {}
-    total_comments = comments_data.get("totalCount", 0)
-    comments = (comments_data.get("nodes") or [])[:comment_limit]
+    comments_data = d["comments"]
+    total_comments = comments_data["totalCount"]
+    comments = comments_data["nodes"][:comment_limit]
 
     lines.append(f"### Comments ({total_comments} total, showing {len(comments)})\n")
 
     for c in comments:
-        c_author = (c.get("author") or {}).get("login", "unknown")
-        is_answer = " [ANSWER]" if c.get("isAnswer") else ""
-        lines.append(f"**@{c_author}** ({c.get('createdAt', '')[:10]}) - {c.get('upvoteCount', 0)} upvotes{is_answer}")
-        lines.append(c.get("body", ""))
+        c_author = c["author"]["login"]
+        is_answer = " [ANSWER]" if c["isAnswer"] else ""
+        lines.append(f"**@{c_author}** ({c['createdAt'][:10]}) - {c['upvoteCount']} upvotes{is_answer}")
+        lines.append(c["body"])
 
-        replies = (c.get("replies") or {}).get("nodes") or []
+        replies = c["replies"]["nodes"]
         for r in replies:
-            r_author = (r.get("author") or {}).get("login", "unknown")
-            lines.append(f"  > **@{r_author}**: {r.get('body', '')} ({r.get('upvoteCount', 0)} upvotes)")
+            r_author = r["author"]["login"]
+            lines.append(f"  > **@{r_author}**: {r['body']} ({r['upvoteCount']} upvotes)")
 
         lines.append("")
 
