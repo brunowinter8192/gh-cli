@@ -159,7 +159,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 **Purpose:** Write each issue's raw, unfiltered fetch text before any cleaning strip runs, paired by filename with the cleaned MD.
 **Reads:** nothing — receives already-fetched raw text from its caller.
 **Writes:** `logs/raw_issues/<file>.md` plus a manifest line; never raises on write failure.
-**Called by:** `index_issues.py` .
+**Called by:** `index_issues.py`.
 **Calls out:** stdlib only (`json`, `logging`, `datetime`, `pathlib`).
 
 ---
