@@ -14,7 +14,7 @@ _FOOTER_TEXT_PHRASES = (
     'Share context across your team and agents. Try',
 )
 ISSUE_HEADING_RE = re.compile(
-    r'^### (?:🔎 Search before asking|🤖 Consult the online AI assistant)'
+    r'^### (?:\U0001F50E Search before asking|\U0001F916 Consult the online AI assistant)'
 )
 
 

@@ -5,11 +5,12 @@ import requests
 import base64
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
+from src.github.config import SIZE_API_MAX
+from src.github.response import text_response
 
 logger = logging.getLogger(__name__)
 
 _SIZE_INLINE_MAX = 1_048_576
-_SIZE_API_MAX    = 104_857_600
 
 
 # ORCHESTRATOR
@@ -18,21 +19,10 @@ def get_file_content_workflow(owner: str, repo: str, path: str, metadata_only: b
     raw_response = fetch_file_content(owner, repo, path)
 
     if isinstance(raw_response, list):
-        if metadata_only:
-            return [TextContent(type="text", text=format_dir_metadata(raw_response, path))]
-        raise ValueError(f"Path '{path}' is a directory, not a file. Use get_repo_tree or metadata_only=True.")
-
+        return respond_to_directory(raw_response, path, metadata_only)
     if metadata_only:
-        return [TextContent(type="text", text=format_metadata(raw_response))]
-
-    size = raw_response["size"]
-    if size > _SIZE_API_MAX:
-        return [TextContent(type="text", text=format_toolarge_response(raw_response))]
-    if size > _SIZE_INLINE_MAX:
-        tmp = _tmp_path(owner, repo, path)
-        _stream_download(raw_response["download_url"], tmp)
-        return [TextContent(type="text", text=format_large_file_response(raw_response, tmp))]
-    return [TextContent(type="text", text=format_file_response(raw_response, offset, limit))]
+        return text_response(format_metadata(raw_response))
+    return respond_by_size(raw_response, owner, repo, path, offset, limit)
 
 
 # FUNCTIONS
@@ -45,12 +35,29 @@ def fetch_file_content(owner: str, repo: str, path: str) -> dict:
     return response.json()
 
 
+def respond_to_directory(raw_response: list, path: str, metadata_only: bool) -> list[TextContent]:
+    if metadata_only:
+        return text_response(format_dir_metadata(raw_response, path))
+    raise ValueError(f"Path '{path}' is a directory, not a file. Use get_repo_tree or metadata_only=True.")
+
+
+def respond_by_size(raw_response: dict, owner: str, repo: str, path: str, offset: int, limit: int) -> list[TextContent]:
+    size = raw_response["size"]
+    if size > SIZE_API_MAX:
+        return text_response(format_toolarge_response(raw_response))
+    if size > _SIZE_INLINE_MAX:
+        tmp = _tmp_path(owner, repo, path)
+        stream_download(raw_response["download_url"], tmp)
+        return text_response(format_large_file_response(raw_response, tmp))
+    return text_response(format_file_response(raw_response, offset, limit))
+
+
 def _tmp_path(owner: str, repo: str, path: str) -> str:
     safe = re.sub(r"[^A-Za-z0-9._-]", "_", path)
     return f"/tmp/gh-cli_{owner}_{repo}_{safe}"
 
 
-def _stream_download(url: str, dest_path: str) -> None:
+def stream_download(url: str, dest_path: str) -> None:
     resp = requests.get(url, stream=True, timeout=30)
     resp.raise_for_status()
     with open(dest_path, "wb") as f:

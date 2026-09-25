@@ -22,6 +22,7 @@ from src.github.delete_issue import delete_issue_workflow
 from src.github.repo_freshness import repo_freshness_workflow
 from src.github.download_files import download_files_workflow
 from src.github.trending import trending_workflow
+from src.github.config import DEFAULT_LIMIT
 
 HELP_TEXT = (
     "This CLI has no help text. Invoke the skill gh-cli-search via "
@@ -29,6 +30,13 @@ HELP_TEXT = (
 )
 
 
+# ORCHESTRATOR
+def main():
+    args = _parse_args()
+    _run_command(args)
+
+
+# FUNCTIONS
 class NoHelpParser(argparse.ArgumentParser):
     def error(self, message):
         self.exit(2, HELP_TEXT + "\n")
@@ -38,12 +46,13 @@ class NoHelpParser(argparse.ArgumentParser):
         self.exit(2)
 
 
-# ORCHESTRATOR
-def main():
-    parser = _build_parser()
-    args = parser.parse_args()
+def _parse_args():
+    return _build_parser().parse_args()
+
+
+def _run_command(args):
     try:
-        result = _dispatch(args, parser)
+        result = _dispatch(args)
         print(result[0].text)
     except BrokenPipeError:
         os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
@@ -53,7 +62,6 @@ def main():
         sys.exit(1)
 
 
-# FUNCTIONS
 def _add_search_repos_parser(sub):
     p = sub.add_parser("search_repos", help="Search GitHub repositories.")
     p.add_argument("query", help="Search query (max 2-3 words; GitHub returns 0 for longer queries)")
@@ -88,16 +96,16 @@ def _add_index_issues_parser(sub):
     p = sub.add_parser("index_issues", help="Fetch issues matching a query and index into RAG.")
     p.add_argument("query", help="Search keywords (max 3; most distinctive first)")
     p.add_argument("repo", help="Repository as owner/repo")
-    p.add_argument("--limit", type=int, default=30,
-                   help="Max issues to fetch and index (default 30)")
+    p.add_argument("--limit", type=int, default=DEFAULT_LIMIT,
+                   help=f"Max issues to fetch and index (default {DEFAULT_LIMIT})")
 
 
 def _add_index_discussions_parser(sub):
     p = sub.add_parser("index_discussions", help="Fetch discussions matching a query and index into RAG.")
     p.add_argument("query", help="Search keywords (max 3; most distinctive first)")
     p.add_argument("repo", help="Repository as owner/repo")
-    p.add_argument("--limit", type=int, default=30,
-                   help="Max discussions to fetch and index (default 30)")
+    p.add_argument("--limit", type=int, default=DEFAULT_LIMIT,
+                   help=f"Max discussions to fetch and index (default {DEFAULT_LIMIT})")
 
 
 def _add_index_releases_parser(sub):
@@ -135,7 +143,7 @@ def _add_list_issues_parser(sub):
     p.add_argument("--state", choices=["open", "closed", "all"], default="open",
                    help="Filter by state (default: open)")
     p.add_argument("--labels", default=None, help="Comma-separated label filter")
-    p.add_argument("--limit", type=int, default=30, help="Max issues to return (default 30)")
+    p.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help=f"Max issues to return (default {DEFAULT_LIMIT})")
 
 
 def _add_get_issue_parser(sub):
@@ -273,7 +281,7 @@ def _dispatch_trending(args):
     return trending_workflow(args.language, args.since, args.spoken, args.developers)
 
 
-def _dispatch(args, parser):
+def _dispatch(args):
     handlers = {
         "search_repos": _dispatch_search_repos,
         "search_code": _dispatch_search_code,
@@ -291,11 +299,7 @@ def _dispatch(args, parser):
         "download_files": _dispatch_download_files,
         "trending": _dispatch_trending,
     }
-    handler = handlers.get(args.cmd)
-    if handler is None:
-        parser.error(f"Unknown command: {args.cmd}")
-        return
-    return handler(args)
+    return handlers[args.cmd](args)
 
 
 if __name__ == "__main__":

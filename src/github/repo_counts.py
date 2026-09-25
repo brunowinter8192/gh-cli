@@ -42,9 +42,9 @@ def fetch_repo_counts(repos: list) -> dict:
 
 def format_count_line(full_name: str, stars: int, counts) -> str:
     if counts is None:
-        return f"{full_name} · ⭐{stars} · issues:? · discussions:?"
+        return f"{full_name} · stars:{stars} · issues:? · discussions:?"
     issues_n = counts["issues"]
     disc_n = counts["discussions"]
     issues_str = f"issues:{issues_n}" if counts["hasIssuesEnabled"] else f"issues:{issues_n} (off)"
     disc_str = f"discussions:{disc_n}" if counts["hasDiscussionsEnabled"] else f"discussions:{disc_n} (off)"
-    return f"{full_name} · ⭐{stars} · {issues_str} · {disc_str}"
+    return f"{full_name} · stars:{stars} · {issues_str} · {disc_str}"

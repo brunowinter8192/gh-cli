@@ -4,7 +4,8 @@ import os
 
 from mcp.types import TextContent
 
-from src.github.get_file_content import fetch_file_content, _stream_download, _SIZE_API_MAX
+from src.github.config import SIZE_API_MAX
+from src.github.get_file_content import fetch_file_content, stream_download
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +41,12 @@ def _download_paths(owner: str, repo: str, paths: list[str], dest: str) -> tuple
             continue
 
         size = raw["size"]
-        if size > _SIZE_API_MAX:
+        if size > SIZE_API_MAX:
             failed.append((path, f"exceeds API limit ({size:,} bytes > 100 MB)"))
             continue
 
         dest_path = os.path.join(dest, os.path.basename(path))
-        _stream_download(download_url, dest_path)
+        stream_download(download_url, dest_path)
         written.append((path, dest_path, os.path.getsize(dest_path)))
 
     return written, failed
