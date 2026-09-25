@@ -327,7 +327,8 @@ Indexed <N> releases from <owner>/<repo>.
 New chunks added this run: <N>
 Collection now: <N> MDs, <N> chunks total.
 
-To search: rag-cli search_hybrid "<your feature query>" github_releases
+Newest release: rag-cli list_documents github_releases, then rag-cli expand_chunks github_releases <newest-release>.md 0 --after 2
+Since when feature X exists: rag-cli search "<feature>" github_releases
 ```
 
 - Jeder Lauf leert `github_releases` und baut sie für dieses EINE Repo neu auf.

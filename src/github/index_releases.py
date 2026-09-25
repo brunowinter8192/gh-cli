@@ -112,5 +112,6 @@ def build_releases_summary(release_count: int, repo: str, new_chunks: int, total
         f"Indexed {release_count} releases from {repo}.\n"
         f"New chunks added this run: {new_chunks}\n"
         f"Collection now: {total_mds} MDs, {total_chunks} chunks total.\n"
-        f"\nTo search: rag-cli search_hybrid \"<your feature query>\" github_releases"
+        f"\nNewest release: rag-cli list_documents github_releases, then rag-cli expand_chunks github_releases <newest-release>.md 0 --after 2\n"
+        f"Since when feature X exists: rag-cli search \"<feature>\" github_releases"
     )
