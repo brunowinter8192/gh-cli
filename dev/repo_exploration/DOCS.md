@@ -1,7 +1,7 @@
 # dev/repo_exploration/
 
 ## Role
-Probe suite for the repo-orientation tools. Validated the GraphQL one-shot depth=1 tree traversal now in `get_repo_tree` (production shape: tree-only, metadata-on-root, single expression param). Backs `process-docs/repo_exploration/`.
+Probe suite for the repo-orientation tools. Validated the GraphQL one-shot one-level tree traversal now in `get_repo_tree` (production shape: tree-only, metadata-on-root, single expression param). Backs `process-docs/repo_exploration/`.
 
 ## Public Interface
 No package `__init__` — each script is a standalone, manually-run dev entry point.
@@ -19,17 +19,17 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 **Reads:** `~/.zshrc` / env for the GitHub token.
 **Writes:** exports auth headers and the GraphQL call to the other probes.
 **Called by:** `01_probe_graphql_explore.py` (imports auth helpers).
-**Calls out:** `requests`; stdlib.
+**Calls out:** `requests`.
 
 ---
 
 ### 01_probe_graphql_explore.py (128 LOC)
 
-**Purpose:** GraphQL one-shot depth=1 tree traversal — per-entry name/type/language/lineCount/size, root-only repo metadata.
+**Purpose:** GraphQL one-shot one-level tree traversal — per-entry name/type/language/lineCount/size, root-only repo metadata.
 **Reads:** GitHub GraphQL API via `probe_client.py`; args `<owner> <repo> [expression]`.
 **Writes:** prints to stdout; report MD to `md/01_graphql_explore.md` (root call) or `md/01_graphql_plugins.md` (sub-path call).
 **Called by:** run manually (dev entry point).
-**Calls out:** imports auth from `probe_client.py`.
+**Calls out:** none.
 
 ---
 

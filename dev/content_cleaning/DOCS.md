@@ -14,13 +14,13 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 
 ## Modules
 
-### 01_audit_discussion_noise.py (341 LOC)
+### 01_audit_discussion_noise.py (355 LOC)
 
 **Purpose:** Classify dosu-bot noise classes across the discussion MD corpus. Read-only.
 **Reads:** discussion MD corpus (`--source-dir PATH` override).
 **Writes:** report MD to `md/01_audit_<date>.md`; prints the report path.
 **Called by:** run manually (dev entry point).
-**Calls out:** stdlib only.
+**Calls out:** none.
 
 ---
 
@@ -30,7 +30,7 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 **Reads:** discussion MD corpus (`--source-dir PATH` override); verbatim inline copy of `src/github/discussion_cleaning.py`'s strip logic.
 **Writes:** report MD to `md/02_validation_<timestamp>.md`; prints the report path.
 **Called by:** run manually (dev entry point).
-**Calls out:** stdlib only.
+**Calls out:** none.
 
 ---
 
@@ -40,7 +40,7 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 **Reads:** discussion MD corpus (`--source-dir PATH` override); verbatim inline copy of `src/github/discussion_cleaning.py`'s strip logic.
 **Writes:** report MD; with `--apply`, overwrites corpus files after a timestamped backup.
 **Called by:** run manually (dev entry point).
-**Calls out:** stdlib only.
+**Calls out:** none.
 
 ---
 
@@ -50,17 +50,17 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 **Reads:** issue MD corpus (`--source-dir PATH` override); verbatim inline copy of `src/github/text_cleaning.py`'s strip logic.
 **Writes:** report MD; with `--apply`, overwrites corpus files after a timestamped backup.
 **Called by:** run manually (dev entry point).
-**Calls out:** stdlib only.
+**Calls out:** none.
 
 ---
 
-### 05_strip_build_logs.py (305 LOC)
+### 05_strip_build_logs.py (327 LOC)
 
 **Purpose:** Detect and dry-run strip build/install-tool log noise from issue MDs. Measurement and proposal only — no `--apply` exercised.
 **Reads:** issue MD corpus (`--source-dir PATH` override, also pointed at `fixtures/` for the regression suite).
 **Writes:** dump MD of removed content only; all measurement goes to stdout.
 **Called by:** run manually (dev entry point).
-**Calls out:** stdlib only.
+**Calls out:** none.
 
 ---
 
@@ -70,7 +70,7 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 **Reads:** issue MD corpus (`--source-dir PATH` override); verbatim inline copy of `src/github/text_cleaning.py`'s strip logic.
 **Writes:** report MD; with `--apply`, backs up the full corpus first, then overwrites only changed files.
 **Called by:** run manually (dev entry point).
-**Calls out:** stdlib only.
+**Calls out:** none.
 
 ---
 
@@ -80,37 +80,37 @@ No package `__init__` — each script is a standalone, manually-run dev entry po
 **Reads:** issue MD corpus (`--source-dir PATH` override); verbatim inline copy of `src/github/index_issues.py`'s class-F/G anchors and removal logic.
 **Writes:** report MD with per-class totals and verbatim removed spans; with `--apply`, backs up then overwrites changed files.
 **Called by:** run manually (dev entry point).
-**Calls out:** stdlib only.
+**Calls out:** none.
 
 ---
 
-### 08_audit_debug_stream.py (300 LOC)
+### 08_audit_debug_stream.py (317 LOC)
 
 **Purpose:** Measure junk class B (DEBUG_STREAM) on the issue MD corpus. Read-only — measurement and a written proposal only, no detector or strip.
 **Reads:** issue MD corpus (`--source-dir PATH` override).
 **Writes:** report MD with per-shape and repeat-comparison breakdowns; corpus-wide numbers to stdout.
 **Called by:** run manually (dev entry point).
-**Calls out:** stdlib only.
+**Calls out:** none.
 
 ---
 
-### 09_strip_debug_stream.py (226 LOC)
+### 09_strip_debug_stream.py (239 LOC)
 
 **Purpose:** Detect and dry-run strip junk class B (DEBUG_STREAM) from issue MDs. No `--apply`, never modifies the corpus.
 **Reads:** issue MD corpus (`--source-dir PATH` override).
 **Writes:** dump MD of removed content only; measurement to stdout.
 **Called by:** run manually (dev entry point).
-**Calls out:** stdlib only.
+**Calls out:** none.
 
 ---
 
-### 10_restore_build_log_files.py (373 LOC)
+### 10_restore_build_log_files.py (393 LOC)
 
-**Purpose:** Restore the 8 build-log-stripped files to what they would be under the fixed, warning-protected build-log strip. Dry-run by default, never modifies anything unless `--apply`.
-**Reads:** the pre-buildlog backup dir and the live issue MD corpus (fixed set of 8 files, no `--source-dir` override).
+**Purpose:** Restore the build-log-stripped files to what they would be under the fixed, warning-protected build-log strip. Dry-run by default, never modifies anything unless `--apply`.
+**Reads:** the pre-buildlog backup dir and the live issue MD corpus (fixed file set, no `--source-dir` override).
 **Writes:** report MD of per-file added-back lines and any unexpected diff; with `--apply`, backs up the live corpus then overwrites only the changed files.
 **Called by:** run manually (dev entry point).
-**Calls out:** stdlib only (`difflib`).
+**Calls out:** none.
 
 ---
 

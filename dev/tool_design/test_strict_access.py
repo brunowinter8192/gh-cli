@@ -3,6 +3,7 @@ import base64
 import os
 import sys
 import tempfile
+import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -13,14 +14,15 @@ REPORT = HERE / "md" / "test_strict_access.md"
 
 # ORCHESTRATOR
 def main():
-    results = run_strands()
-    write_report(results)
+    names = select_strands(sys.argv[1:])
+    results = run_strands(names)
+    write_report(results, len(names) == len(strand_table()))
     report_and_exit(results)
 
 
 # FUNCTIONS
-def run_strands():
-    strands = [
+def strand_table():
+    return dict([
         ("token_env_fallback", check_token_env_fallback),
         ("token_empty_raises", check_token_empty_raises),
         ("repo_counts_null_repo", check_repo_counts_null_repo),
@@ -30,9 +32,23 @@ def run_strands():
         ("discussion_without_answer", check_discussion_without_answer),
         ("empty_base64_file", check_empty_base64_file),
         ("tree_repo_without_description", check_tree_repo_without_description),
-    ]
-    with ProcessPoolExecutor(max_workers=len(strands)) as pool:
-        futures = [(name, pool.submit(fn)) for name, fn in strands]
+        ("search_repos_fallback_note", check_search_repos_fallback_note),
+    ])
+
+
+def select_strands(requested):
+    table = strand_table()
+    unknown = [name for name in requested if name not in table]
+    if unknown:
+        raise SystemExit(f"unknown strand(s): {', '.join(unknown)}; available: {', '.join(table)}")
+    return requested or list(table)
+
+
+def run_strands(names):
+    table = strand_table()
+    context = multiprocessing.get_context("spawn")
+    with ProcessPoolExecutor(max_workers=len(names), mp_context=context, max_tasks_per_child=1) as pool:
+        futures = [(name, pool.submit(table[name])) for name in names]
         return [collect(name, future) for name, future in futures]
 
 
@@ -44,7 +60,9 @@ def collect(name, future):
         return name, f"{type(e).__name__}: {e}"
 
 
-def write_report(results):
+def write_report(results, is_full_run):
+    if not is_full_run:
+        return
     lines = ["# test_strict_access", ""]
     for name, error in results:
         lines.append(f"- {name}: {'FAIL ' + error if error else 'PASS'}")
@@ -71,8 +89,8 @@ def prepare_import(home_token_env):
 
 def check_token_env_fallback():
     prepare_import({"GITHUB_TOKEN": "ghp_test"})
-    from src.github.client import GITHUB_TOKEN, build_headers
-    assert GITHUB_TOKEN == "ghp_test", GITHUB_TOKEN
+    from src.github.client import build_headers, require_token
+    assert require_token() == "ghp_test"
     assert build_headers()["Authorization"] == "Bearer ghp_test"
 
 
@@ -90,7 +108,7 @@ def check_token_empty_raises():
 
 
 def check_repo_counts_null_repo():
-    sys.path.insert(0, str(ROOT))
+    prepare_import({})
     import src.github.repo_counts as rc
     full = {
         "stargazerCount": 131774,
@@ -102,23 +120,22 @@ def check_repo_counts_null_repo():
     rc.graphql_query = lambda query, variables: {"r0": None, "r1": full}
     counts = rc.fetch_repo_counts([("gone", "repo"), ("anthropics", "claude-code")])
     assert counts["gone/repo"] is None
-    assert rc.format_count_line("gone/repo", 1, None) == "gone/repo · ⭐1 · issues:? · discussions:?"
+    assert rc.format_count_line("gone/repo", 1, None) == "gone/repo · stars:1 · issues:? · discussions:?"
     line = rc.format_count_line("anthropics/claude-code", 131774, counts["anthropics/claude-code"])
-    assert line == "anthropics/claude-code · ⭐131774 · issues:65172 · discussions:0 (off)", line
+    assert line == "anthropics/claude-code · stars:131774 · issues:65172 · discussions:0 (off)", line
 
 
 def check_parse_chunk_count():
     sys.path.insert(0, str(ROOT))
-    from src.github import index_discussions, index_issues, index_releases
-    for module in (index_discussions, index_issues, index_releases):
-        assert module.parse_chunk_count("\nNothing to index.\n") == 0
-        assert module.parse_chunk_count("\nDone: 2 files indexed (17 chunks), 5 skipped, 0 adopted") == 17
-        try:
-            module.parse_chunk_count("something else")
-        except RuntimeError as e:
-            assert "Unrecognised" in str(e)
-        else:
-            raise AssertionError("no error raised for unknown output")
+    from src.github.rag_indexing import parse_chunk_count
+    assert parse_chunk_count("\nNothing to index.\n") == 0
+    assert parse_chunk_count("\nDone: 2 files indexed (17 chunks), 5 skipped, 0 adopted") == 17
+    try:
+        parse_chunk_count("something else")
+    except RuntimeError as e:
+        assert "Unrecognised" in str(e)
+    else:
+        raise AssertionError("no error raised for unknown output")
 
 
 def check_issue_body_null():
@@ -159,6 +176,22 @@ def check_tree_repo_without_description():
     text = grt.fetch_and_format("o", "r", "")
     assert "description:     (none)" in text, text
     assert "primaryLanguage: Go" in text
+
+
+def check_search_repos_fallback_note():
+    prepare_import({})
+    import src.github.search_repos as sr
+    payload = {"total_count": 1, "items": [{"full_name": "fastapi/fastapi", "stargazers_count": 5}]}
+    empty = {"total_count": 0, "items": []}
+    sr.fetch_repositories = lambda query, sort_by: payload if query == "fastapi" else empty
+    sr.fetch_repo_counts = lambda repos: {"fastapi/fastapi": None}
+    shortened = sr.search_repos_workflow("fastapi nonexistentzz")[0].text.split("\n")
+    assert shortened[0] == "Query: 'fastapi' (fell back to 1 keyword)", shortened[0]
+    assert shortened[1].startswith("fastapi/fastapi · stars:5"), shortened[1]
+    direct = sr.search_repos_workflow("fastapi")[0].text
+    assert not direct.startswith("Query:"), direct
+    nothing = sr.search_repos_workflow("zzqq")[0].text
+    assert nothing == "No repositories found for 'zzqq'.", nothing
 
 
 def check_discussion_without_answer():

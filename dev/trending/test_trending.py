@@ -14,21 +14,34 @@ REPORT = HERE / "md" / "test_trending.md"
 
 # ORCHESTRATOR
 def main():
-    results = run_strands()
-    write_report(results)
+    names = select_strands(sys.argv[1:])
+    results = run_strands(names)
+    write_report(results, len(names) == len(strand_table()))
     report_and_exit(results)
 
 
 # FUNCTIONS
-def run_strands():
-    strands = [
+def strand_table():
+    return dict([
         ("repositories", check_repositories),
         ("developers", check_developers),
         ("single_star", check_single_star),
         ("tripwires", check_tripwires),
-    ]
-    with ThreadPoolExecutor(max_workers=len(strands)) as pool:
-        futures = [pool.submit(run_strand, name, fn) for name, fn in strands]
+    ])
+
+
+def select_strands(requested):
+    table = strand_table()
+    unknown = [name for name in requested if name not in table]
+    if unknown:
+        raise SystemExit(f"unknown strand(s): {', '.join(unknown)}; available: {', '.join(table)}")
+    return requested or list(table)
+
+
+def run_strands(names):
+    table = strand_table()
+    with ThreadPoolExecutor(max_workers=len(names)) as pool:
+        futures = [pool.submit(run_strand, name, table[name]) for name in names]
         return [f.result() for f in futures]
 
 
@@ -39,7 +52,9 @@ def run_strand(name, fn):
         return name, None, f"{type(e).__name__}: {e}"
 
 
-def write_report(results):
+def write_report(results, is_full_run):
+    if not is_full_run:
+        return
     sections = [format_section(name, output, error) for name, output, error in results]
     REPORT.write_text("# test_trending\n\n" + "\n".join(sections))
 

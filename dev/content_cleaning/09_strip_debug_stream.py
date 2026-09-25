@@ -57,7 +57,27 @@ class FileResult:
     changed: bool = False
 
 
+# ORCHESTRATOR
+
+def strip_debug_stream_workflow(source_dir: Path) -> None:
+    md_files = list_md_files(source_dir)
+    results = measure_all(md_files)
+    total_checked = assert_safety(results)
+    report_path = write_dump_report(results)
+    print(f"report: {report_path}")
+    print_corpus_summary(md_files, results, total_checked)
+    print_shape_summaries(results)
+
+
 # FUNCTIONS
+
+def list_md_files(source_dir: Path) -> list:
+    md_files = sorted(source_dir.glob("*.md"))
+    if not md_files:
+        print(f"No .md files found in {source_dir}", file=sys.stderr)
+        sys.exit(1)
+    return md_files
+
 
 def _is_protected(line: str) -> bool:
     return bool(ERROR_RE.search(line) or TRACE_RE.search(line) or BACKTRACE_RE.search(line)
@@ -177,22 +197,15 @@ def write_dump(path: Path, results: list) -> None:
     path.write_text('\n'.join(o))
 
 
-# ORCHESTRATOR
-
-def strip_debug_stream_workflow(source_dir: Path) -> None:
-    md_files = sorted(source_dir.glob("*.md"))
-    if not md_files:
-        print(f"No .md files found in {source_dir}", file=sys.stderr)
-        sys.exit(1)
-
-    results = measure_all(md_files)
-    total_checked = assert_safety(results)
-
+def write_dump_report(results: list) -> Path:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
     report_path = REPORT_DIR / f"09_strip_debug_stream_dryrun_{ts}.md"
     write_dump(report_path, results)
+    return report_path
 
+
+def print_corpus_summary(md_files: list, results: list, total_checked: int) -> None:
     changed = [fr for fr in results if fr.changed]
     total_blocks = sum(len(fr.blocks) for fr in results)
     total_lines = sum(b.length for fr in results for b in fr.blocks)
@@ -200,13 +213,13 @@ def strip_debug_stream_workflow(source_dir: Path) -> None:
     total_net = sum(fr.net_chars_removed for fr in results)
     total_corpus_chars = sum(fr.file_chars for fr in results)
     pct = 100 * total_gross / total_corpus_chars if total_corpus_chars else 0
-
-    print(f"report: {report_path}")
     print(f"files_scanned={len(md_files)} files_affected={len(changed)} blocks={total_blocks} "
           f"lines_removed={total_lines} gross_chars_removed={total_gross} "
           f"net_chars_removed={total_net} pct_corpus={pct:.2f}% "
           f"safety=PASS ({total_checked} lines checked)")
 
+
+def print_shape_summaries(results: list) -> None:
     for shape_name in SHAPES:
         shape_blocks = [b for fr in results for b in fr.blocks if b.shape == shape_name]
         shape_files = {b.filename for b in shape_blocks}

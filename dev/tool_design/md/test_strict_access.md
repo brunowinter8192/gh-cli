@@ -9,3 +9,4 @@
 - discussion_without_answer: PASS
 - empty_base64_file: PASS
 - tree_repo_without_description: PASS
+- search_repos_fallback_note: PASS
