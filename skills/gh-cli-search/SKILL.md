@@ -86,9 +86,8 @@ description:
 #### Output
 
 ```
-jakevdp/PythonDataScienceHandbook · stars:49994 · issues:213 · discussions:0 (off)
-fastai/fastbook · stars:25324 · issues:259 · discussions:0 (off)
-jupyter/notebook · stars:13370 · issues:5065 · discussions:73
+<owner>/<repo> · stars:<N> · issues:<N> · discussions:<N>
+<owner>/<repo> · stars:<N> · issues:<N> · discussions:0 (off)
 ```
 
 - Eine Zeile pro Repo, bis zu 30 Zeilen.
@@ -96,7 +95,7 @@ jupyter/notebook · stars:13370 · issues:5065 · discussions:73
 - Endet der Rückfall ohne Treffer, nennt die Ausgabe die letzte Query, also das vorderste Keyword:
 
 ```
-No repositories found for 'zzqqxx'.
+No repositories found for '<keyword>'.
 ```
 
 ### search_code
@@ -109,20 +108,15 @@ No repositories found for 'zzqqxx'.
 #### Output
 
 ```
-## Repos (1 unique)
-psf/requests · stars:54342 · issues:4183 · discussions:0 (off)
+## Repos (<N> unique)
+<owner>/<repo> · stars:<N> · issues:<N> · discussions:<N>
 
-psf/requests src/requests/adapters.py
-  raise NotImplementedError
-  
-  
-  class HTTPAdapter(BaseAdapter):
-      """The built-in HTTP Adapter for urllib3.
+<owner>/<repo> <path>
+  <Trefferzeile mit Kontext>
+  <Trefferzeile mit Kontext>
 
-psf/requests src/requests/sessions.py
-  self.adapters = OrderedDict()
-          self.mount("https://", HTTPAdapter())
-          self.mount("http://", HTTPAdapter())
+<owner>/<repo> <path>
+  <Trefferzeile mit Kontext>
 ```
 
 - Oben die Repos, in denen Treffer liegen, darunter ein Block pro Datei mit Repo, Pfad und den Trefferzeilen samt Kontext.
@@ -143,20 +137,16 @@ No results. Note: GitHub Code Search does not index CSV/data files — use get_f
 #### Output
 
 ```
-description:     A simple, yet elegant, HTTP library.
-primaryLanguage: Python
-languages:       Python 99%, Makefile 1%
+description:     <Repo-Beschreibung>
+primaryLanguage: <Sprache>
+languages:       <Sprache> <N>%, <Sprache> <N>%
 
 type: Tree
 
   name                                     type   lang               lines      size
   ----------------------------------------------------------------------------------
-  .github                                  tree   -                      -         0
-  HISTORY.md                               blob   Markdown            2102    64,563
-  README.md                                blob   Markdown              76     2,906
-  pyproject.toml                           blob   TOML                 125     3,404
-  src                                      tree   -                      -         0
-  tests                                    tree   -                      -         0
+  <verzeichnis>                            tree   -                      -         0
+  <datei>                                  blob   <Sprache>            <N>       <N>
 ```
 
 - Nur der Root-Aufruf trägt die drei Metadaten-Zeilen `description`, `primaryLanguage` und `languages`.
@@ -174,19 +164,16 @@ type: Tree
 #### Output
 
 ```
-File: src/requests/api.py
-Name: api.py
-Size: 7,152 bytes
-Lines: 181 total
-Showing: lines 11-25 of 181
-URL: https://github.com/psf/requests/blob/main/src/requests/api.py
+File: <path>
+Name: <dateiname>
+Size: <N> bytes
+Lines: <N> total
+Showing: lines <von>-<bis> of <N>
+URL: https://github.com/<owner>/<repo>/blob/<branch>/<path>
 
 Content:
 ============================================================
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-...
+<Dateiinhalt>
 ============================================================
 ```
 
@@ -194,18 +181,18 @@ from typing import TYPE_CHECKING
 - Mit `--metadata-only`:
 
 ```
-File: src/requests/api.py
-Name: api.py
-Size: 7,152 bytes
+File: <path>
+Name: <dateiname>
+Size: <N> bytes
 Type: file
-SHA: eeb3b54d7f27e2c843080dfe81dfdb0d460c2b31
-URL: https://github.com/psf/requests/blob/main/src/requests/api.py
+SHA: <sha>
+URL: https://github.com/<owner>/<repo>/blob/<branch>/<path>
 ```
 
 - Ein falscher Pfad endet mit Exit-Code 1:
 
 ```
-Error: 404 Client Error: Not Found for url: https://api.github.com/repos/psf/requests/contents/src/requests/nope.py
+Error: 404 Client Error: Not Found for url: https://api.github.com/repos/<owner>/<repo>/contents/<path>
 ```
 
 ### repo_freshness
@@ -217,10 +204,10 @@ Error: 404 Client Error: Not Found for url: https://api.github.com/repos/psf/req
 #### Output
 
 ```
-psf/requests
-Pushed:  2026-09-21T20:22:36Z  (pushed 3 days ago)
-Updated: 2026-09-25T16:11:27Z
-Created: 2011-02-13T18:38:17Z
+<owner>/<repo>
+Pushed:  <ISO-Zeitstempel>  (pushed <N> days ago)
+Updated: <ISO-Zeitstempel>
+Created: <ISO-Zeitstempel>
 ```
 
 - `Pushed` ist der letzte Push von Code, das ist das Maß für Aktivität.
@@ -237,13 +224,12 @@ Created: 2011-02-13T18:38:17Z
 #### Output
 
 ```
-Downloaded to: /tmp/ghout/dl/
+Downloaded to: <dest>/
 
-Written (2):
-  __version__.py -> /tmp/ghout/dl/__version__.py (435 bytes)
-  README.md -> /tmp/ghout/dl/README.md (2,906 bytes)
+Written (<N>):
+  <dateiname> -> <dest>/<dateiname> (<N> bytes)
 
-Failed (0):
+Failed (<N>):
   (none)
 ```
 
@@ -261,10 +247,9 @@ Failed (0):
 #### Output
 
 ```
-Trending repositories · python · this week
-1. anthropics/financial-services · Python · stars:37504 · forks:5426 · +2382 this week
-2. vectorize-io/hindsight · Python · stars:29284 · forks:3034 · +3363 this week
-   Hindsight: Agent Memory That Learns
+Trending repositories · <sprache> · <zeitraum>
+1. <owner>/<repo> · <Sprache> · stars:<N> · forks:<N> · +<N> <zeitraum>
+   <Beschreibung>
 ```
 
 - Gelesen wird die HTML-Seite github.com/trending, nicht die API.
@@ -272,9 +257,9 @@ Trending repositories · python · this week
 - Mit `--developers`:
 
 ```
-Trending developers · all languages · today
-1. magnus919 (Magnus Hedemark) · popular: magnus919/hermes-profiles
-   Curated Hermes Agent profiles for specialist swarms — opinionated, Hermes-optimized, artifact-pyramid native
+Trending developers · <sprache> · <zeitraum>
+1. <login> (<Name>) · popular: <owner>/<repo>
+   <Beschreibung des Repos>
 ```
 
 ### index_issues
@@ -288,28 +273,24 @@ Trending developers · all languages · today
 #### Output
 
 ```
-Indexed 5 issues from psf/requests.
-Query: 'timeout'
-New chunks added this run: 23
-Collection now: 1301 MDs, 7220 chunks total.
+Indexed <N> issues from <owner>/<repo>.
+Query: '<query>'
+New chunks added this run: <N>
+Collection now: <N> MDs, <N> chunks total.
 ```
 
 - Die Collection `github_issues` wächst über alle Läufe und alle Repos an.
-   - Grenze die Suche danach mit `--document` auf das Repo ein, die Dokumente heißen `<repo>__<nummer>.md`.
-- Die Suche danach:
+   - Grenze die Suche danach mit `--document '%<repo>%'` auf das Repo ein, die Dokumente heißen `<repo>__<nummer>.md`.
+- Ein Treffer der Suche danach:
 
 ```
-rag-cli search "timeout connect read" github_issues --document '%requests%'
-```
+--- Result 1 (score: <score>) ---
+Collection: github_issues | Document: <repo>__<nummer>.md | Chunk: <N>
+# <Issue-Titel>
 
-```
---- Result 1 (score: 0.99899) ---
-Collection: github_issues | Document: requests__5263.md | Chunk: 0
-# `connect` timeout is *not* a TCP connect timeout, but a TCP connect + send the whole HTTP request timeout
-
-State: OPEN | #5263
-Author: thomas-riccardi (NONE)
-Created: 2019-11-14T16:49:25Z | Updated: 2021-03-11T10:22:43Z
+State: <OPEN|CLOSED> | #<nummer>
+Author: <login> (<rolle>)
+Created: <ISO-Zeitstempel> | Updated: <ISO-Zeitstempel>
 ```
 
 ### index_discussions
@@ -323,10 +304,10 @@ Created: 2019-11-14T16:49:25Z | Updated: 2021-03-11T10:22:43Z
 #### Output
 
 ```
-Indexed 5 discussions from gastownhall/beads.
-Query: 'memory'
-New chunks added this run: 1
-Collection now: 134 MDs, 731 chunks total.
+Indexed <N> discussions from <owner>/<repo>.
+Query: '<query>'
+New chunks added this run: <N>
+Collection now: <N> MDs, <N> chunks total.
 ```
 
 - Die Collection `github_discussions` wächst wie `github_issues` über alle Läufe an.
@@ -342,28 +323,17 @@ Collection now: 134 MDs, 731 chunks total.
 #### Output
 
 ```
-Indexed 19 releases from psf/requests.
-New chunks added this run: 20
-Collection now: 19 MDs, 20 chunks total.
+Indexed <N> releases from <owner>/<repo>.
+New chunks added this run: <N>
+Collection now: <N> MDs, <N> chunks total.
 
 To search: rag-cli search_hybrid "<your feature query>" github_releases
 ```
 
 - Jeder Lauf leert `github_releases` und baut sie für dieses EINE Repo neu auf.
    - Indexiere deshalb unmittelbar vor der Suche.
-- Die Frage nach dem neuesten Release beantwortest du mit `expand_chunks` ab Chunk 0, nie mit einer Vektorsuche:
-
-```
-rag-cli list_documents github_releases --filter 2.34
-rag-cli expand_chunks github_releases v2.34.2.md 0 --after 2
-```
-
-```
-Document: v2.34.2.md | Chunks 0-2 (anchor: 0)
-
-# v2.34.2 (2026-05-14)
-```
-
+- Die Frage nach dem neuesten Release beantwortest du mit `expand_chunks` ab Chunk 0, nie mit einer Vektorsuche.
+   - Der Weg ist `rag-cli list_documents github_releases`, danach `rag-cli expand_chunks github_releases <newest-release>.md 0 --after 2`.
 - Die Vektorsuche auf `github_releases` beantwortet die Frage, seit wann ein Feature X existiert.
 
 ## RAG-Nutzung
@@ -375,9 +345,7 @@ Document: v2.34.2.md | Chunks 0-2 (anchor: 0)
 - Weitere Blickwinkel sind optional, der breite Durchgang ist zwingend.
 
 ```
-gh-cli index_issues "streaming" anthropics/claude-code --limit 30
-rag-cli search "streaming context window tool_use" github_issues
-
-gh-cli index_discussions "memory" gastownhall/beads --limit 30
-rag-cli search "memory tracking workflow" github_discussions
+gh-cli index_issues "<symptom>" <owner/repo> --limit 30
+rag-cli search "<exakter Fehlerstring>" github_issues --document '%<repo>%'
+rag-cli search "<komponente feature bereich>" github_issues --document '%<repo>%'
 ```
