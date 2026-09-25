@@ -15,7 +15,7 @@ TRENDING_TIMEOUT_SECONDS = 10
 DESCRIPTION_MAX_CHARS = 160
 SINCE_LABELS = {"daily": "today", "weekly": "this week", "monthly": "this month"}
 VOID_TAGS = {"img", "br", "hr", "input", "meta", "link", "source", "wbr"}
-PERIOD_RE = re.compile(r"^([\d,]+) stars (today|this week|this month)$")
+PERIOD_RE = re.compile(r"^([\d,]+) stars? (today|this week|this month)$")
 NUMBER_RE = re.compile(r"^\d[\d,]*$")
 
 
@@ -156,12 +156,14 @@ def extract_repository(index: int, nodes: list[dict]) -> dict:
         "forks link",
     )
     description = find_node(nodes, lambda n: n["tag"] == "p")
-    language = find_node(nodes, lambda n: n["attrs"].get("itemprop") == "programmingLanguage")
+    language = require_node(nodes, lambda n: n["attrs"].get("itemprop") == "programmingLanguage", index, "language")
+    if description is None:
+        logger.info("trending entry %s (%s): no description", index, full_name)
     return {
         "rank": index,
         "full_name": full_name,
         "description": clean_text(description["text"]) if description else "",
-        "language": clean_text(language["text"]) if language else "",
+        "language": clean_text(language["text"]),
         "stars": parse_count(stars["text"], index, "stars"),
         "forks": parse_count(forks["text"], index, "forks"),
         "period": parse_period_stars(nodes, index),
@@ -179,6 +181,10 @@ def extract_developer(index: int, nodes: list[dict]) -> dict:
         lambda n: n["tag"] == "a" and n["nested"] and (n["attrs"].get("href") or "").strip("/").count("/") == 1,
     )
     repo_description = find_node(nodes, lambda n: n["nested"] and n["tag"] == "div" and {"f6", "mt-1"} <= set(n["classes"]))
+    if repo_link is None:
+        logger.info("trending entry %s (%s): no popular repo", index, login)
+    if repo_description is None:
+        logger.info("trending entry %s (%s): no popular repo description", index, login)
     return {
         "rank": index,
         "login": login,
@@ -213,10 +219,8 @@ def parse_count(text: str, index: int, what: str) -> int:
     return int(cleaned.replace(",", ""))
 
 
-def parse_period_stars(nodes: list[dict], index: int) -> tuple[int, str] | None:
-    node = find_node(nodes, lambda n: "float-sm-right" in n["classes"])
-    if node is None:
-        return None
+def parse_period_stars(nodes: list[dict], index: int) -> tuple[int, str]:
+    node = require_node(nodes, lambda n: "float-sm-right" in n["classes"], index, "period stars")
     match = PERIOD_RE.match(clean_text(node["text"]))
     if match is None:
         raise RuntimeError(
@@ -243,13 +247,11 @@ def format_header(language: str | None, since: str, spoken: str | None, develope
 
 def format_repository(item: dict) -> list[str]:
     fields = [f"{item['rank']}. {item['full_name']}"]
-    if item["language"]:
-        fields.append(item["language"])
+    fields.append(item["language"])
     fields.append(f"stars:{item['stars']}")
     fields.append(f"forks:{item['forks']}")
-    if item["period"]:
-        gained, label = item["period"]
-        fields.append(f"+{gained} {label}")
+    gained, label = item["period"]
+    fields.append(f"+{gained} {label}")
     lines = [" · ".join(fields)]
     if item["description"]:
         lines.append(f"   {truncate(item['description'])}")
@@ -258,7 +260,7 @@ def format_repository(item: dict) -> list[str]:
 
 def format_developer(item: dict) -> list[str]:
     head = f"{item['rank']}. {item['login']}"
-    if item["name"] and item["name"] != item["login"]:
+    if item["name"] != item["login"]:
         head += f" ({item['name']})"
     if item["repo"]:
         head += f" · popular: {item['repo']}"

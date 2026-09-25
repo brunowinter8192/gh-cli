@@ -26,6 +26,7 @@ def _download_paths(owner: str, repo: str, paths: list[str], dest: str) -> tuple
         try:
             raw = fetch_file_content(owner, repo, path)
         except Exception as e:
+            logger.warning("download_files: %s failed: %s", path, e)
             failed.append((path, str(e)))
             continue
 
@@ -38,7 +39,7 @@ def _download_paths(owner: str, repo: str, paths: list[str], dest: str) -> tuple
             failed.append((path, "no download_url (submodule or symlink)"))
             continue
 
-        size = raw.get("size", 0)
+        size = raw["size"]
         if size > _SIZE_API_MAX:
             failed.append((path, f"exceeds API limit ({size:,} bytes > 100 MB)"))
             continue

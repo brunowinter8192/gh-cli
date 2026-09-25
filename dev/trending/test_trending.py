@@ -24,6 +24,7 @@ def run_strands():
     strands = [
         ("repositories", check_repositories),
         ("developers", check_developers),
+        ("single_star", check_single_star),
         ("tripwires", check_tripwires),
     ]
     with ThreadPoolExecutor(max_workers=len(strands)) as pool:
@@ -86,6 +87,15 @@ def check_developers():
     assert items[0]["repo"] == "lidge-jun/opencodex"
     assert items[0]["repo_description"].startswith("Universal provider proxy")
     return format_trending(items, None, "daily", None, True)
+
+
+def check_single_star():
+    html = (FIXTURES / "trending_single_star.html").read_text()
+    items = parse_trending(html, False)
+    assert len(items) == 1, len(items)
+    assert items[0]["full_name"] == "nyldn/claude-octopus"
+    assert items[0]["period"] == (1, "today"), items[0]["period"]
+    return format_trending(items, "shell", "daily", None, False)
 
 
 def raises(fn, needle):

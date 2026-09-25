@@ -27,14 +27,15 @@ def fetch_repo_counts(repos: list) -> dict:
     for i, (owner, name) in enumerate(repos):
         node = data.get(f"r{i}")
         if node is None:
+            logger.warning("repo_counts: %s/%s returned null, counts unavailable", owner, name)
             result[f"{owner}/{name}"] = None
             continue
         result[f"{owner}/{name}"] = {
-            "stars": node.get("stargazerCount", 0),
-            "issues": (node.get("issues") or {}).get("totalCount", 0),
-            "discussions": (node.get("discussions") or {}).get("totalCount", 0),
-            "hasIssuesEnabled": node.get("hasIssuesEnabled", True),
-            "hasDiscussionsEnabled": node.get("hasDiscussionsEnabled", True),
+            "stars": node["stargazerCount"],
+            "issues": node["issues"]["totalCount"],
+            "discussions": node["discussions"]["totalCount"],
+            "hasIssuesEnabled": node["hasIssuesEnabled"],
+            "hasDiscussionsEnabled": node["hasDiscussionsEnabled"],
         }
     return result
 
@@ -42,8 +43,8 @@ def fetch_repo_counts(repos: list) -> dict:
 def format_count_line(full_name: str, stars: int, counts) -> str:
     if counts is None:
         return f"{full_name} · ⭐{stars} · issues:? · discussions:?"
-    issues_n = counts.get("issues", 0)
-    disc_n = counts.get("discussions", 0)
-    issues_str = f"issues:{issues_n}" if counts.get("hasIssuesEnabled", True) else f"issues:{issues_n} (off)"
-    disc_str = f"discussions:{disc_n}" if counts.get("hasDiscussionsEnabled", True) else f"discussions:{disc_n} (off)"
+    issues_n = counts["issues"]
+    disc_n = counts["discussions"]
+    issues_str = f"issues:{issues_n}" if counts["hasIssuesEnabled"] else f"issues:{issues_n} (off)"
+    disc_str = f"discussions:{disc_n}" if counts["hasDiscussionsEnabled"] else f"discussions:{disc_n} (off)"
     return f"{full_name} · ⭐{stars} · {issues_str} · {disc_str}"

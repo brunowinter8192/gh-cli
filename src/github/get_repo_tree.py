@@ -62,10 +62,9 @@ def fetch_and_format(owner: str, repo: str, path: str) -> str:
 
     is_root = not path
     if is_root:
-        lines.append(f"description:     {repo_data.get('description') or '(none)'}")
-        primary = (repo_data.get("primaryLanguage") or {}).get("name", "(none)")
-        lines.append(f"primaryLanguage: {primary}")
-        lang_edges = (repo_data.get("languages") or {}).get("edges", [])
+        lines.append(f"description:     {format_description(repo_data['description'], owner, repo)}")
+        lines.append(f"primaryLanguage: {require_present(repo_data['primaryLanguage'], 'primaryLanguage')['name']}")
+        lang_edges = repo_data["languages"]["edges"]
         if lang_edges:
             total_bytes = sum(e["size"] for e in lang_edges)
             lang_parts = [
@@ -75,12 +74,12 @@ def fetch_and_format(owner: str, repo: str, path: str) -> str:
             lines.append(f"languages:       {', '.join(lang_parts)}")
         lines.append("")
 
-    obj = repo_data.get("object")
+    obj = repo_data["object"]
     if obj is None:
         lines.append("object: null — path not found or not accessible")
         return "\n".join(lines)
 
-    typename = obj.get("__typename")
+    typename = obj["__typename"]
 
     if typename == "Blob":
         lines.append(f"{path} is a file — use get_file_content to read it")
@@ -88,9 +87,22 @@ def fetch_and_format(owner: str, repo: str, path: str) -> str:
 
     lines.append(f"type: {typename}")
     lines.append("")
-    lines.append(format_tree(obj.get("entries", [])))
+    lines.append(format_tree(obj["entries"]))
 
     return "\n".join(lines)
+
+
+def format_description(description: str | None, owner: str, repo: str) -> str:
+    if description is None:
+        logger.info("Repo %s/%s has no description", owner, repo)
+        return "(none)"
+    return description
+
+
+def require_present(value, field: str):
+    if value is None:
+        raise RuntimeError(f"get_repo_tree: {field} is null, payload shape not seen before")
+    return value
 
 
 def format_tree(entries: list) -> str:
@@ -100,11 +112,10 @@ def format_tree(entries: list) -> str:
     rows.append(f"  {'name':<40} {'type':<6} {'lang':<16} {'lines':>7} {'size':>9}")
     rows.append("  " + "-" * 82)
     for e in entries:
-        lang = (e.get("language") or {}).get("name") or "-"
-        lc = e.get("lineCount")
+        lang = e["language"]["name"] if e["language"] else "-"
+        lc = e["lineCount"]
         lines_str = str(lc) if lc is not None else "-"
-        sz = e.get("size")
-        sz_str = f"{sz:,}" if sz is not None else "-"
+        sz_str = f"{e['size']:,}"
         rows.append(
             f"  {e['name']:<40} {e['type']:<6} {lang:<16} {lines_str:>7} {sz_str:>9}"
         )

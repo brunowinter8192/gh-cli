@@ -24,7 +24,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ---
 
-### client.py (60 LOC)
+### client.py (72 LOC)
 
 **Purpose:** REST infrastructure — auth token resolution, API base URL, shared request headers, generic HTTP helper.
 **Reads:** `~/.zshrc` and GitHub token env vars, resolved at module-import time.
@@ -44,7 +44,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ---
 
-### repo_counts.py (49 LOC)
+### repo_counts.py (50 LOC)
 
 **Purpose:** Shared GraphQL enrichment helper — batch star/issue/discussion counts for a list of repos in one call.
 **Reads:** GitHub GraphQL API via `graphql_client.py`.
@@ -74,7 +74,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ---
 
-### get_repo_tree.py (111 LOC)
+### get_repo_tree.py (122 LOC)
 
 **Purpose:** One-level directory traversal of a repository tree via a GraphQL one-shot query.
 **Reads:** GitHub GraphQL API (`repository.object(expression)`).
@@ -94,7 +94,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ---
 
-### get_issue.py (48 LOC)
+### get_issue.py (51 LOC)
 
 **Purpose:** Retrieve full issue details including body.
 **Reads:** GitHub Issues API.
@@ -104,7 +104,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ---
 
-### download_files.py (71 LOC)
+### download_files.py (72 LOC)
 
 **Purpose:** Download one or more repo files to a local directory, binary-safe, per-path failure isolation.
 **Reads:** GitHub Contents API via `get_file_content.py` helpers.
@@ -124,7 +124,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ---
 
-### trending.py (274 LOC)
+### trending.py (276 LOC)
 
 **Purpose:** List GitHub Trending repositories or developers by scraping the trending HTML page, with language, date-range and spoken-language filters.
 **Reads:** `https://github.com/trending[/developers][/<language>]` HTML (no API exists); unauthenticated.
@@ -144,7 +144,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ---
 
-### index_issues.py (262 LOC)
+### index_issues.py (264 LOC)
 
 **Purpose:** Fetch GitHub issues matching a query, strip noise, write per-issue MDs, and index into the `github_issues` RAG collection.
 **Reads:** GitHub Search Issues API; the issue and comment workflows in-process; existing MD count; `rag-cli list_collections`.
@@ -164,7 +164,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ---
 
-### index_releases.py (141 LOC)
+### index_releases.py (144 LOC)
 
 **Purpose:** Fetch releases for a repo, write per-release MDs, and index into the fixed `github_releases` RAG collection.
 **Reads:** `GET /repos/{o}/{r}/releases`; existing MD count; `rag-cli list_collections`.
@@ -244,7 +244,7 @@ GitHub API tool implementations behind `cli.py`'s 15 subcommands, plus the clean
 
 ---
 
-### index_discussions.py (177 LOC)
+### index_discussions.py (179 LOC)
 
 **Purpose:** Fetch GitHub discussions matching a query, strip noise, redact tokens, write per-discussion MDs, and index into the `github_discussions` RAG collection.
 **Reads:** GitHub GraphQL Search API; the discussion workflow in-process; existing MD count; `rag-cli list_collections`.

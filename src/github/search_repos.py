@@ -29,7 +29,7 @@ def search_repos_workflow(
             break
     if raw_response["total_count"] == 0:
         return [TextContent(type="text", text=f"No repositories found for '{keywords[0]}'.")]
-    items = raw_response.get("items", [])
+    items = raw_response["items"]
     repos = [tuple(r["full_name"].split("/", 1)) for r in items]
     counts = fetch_repo_counts(repos)
     return [TextContent(type="text", text=format_repo_results(items, counts))]
@@ -53,5 +53,5 @@ def format_repo_results(items: list, counts: dict) -> str:
     for repo in items:
         full_name = repo["full_name"]
         stars = repo["stargazers_count"]
-        lines.append(format_count_line(full_name, stars, counts.get(full_name)))
+        lines.append(format_count_line(full_name, stars, counts[full_name]))
     return "\n".join(lines)
