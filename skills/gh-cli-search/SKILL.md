@@ -78,5 +78,5 @@ Das ist zwingend und gilt identisch für `search_repos`, `index_issues` und `ind
   rag-cli search "memory tracking workflow" github_discussions
   ```
 
-**Bei Releases beantwortest du Aktualitätsfragen mit `read_document` ab Chunk 0, nie mit einer Vektorsuche.**
-Nach `index_releases` beantwortest du die Frage nach dem neuesten Release oder der Aktivität eines Pakets, indem du das neueste indexierte Release direkt liest. Der Weg ist `rag-cli list_documents github_releases` und danach `rag-cli read_document github_releases <newest-release>.md 0 --after 2`. Die Vektorsuche auf `github_releases` beantwortet dagegen die Frage, seit wann ein Feature X existiert. Indexiere dein Ziel-Repo unmittelbar vor der Suche, denn jeder Lauf leert die Collection und baut sie auf dieses EINE Repo neu auf.
+**Bei Releases beantwortest du Aktualitätsfragen mit `expand_chunks` ab Chunk 0, nie mit einer Vektorsuche.**
+Nach `index_releases` beantwortest du die Frage nach dem neuesten Release oder der Aktivität eines Pakets, indem du das neueste indexierte Release direkt liest. Der Weg ist `rag-cli list_documents github_releases` und danach `rag-cli expand_chunks github_releases <newest-release>.md 0 --after 2`. Die Vektorsuche auf `github_releases` beantwortet dagegen die Frage, seit wann ein Feature X existiert. Indexiere dein Ziel-Repo unmittelbar vor der Suche, denn jeder Lauf leert die Collection und baut sie auf dieses EINE Repo neu auf.
