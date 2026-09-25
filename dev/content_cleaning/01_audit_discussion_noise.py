@@ -47,11 +47,24 @@ class Class:
 # ORCHESTRATOR
 
 def audit_discussion_noise_workflow(source_dir: Path) -> None:
+    md_files = list_md_files(source_dir)
+    classes = run_audits(md_files)
+    report_path = write_audit_report(classes, len(md_files))
+    print(report_path)
+
+
+# FUNCTIONS
+
+def list_md_files(source_dir: Path) -> list:
     md_files = sorted(source_dir.glob("*.md"))
     if not md_files:
         print(f"No .md files found in {source_dir}", file=sys.stderr)
         sys.exit(1)
-    classes = [
+    return md_files
+
+
+def run_audits(md_files: list) -> list:
+    return [
         audit_dosu_footer(md_files),
         audit_dosu_greeting(md_files),
         _audit_token_class(md_files, Class(
@@ -67,13 +80,14 @@ def audit_discussion_noise_workflow(source_dir: Path) -> None:
         ), re.compile(r'!\[Uploading[^\]]*\]\(\)')),
         audit_issue_template(md_files),
     ]
+
+
+def write_audit_report(classes: list, total_files: int) -> Path:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     report_path = REPORT_DIR / f"01_audit_{datetime.now().strftime('%Y%m%d')}.md"
-    write_report(report_path, classes, len(md_files))
-    print(report_path)
+    write_report(report_path, classes, total_files)
+    return report_path
 
-
-# FUNCTIONS
 
 def _strip_bq(line: str) -> str:
     return re.sub(r'^[\s>]+', '', line).strip()

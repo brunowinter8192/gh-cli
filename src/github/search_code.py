@@ -18,8 +18,7 @@ def search_code_workflow(query: str) -> list[TextContent]:
     if not items:
         return [TextContent(type="text", text="No results. Note: GitHub Code Search does not index CSV/data files — use get_file_content for known paths.")]
     repo_order = collect_unique_repos(items)
-    repos = [tuple(fn.split("/", 1)) for fn in repo_order]
-    counts = fetch_repo_counts(repos)
+    counts = fetch_repo_counts(build_repo_tuples(repo_order))
     formatted_string = format_code_results(items, repo_order, counts)
     return [TextContent(type="text", text=formatted_string)]
 
@@ -44,6 +43,10 @@ def collect_unique_repos(items: list) -> list:
             seen.add(fn)
             order.append(fn)
     return order
+
+
+def build_repo_tuples(repo_order: list) -> list[tuple[str, str]]:
+    return [tuple(fn.split("/", 1)) for fn in repo_order]
 
 
 def format_code_results(items: list, repo_order: list, counts: dict) -> str:

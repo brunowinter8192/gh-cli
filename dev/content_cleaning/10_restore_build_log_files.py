@@ -62,163 +62,11 @@ SIGNAL_PATTERNS = [
     re.compile(r'^\s*\S+\.(c|cc|cpp|cxx|m|mm|h|hpp|hh):\d+:\d+:\s*note:'),
 ]
 
-
-def _is_protected(line: str) -> bool:
-    return bool(ERROR_RE.search(line) or TRACE_RE.search(line) or BACKTRACE_RE.search(line))
-
-
-def _is_signal(line: str) -> bool:
-    if _is_protected(line):
-        return False
-    return any(p.search(line) for p in SIGNAL_PATTERNS)
-
-
-def _is_blank(line: str) -> bool:
-    return line.strip() == ''
-
-
-def _find_build_log_blocks(lines: list, threshold: int = MIN_BLOCK_LINES) -> list:
-    n = len(lines)
-    blocks = []
-    i = 0
-    while i < n:
-        if not _is_signal(lines[i]):
-            i += 1
-            continue
-        start = i
-        end = i
-        j = i + 1
-        while j < n:
-            if _is_protected(lines[j]):
-                break
-            if _is_signal(lines[j]):
-                end = j
-                j += 1
-                continue
-            if _is_blank(lines[j]):
-                j += 1
-                continue
-            k = j
-            gap = 0
-            while (k < n and gap < BRIDGE_GAP and not _is_signal(lines[k])
-                   and not _is_blank(lines[k]) and not _is_protected(lines[k])):
-                k += 1
-                gap += 1
-            if k < n and _is_signal(lines[k]):
-                end = k
-                j = k + 1
-                continue
-            break
-        if end - start + 1 >= threshold:
-            blocks.append((start, end))
-        i = end + 1
-    return blocks
-
-
-def _placeholder(n_lines: int) -> str:
-    return f"[build log output removed — {n_lines} lines]"
-
-
-def strip_build_logs(text: str) -> str:
-    lines = text.splitlines()
-    blocks = _find_build_log_blocks(lines, MIN_BLOCK_LINES)
-    if not blocks:
-        return text
-    out = []
-    prev_end = -1
-    for start, end in blocks:
-        out.extend(lines[prev_end + 1:start])
-        out.append(_placeholder(end - start + 1))
-        prev_end = end
-    out.extend(lines[prev_end + 1:])
-    result = '\n'.join(out)
-    if text.endswith('\n') and not result.endswith('\n'):
-        result += '\n'
-    return result
-
 MIGRATION_REPORT_RE = re.compile(r'^\*\*\[Original report\]\([^)]*\) by .+\.\*\*$')
 MIGRATION_COMMENT_RE = re.compile(r'^\*\*Original comment by .+\.\*\*$')
 MIGRATION_RULE_RE = re.compile(r'^-{40}$')
 SEP_RE = re.compile(r'^--- Comment \d+ ---$')
 AUTOMATED_COMMENT_RE = re.compile(r'^Removing version: .+ \(automated comment\)$')
-
-
-def _find_migration_blocks(lines: list) -> list:
-    n = len(lines)
-    blocks = []
-    i = 0
-    while i < n:
-        line = lines[i]
-        if ((MIGRATION_REPORT_RE.match(line) or MIGRATION_COMMENT_RE.match(line))
-                and i + 2 < n and lines[i + 1].strip() == ''
-                and MIGRATION_RULE_RE.match(lines[i + 2])):
-            blocks.append((i, i + 2))
-            i += 3
-            continue
-        i += 1
-    return blocks
-
-
-def _is_automated_only_comment(block: list) -> bool:
-    content = []
-    i = 0
-    n = len(block)
-    while i < n:
-        line = block[i]
-        if line.strip() == '' or line.startswith('Author:') or line.startswith('Date:'):
-            i += 1
-            continue
-        if (MIGRATION_COMMENT_RE.match(line) and i + 2 < n
-                and block[i + 1].strip() == '' and MIGRATION_RULE_RE.match(block[i + 2])):
-            i += 3
-            continue
-        content.append(line)
-        i += 1
-    return len(content) == 1 and bool(AUTOMATED_COMMENT_RE.match(content[0]))
-
-
-def _find_automated_comment_blocks(lines: list) -> list:
-    n = len(lines)
-    blocks = []
-    i = 0
-    while i < n:
-        if SEP_RE.match(lines[i]):
-            end_idx = next((j for j in range(i + 1, n) if SEP_RE.match(lines[j])), n)
-            if _is_automated_only_comment(lines[i + 1:end_idx]):
-                blocks.append((i, end_idx - 1))
-                i = end_idx
-                continue
-        i += 1
-    return blocks
-
-
-def _find_all_blocks(lines: list) -> list:
-    g_blocks = _find_automated_comment_blocks(lines)
-    f_blocks_raw = _find_migration_blocks(lines)
-    f_blocks = [
-        b for b in f_blocks_raw
-        if not any(g[0] <= b[0] and b[1] <= g[1] for g in g_blocks)
-    ]
-    tagged = [(s, e, 'F') for s, e in f_blocks] + [(s, e, 'G') for s, e in g_blocks]
-    return sorted(tagged)
-
-
-def strip_migration_and_automated(text: str) -> str:
-    lines = text.splitlines()
-    blocks = _find_all_blocks(lines)
-    if not blocks:
-        return text
-    out = []
-    prev_end = -1
-    for start, end, _cls in blocks:
-        out.extend(lines[prev_end + 1:start])
-        prev_end = end
-    out.extend(lines[prev_end + 1:])
-    result = '\n'.join(out)
-    if text.endswith('\n') and not result.endswith('\n'):
-        result += '\n'
-    return result
-
 PLACEHOLDER_RE = re.compile(r'^\[build log output removed — \d+ lines\]$')
 
 
@@ -234,7 +82,60 @@ class FileResult:
     changed: bool = False
 
 
+# ORCHESTRATOR
+
+def restore_workflow(apply: bool) -> None:
+    results = measure_all()
+    ts = make_timestamp()
+    report_path = write_dryrun_report(results, ts)
+    print_restore_summary(report_path, results)
+    if has_unexpected(results):
+        report_unexpected(results, apply)
+        return
+    if apply:
+        apply_and_report(results, ts)
+
+
 # FUNCTIONS
+
+def make_timestamp() -> str:
+    return datetime.now().strftime('%Y%m%d_%H%M%S')
+
+
+def write_dryrun_report(results: list, ts: str) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    report_path = REPORT_DIR / f"10_restore_dryrun_{ts}.md"
+    write_report(report_path, results)
+    return report_path
+
+
+def print_restore_summary(report_path: Path, results: list) -> None:
+    changed = [r for r in results if r.changed]
+    total_added_back = sum(len(r.added_back) for r in results)
+    total_unexpected = sum(len(r.unexpected) for r in results)
+    print(f"report: {report_path}")
+    print(f"files_changed={len(changed)}/{len(results)} lines_added_back={total_added_back} "
+          f"unexpected_diffs={total_unexpected}")
+
+
+def has_unexpected(results: list) -> bool:
+    return any(r.unexpected for r in results)
+
+
+def report_unexpected(results: list, apply: bool) -> None:
+    print("UNEXPECTED DIFFERENCES FOUND — refusing to apply, see report", file=sys.stderr)
+    for r in results:
+        if r.unexpected:
+            print(f"  {r.filename}: {len(r.unexpected)} unexpected diff span(s)",
+                  file=sys.stderr)
+    if apply:
+        sys.exit(1)
+
+
+def apply_and_report(results: list, ts: str) -> None:
+    backup_dir = apply_changes(results, ts)
+    print(f"Backup: {backup_dir}")
+
 
 def _strip_placeholders(lines: list) -> list:
     return [l for l in lines if not PLACEHOLDER_RE.match(l)]
@@ -330,36 +231,155 @@ def apply_changes(results: list, ts: str) -> Path:
     return backup_dir
 
 
-# ORCHESTRATOR
+def _is_protected(line: str) -> bool:
+    return bool(ERROR_RE.search(line) or TRACE_RE.search(line) or BACKTRACE_RE.search(line))
 
-def restore_workflow(apply: bool) -> None:
-    results = measure_all()
 
-    REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    report_path = REPORT_DIR / f"10_restore_dryrun_{ts}.md"
-    write_report(report_path, results)
-    print(f"report: {report_path}")
+def _is_signal(line: str) -> bool:
+    if _is_protected(line):
+        return False
+    return any(p.search(line) for p in SIGNAL_PATTERNS)
 
-    changed = [r for r in results if r.changed]
-    total_added_back = sum(len(r.added_back) for r in results)
-    total_unexpected = sum(len(r.unexpected) for r in results)
-    print(f"files_changed={len(changed)}/{len(results)} lines_added_back={total_added_back} "
-          f"unexpected_diffs={total_unexpected}")
 
-    if total_unexpected:
-        print("UNEXPECTED DIFFERENCES FOUND — refusing to apply, see report", file=sys.stderr)
-        for r in results:
-            if r.unexpected:
-                print(f"  {r.filename}: {len(r.unexpected)} unexpected diff span(s)",
-                      file=sys.stderr)
-        if apply:
-            sys.exit(1)
-        return
+def _is_blank(line: str) -> bool:
+    return line.strip() == ''
 
-    if apply:
-        backup_dir = apply_changes(results, ts)
-        print(f"Backup: {backup_dir}")
+
+def _find_build_log_blocks(lines: list, threshold: int = MIN_BLOCK_LINES) -> list:
+    n = len(lines)
+    blocks = []
+    i = 0
+    while i < n:
+        if not _is_signal(lines[i]):
+            i += 1
+            continue
+        start = i
+        end = i
+        j = i + 1
+        while j < n:
+            if _is_protected(lines[j]):
+                break
+            if _is_signal(lines[j]):
+                end = j
+                j += 1
+                continue
+            if _is_blank(lines[j]):
+                j += 1
+                continue
+            k = j
+            gap = 0
+            while (k < n and gap < BRIDGE_GAP and not _is_signal(lines[k])
+                   and not _is_blank(lines[k]) and not _is_protected(lines[k])):
+                k += 1
+                gap += 1
+            if k < n and _is_signal(lines[k]):
+                end = k
+                j = k + 1
+                continue
+            break
+        if end - start + 1 >= threshold:
+            blocks.append((start, end))
+        i = end + 1
+    return blocks
+
+
+def _placeholder(n_lines: int) -> str:
+    return f"[build log output removed — {n_lines} lines]"
+
+
+def strip_build_logs(text: str) -> str:
+    lines = text.splitlines()
+    blocks = _find_build_log_blocks(lines, MIN_BLOCK_LINES)
+    if not blocks:
+        return text
+    out = []
+    prev_end = -1
+    for start, end in blocks:
+        out.extend(lines[prev_end + 1:start])
+        out.append(_placeholder(end - start + 1))
+        prev_end = end
+    out.extend(lines[prev_end + 1:])
+    result = '\n'.join(out)
+    if text.endswith('\n') and not result.endswith('\n'):
+        result += '\n'
+    return result
+
+
+def _find_migration_blocks(lines: list) -> list:
+    n = len(lines)
+    blocks = []
+    i = 0
+    while i < n:
+        line = lines[i]
+        if ((MIGRATION_REPORT_RE.match(line) or MIGRATION_COMMENT_RE.match(line))
+                and i + 2 < n and lines[i + 1].strip() == ''
+                and MIGRATION_RULE_RE.match(lines[i + 2])):
+            blocks.append((i, i + 2))
+            i += 3
+            continue
+        i += 1
+    return blocks
+
+
+def _is_automated_only_comment(block: list) -> bool:
+    content = []
+    i = 0
+    n = len(block)
+    while i < n:
+        line = block[i]
+        if line.strip() == '' or line.startswith('Author:') or line.startswith('Date:'):
+            i += 1
+            continue
+        if (MIGRATION_COMMENT_RE.match(line) and i + 2 < n
+                and block[i + 1].strip() == '' and MIGRATION_RULE_RE.match(block[i + 2])):
+            i += 3
+            continue
+        content.append(line)
+        i += 1
+    return len(content) == 1 and bool(AUTOMATED_COMMENT_RE.match(content[0]))
+
+
+def _find_automated_comment_blocks(lines: list) -> list:
+    n = len(lines)
+    blocks = []
+    i = 0
+    while i < n:
+        if SEP_RE.match(lines[i]):
+            end_idx = next((j for j in range(i + 1, n) if SEP_RE.match(lines[j])), n)
+            if _is_automated_only_comment(lines[i + 1:end_idx]):
+                blocks.append((i, end_idx - 1))
+                i = end_idx
+                continue
+        i += 1
+    return blocks
+
+
+def _find_all_blocks(lines: list) -> list:
+    g_blocks = _find_automated_comment_blocks(lines)
+    f_blocks_raw = _find_migration_blocks(lines)
+    f_blocks = [
+        b for b in f_blocks_raw
+        if not any(g[0] <= b[0] and b[1] <= g[1] for g in g_blocks)
+    ]
+    tagged = [(s, e, 'F') for s, e in f_blocks] + [(s, e, 'G') for s, e in g_blocks]
+    return sorted(tagged)
+
+
+def strip_migration_and_automated(text: str) -> str:
+    lines = text.splitlines()
+    blocks = _find_all_blocks(lines)
+    if not blocks:
+        return text
+    out = []
+    prev_end = -1
+    for start, end, _cls in blocks:
+        out.extend(lines[prev_end + 1:start])
+        prev_end = end
+    out.extend(lines[prev_end + 1:])
+    result = '\n'.join(out)
+    if text.endswith('\n') and not result.endswith('\n'):
+        result += '\n'
+    return result
 
 
 if __name__ == "__main__":

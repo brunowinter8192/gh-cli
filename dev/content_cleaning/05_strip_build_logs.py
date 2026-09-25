@@ -156,40 +156,26 @@ class FileResult:
 # ORCHESTRATOR
 
 def strip_build_logs_workflow(source_dir: Path, threshold: int, apply: bool) -> None:
+    md_files = list_md_files(source_dir)
+    results = measure_all(md_files, threshold)
+    safety_ok, safety_total = assert_safety(results)
+    report_path = write_dump_report(results)
+    print_corpus_summary(md_files, results, report_path, safety_ok, safety_total)
+    print_sensitivity(md_files)
+    print_worst_file(md_files)
+    if apply:
+        reject_apply()
+
+
+# FUNCTIONS
+
+def list_md_files(source_dir: Path) -> list:
     md_files = sorted(source_dir.glob("*.md"))
     if not md_files:
         print(f"No .md files found in {source_dir}", file=sys.stderr)
         sys.exit(1)
+    return md_files
 
-    results = measure_all(md_files, threshold)
-    safety_ok, safety_total = assert_safety(results)
-
-    REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    report_path = REPORT_DIR / f"05_strip_build_logs_dryrun_{ts}.md"
-    write_dump(report_path, results)
-
-    total_blocks = sum(len(fr.blocks) for fr in results)
-    total_lines = sum(b.length for fr in results for b in fr.blocks)
-    total_chars = sum(fr.chars_removed for fr in results)
-    print(f"report: {report_path}")
-    print(f"files_scanned={len(md_files)} files_affected={len(results)} "
-          f"blocks={total_blocks} lines_removed={total_lines} chars_removed={total_chars} "
-          f"safety={'PASS' if safety_ok else 'FAIL'} ({safety_total} lines checked)")
-    for row in measure_sensitivity(md_files):
-        print(f"sensitivity threshold={row['threshold']}: "
-              f"files_affected={row['files_affected']} blocks={row['blocks']} "
-              f"lines_removed={row['lines_removed']} chars_removed={row['chars_removed']}")
-    wf = measure_worst_file_coverage(md_files)
-    print(f"worst_file={wf['filename']} file_chars={wf['file_chars']} "
-          f"candidate_lines={wf['candidate_lines']} narrow_hits={wf['narrow_hits']} "
-          f"full_hits={wf['full_hits']} chars_removed={wf['chars_removed']}")
-
-    if apply:
-        raise RuntimeError("--apply is not enabled in this milestone (dry-run only).")
-
-
-# FUNCTIONS
 
 def measure_all(md_files: list, threshold: int) -> list:
     results = []
@@ -290,6 +276,42 @@ def write_dump(path: Path, results: list) -> None:
             o.append(b.text)
             o.append("")
     path.write_text('\n'.join(o))
+
+
+def write_dump_report(results: list) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+    report_path = REPORT_DIR / f"05_strip_build_logs_dryrun_{ts}.md"
+    write_dump(report_path, results)
+    return report_path
+
+
+def print_corpus_summary(md_files: list, results: list, report_path: Path, safety_ok: bool, safety_total: int) -> None:
+    total_blocks = sum(len(fr.blocks) for fr in results)
+    total_lines = sum(b.length for fr in results for b in fr.blocks)
+    total_chars = sum(fr.chars_removed for fr in results)
+    print(f"report: {report_path}")
+    print(f"files_scanned={len(md_files)} files_affected={len(results)} "
+          f"blocks={total_blocks} lines_removed={total_lines} chars_removed={total_chars} "
+          f"safety={'PASS' if safety_ok else 'FAIL'} ({safety_total} lines checked)")
+
+
+def print_sensitivity(md_files: list) -> None:
+    for row in measure_sensitivity(md_files):
+        print(f"sensitivity threshold={row['threshold']}: "
+              f"files_affected={row['files_affected']} blocks={row['blocks']} "
+              f"lines_removed={row['lines_removed']} chars_removed={row['chars_removed']}")
+
+
+def print_worst_file(md_files: list) -> None:
+    wf = measure_worst_file_coverage(md_files)
+    print(f"worst_file={wf['filename']} file_chars={wf['file_chars']} "
+          f"candidate_lines={wf['candidate_lines']} narrow_hits={wf['narrow_hits']} "
+          f"full_hits={wf['full_hits']} chars_removed={wf['chars_removed']}")
+
+
+def reject_apply() -> None:
+    raise RuntimeError("--apply is not enabled in this milestone (dry-run only).")
 
 
 if __name__ == "__main__":

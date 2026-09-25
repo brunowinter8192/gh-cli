@@ -55,7 +55,27 @@ class FileResult:
     fingerprint_repeats: dict = field(default_factory=dict)
 
 
+# ORCHESTRATOR
+
+def audit_workflow(source_dir: Path) -> None:
+    md_files = list_md_files(source_dir)
+    results = measure_all(md_files)
+    report_path = write_audit_report(results, len(md_files))
+    print(f"report: {report_path}")
+    print_shape_summaries(results)
+    print_repeat_summaries(results)
+    print_adjacency_summary(md_files)
+
+
 # FUNCTIONS
+
+def list_md_files(source_dir: Path) -> list:
+    md_files = sorted(source_dir.glob("*.md"))
+    if not md_files:
+        print(f"No .md files found in {source_dir}", file=sys.stderr)
+        sys.exit(1)
+    return md_files
+
 
 def _is_protected_existing(line: str) -> bool:
     return bool(ERROR_RE.search(line) or TRACE_RE.search(line) or BACKTRACE_RE.search(line))
@@ -251,22 +271,15 @@ def write_report(path: Path, results: list, total_files: int) -> None:
     path.write_text('\n'.join(o) + '\n')
 
 
-# ORCHESTRATOR
-
-def audit_workflow(source_dir: Path) -> None:
-    md_files = sorted(source_dir.glob("*.md"))
-    if not md_files:
-        print(f"No .md files found in {source_dir}", file=sys.stderr)
-        sys.exit(1)
-
-    results = measure_all(md_files)
-
+def write_audit_report(results: list, total_files: int) -> Path:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
     report_path = REPORT_DIR / f"08_audit_{ts}.md"
-    write_report(report_path, results, len(md_files))
-    print(f"report: {report_path}")
+    write_report(report_path, results, total_files)
+    return report_path
 
+
+def print_shape_summaries(results: list) -> None:
     for shape_name in SHAPES:
         affected = [r for r in results if r.shape_lines.get(shape_name)]
         total_lines = sum(r.shape_lines.get(shape_name, 0) for r in results)
@@ -276,6 +289,8 @@ def audit_workflow(source_dir: Path) -> None:
         print(f"shape={shape_name} files={len(affected)} lines={total_lines} "
               f"chars={total_chars} pct_corpus={pct:.2f}%")
 
+
+def print_repeat_summaries(results: list) -> None:
     literal_files = [r for r in results if r.literal_repeats]
     fp_files = [r for r in results if r.fingerprint_repeats]
     literal_instances = sum(sum(r.literal_repeats.values()) for r in results)
@@ -284,6 +299,8 @@ def audit_workflow(source_dir: Path) -> None:
     print(f"fingerprint_repeats files={len(fp_files)} instances={fp_instances} "
           f"delta={fp_instances - literal_instances}")
 
+
+def print_adjacency_summary(md_files: list) -> None:
     adjacency = measure_adjacency(md_files)
     for shape_name, rows in adjacency.items():
         for window, (existing, proposed) in rows.items():

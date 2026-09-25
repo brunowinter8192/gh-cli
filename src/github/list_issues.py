@@ -2,6 +2,7 @@
 import logging
 from mcp.types import TextContent
 from src.github.client import request
+from src.github.config import DEFAULT_LIMIT
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ def list_issues_workflow(
     repo: str,
     state: str = "open",
     labels: str | None = None,
-    limit: int = 30,
+    limit: int = DEFAULT_LIMIT,
 ) -> list[TextContent]:
     logger.info("list_issues owner=%s repo=%s state=%s", owner, repo, state)
     issues = fetch_issues(owner, repo, state, labels, limit)

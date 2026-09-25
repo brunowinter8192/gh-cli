@@ -5,6 +5,11 @@ from typing import Literal
 from mcp.types import TextContent
 from src.github.client import GITHUB_API_BASE, build_headers
 from src.github.repo_counts import fetch_repo_counts, format_count_line
+from src.github.query_common import (
+    extract_keywords, search_with_keyword_fallback,
+    build_empty_query_message, build_no_hits_message, build_fallback_note,
+)
+from src.github.response import text_response
 
 logger = logging.getLogger(__name__)
 
@@ -18,24 +23,25 @@ def search_repos_workflow(
     sort_by: Literal["stars", "forks", "updated", "best_match"] = "best_match"
 ) -> list[TextContent]:
     logger.info("search_repos query=%s sort_by=%s", query, sort_by)
-    keywords = query.split()[:3]
+    keywords = extract_keywords(query)
     if not keywords:
-        return [TextContent(type="text", text="Empty query — provide 1-3 keywords.")]
-    raw_response = None
-    for k in range(len(keywords), 0, -1):
-        sub_q = " ".join(keywords[:k])
-        raw_response = fetch_repositories(sub_q, sort_by)
-        if raw_response["total_count"] > 0:
-            break
-    if raw_response["total_count"] == 0:
-        return [TextContent(type="text", text=f"No repositories found for '{keywords[0]}'.")]
+        return text_response(build_empty_query_message())
+    total, raw_response, kw_level = search_repositories_with_fallback(keywords, sort_by)
+    if total == 0:
+        return text_response(build_no_hits_message("repositories", keywords[0]))
     items = raw_response["items"]
-    repos = [tuple(r["full_name"].split("/", 1)) for r in items]
-    counts = fetch_repo_counts(repos)
-    return [TextContent(type="text", text=format_repo_results(items, counts))]
+    counts = fetch_repo_counts(collect_repo_names(items))
+    return text_response(format_repo_results(items, counts, kw_level, keywords))
 
 
 # FUNCTIONS
+
+def search_repositories_with_fallback(keywords: list[str], sort_by: str) -> tuple[int, dict, int]:
+    def search(sub_query):
+        raw_response = fetch_repositories(sub_query, sort_by)
+        return raw_response["total_count"], raw_response
+    return search_with_keyword_fallback(keywords, search)
+
 
 def fetch_repositories(query: str, sort_by: str) -> dict:
     url = f"{GITHUB_API_BASE}/search/repositories"
@@ -48,8 +54,15 @@ def fetch_repositories(query: str, sort_by: str) -> dict:
     return response.json()
 
 
-def format_repo_results(items: list, counts: dict) -> str:
+def collect_repo_names(items: list) -> list[tuple[str, str]]:
+    return [tuple(r["full_name"].split("/", 1)) for r in items]
+
+
+def format_repo_results(items: list, counts: dict, kw_level: int, keywords: list[str]) -> str:
     lines = []
+    fallback_note = build_fallback_note(kw_level, keywords)
+    if fallback_note:
+        lines.append(f"Query: '{' '.join(keywords[:kw_level])}'{fallback_note}")
     for repo in items:
         full_name = repo["full_name"]
         stars = repo["stargazers_count"]

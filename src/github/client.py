@@ -1,4 +1,5 @@
 # INFRASTRUCTURE
+import functools
 import logging
 import os
 import re
@@ -7,51 +8,21 @@ from pathlib import Path
 
 GITHUB_API_BASE = "https://api.github.com"
 
-logger = logging.getLogger(__name__)
-
-
 _ZSHRC_TOKEN_RE = re.compile(
     r'^\s*export\s+GH_TOKEN\s*=\s*["\']?([^"\'\s#]+)["\']?',
     re.MULTILINE,
 )
 
-
-def _read_zshrc_token() -> str:
-    path = Path.home() / ".zshrc"
-    if not path.is_file():
-        return ""
-    content = path.read_text(encoding="utf-8", errors="replace")
-    matches = _ZSHRC_TOKEN_RE.findall(content)
-    return matches[-1] if matches else ""
-
-
-def _read_env_token(name: str) -> str:
-    return os.environ.get(name, "")
-
-
-def _resolve_token() -> str:
-    sources = (
-        ("zshrc", _read_zshrc_token),
-        ("GH_TOKEN", lambda: _read_env_token("GH_TOKEN")),
-        ("GITHUB_TOKEN", lambda: _read_env_token("GITHUB_TOKEN")),
-    )
-    for name, read in sources:
-        token = read()
-        if token:
-            logger.info("Token resolved from %s", name)
-            return token
-    return ""
-
-
-GITHUB_TOKEN = _resolve_token()
+logger = logging.getLogger(__name__)
 
 
 # FUNCTIONS
 
 def require_token() -> str:
-    if not GITHUB_TOKEN:
+    token = _resolve_token()
+    if not token:
         raise RuntimeError("No GitHub token found in ~/.zshrc, GH_TOKEN or GITHUB_TOKEN")
-    return GITHUB_TOKEN
+    return token
 
 
 def build_headers(accept: str = "application/vnd.github+json") -> dict:
@@ -70,3 +41,31 @@ def request(method: str, path: str, json: dict | None = None, params: dict | Non
     response = requests.request(method, url, headers=build_headers(), json=json, params=params)
     response.raise_for_status()
     return response.json()
+
+
+@functools.cache
+def _resolve_token() -> str:
+    sources = (
+        ("zshrc", _read_zshrc_token),
+        ("GH_TOKEN", lambda: _read_env_token("GH_TOKEN")),
+        ("GITHUB_TOKEN", lambda: _read_env_token("GITHUB_TOKEN")),
+    )
+    for name, read in sources:
+        token = read()
+        if token:
+            logger.info("Token resolved from %s", name)
+            return token
+    return ""
+
+
+def _read_zshrc_token() -> str:
+    path = Path.home() / ".zshrc"
+    if not path.is_file():
+        return ""
+    content = path.read_text(encoding="utf-8", errors="replace")
+    matches = _ZSHRC_TOKEN_RE.findall(content)
+    return matches[-1] if matches else ""
+
+
+def _read_env_token(name: str) -> str:
+    return os.environ.get(name, "")
