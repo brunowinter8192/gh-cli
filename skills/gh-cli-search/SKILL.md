@@ -5,6 +5,9 @@ description:
 
 # GitHub Search — Skill
 
+**Geht es um das Verhalten fremder Software, ist ihr Quellcode die erste Quelle.**
+    - Issues, Discussions und Doku ergänzen den Quellcode, sie ersetzen ihn nicht.
+
 **Alles, was INNERHALB eines Repos liegt, holst du direkt über die CLI.**
 - Die Commands dafür sind `search_repos`, `search_code`, `get_repo_tree` und `get_file_content`.
 - Du liest deren Ausgabe direkt, es gibt keinen Umweg über RAG.
